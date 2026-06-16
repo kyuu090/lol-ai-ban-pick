@@ -33,6 +33,8 @@ const elements = {
 };
 
 let activeView = 'coach';
+let championsById = {};
+const championIconCache = new Map();
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -61,7 +63,42 @@ function getSummonerName(summoner) {
 
 function championLabel(championId) {
   const id = Number(championId);
-  return id > 0 ? `Champion ${id}` : '未選択';
+  if (id <= 0) return '未選択';
+
+  return championsById[id]?.name || `Champion ${id}`;
+}
+
+function championTitle(championId) {
+  const champion = championsById[Number(championId)];
+  return champion?.title ? `${champion.name} - ${champion.title}` : championLabel(championId);
+}
+
+function loadChampionIcon(img, championId) {
+  const id = Number(championId);
+  if (!id || !window.lcuApi?.getChampionIcon) return;
+
+  img.dataset.championId = String(id);
+
+  const cached = championIconCache.get(id);
+  if (typeof cached === 'string') {
+    img.src = cached;
+    return;
+  }
+
+  const iconPromise = cached || window.lcuApi.getChampionIcon(id)
+    .then((src) => {
+      if (src) championIconCache.set(id, src);
+      return src;
+    })
+    .catch(() => null);
+
+  championIconCache.set(id, iconPromise);
+
+  iconPromise.then((src) => {
+    if (src && img.dataset.championId === String(id)) {
+      img.src = src;
+    }
+  });
 }
 
 function positionLabel(position) {
@@ -69,6 +106,7 @@ function positionLabel(position) {
 }
 
 function renderState(state) {
+  championsById = state.championsById || {};
   renderStatus(state);
   renderSettings(state.settings);
   renderCoach(state);
@@ -164,7 +202,17 @@ function renderBanList(container, bans) {
   container.replaceChildren(...bans.slice(0, 5).map((championId) => {
     const item = document.createElement('span');
     item.className = 'ban-token';
-    item.textContent = championLabel(championId);
+    item.title = championTitle(championId);
+
+    const icon = document.createElement('img');
+    icon.alt = '';
+    icon.className = 'ban-token-icon';
+    loadChampionIcon(icon, championId);
+
+    const label = document.createElement('span');
+    label.textContent = championLabel(championId);
+
+    item.append(icon, label);
     return item;
   }));
 
@@ -186,7 +234,16 @@ function renderTeam(container, team, side) {
 
     const portrait = document.createElement('div');
     portrait.className = 'champion-portrait';
-    portrait.textContent = selected ? championLabel(member.championId).replace('Champion ', '#') : '?';
+    portrait.title = selected ? championTitle(member.championId) : '';
+
+    if (selected) {
+      const image = document.createElement('img');
+      image.alt = championLabel(member.championId);
+      loadChampionIcon(image, member.championId);
+      portrait.append(image);
+    } else {
+      portrait.textContent = '?';
+    }
 
     const meta = document.createElement('div');
     meta.className = 'pick-meta';

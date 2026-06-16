@@ -311,13 +311,24 @@ h2 {
 }
 
 .ban-token {
+  align-items: center;
   background: rgba(212, 175, 55, 0.12);
   border: 1px solid rgba(212, 175, 55, 0.42);
   border-radius: 999px;
   color: #f1ddb0;
+  display: inline-flex;
   font-size: 12px;
+  gap: 6px;
   min-height: 28px;
   padding: 5px 10px;
+}
+
+.ban-token-icon {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  height: 18px;
+  object-fit: cover;
+  width: 18px;
 }
 
 .ban-token.empty {
@@ -403,6 +414,12 @@ h2 {
 .pick-row.empty .champion-portrait {
   border-color: rgba(154, 167, 184, 0.38);
   color: var(--muted);
+}
+
+.champion-portrait img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .pick-meta {

@@ -10,7 +10,8 @@ const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
   summoner: '/lol-summoner/v1/current-summoner',
-  gameflowPhase: '/lol-gameflow/v1/gameflow-phase'
+  gameflowPhase: '/lol-gameflow/v1/gameflow-phase',
+  championSummary: '/lol-game-data/assets/v1/champion-summary.json'
 };
 const LOCKFILE_RETRY_MS = 5000;
 const WEBSOCKET_RECONNECT_MS = 3000;
@@ -38,6 +39,7 @@ function createInitialState() {
     summoner: null,
     lobby: null,
     champSelect: null,
+    championsById: {},
     lastEvent: null,
     error: null,
     updatedAt: null
@@ -181,7 +183,32 @@ async function lcuFetch(endpoint) {
   return response.body ? JSON.parse(response.body) : null;
 }
 
+async function lcuFetchBuffer(endpoint) {
+  if (!lcuConnection) {
+    throw new Error('LCU謗･邯壽ュ蝣ｱ縺後≠繧翫∪縺帙ｓ');
+  }
+
+  const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
+  const response = await requestLcu(url, {
+    Authorization: createAuthHeader(lcuConnection.password),
+    Accept: '*/*'
+  });
+
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`${endpoint} returned HTTP ${response.statusCode}`);
+  }
+
+  return response.body;
+}
+
 function requestLcuJson(url, headers) {
+  return requestLcu(url, headers).then((response) => ({
+    ...response,
+    body: response.body.toString('utf8')
+  }));
+}
+
+function requestLcu(url, headers) {
   const client = url.startsWith('https:') ? https : http;
 
   return new Promise((resolve, reject) => {
@@ -201,7 +228,7 @@ function requestLcuJson(url, headers) {
         response.on('end', () => {
           resolve({
             statusCode: response.statusCode ?? 0,
-            body: Buffer.concat(chunks).toString('utf8')
+            body: Buffer.concat(chunks)
           });
         });
       }
@@ -216,17 +243,44 @@ function requestLcuJson(url, headers) {
   });
 }
 
+function createChampionsById(championSummary) {
+  const champions = Array.isArray(championSummary) ? championSummary : [];
+
+  return champions.reduce((acc, champion) => {
+    const championId = Number(champion.id);
+    if (!championId || championId < 0) return acc;
+
+    acc[championId] = {
+      id: championId,
+      name: champion.name,
+      alias: champion.alias,
+      title: champion.title,
+      squarePortraitPath: champion.squarePortraitPath
+    };
+    return acc;
+  }, {});
+}
+
+async function getChampionIcon(_event, championId) {
+  const id = Number(championId);
+  if (!Number.isInteger(id) || id <= 0) return null;
+
+  const buffer = await lcuFetchBuffer(`/lol-game-data/assets/v1/champion-icons/${id}.png`);
+  return `data:image/png;base64,${buffer.toString('base64')}`;
+}
+
 async function refreshLcuState() {
   try {
     lcuConnection = await readLockfile();
     clearRetryTimer();
     updateState({ lcuStatus: 'connected', error: null });
 
-    const [lobby, champSelect, summoner, gameflowPhase] = await Promise.all([
+    const [lobby, champSelect, summoner, gameflowPhase, championSummary] = await Promise.all([
       lcuFetch(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message }))
+      lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
+      lcuFetch(LCU_ENDPOINTS.championSummary).catch(() => [])
     ]);
 
     updateState({
@@ -234,6 +288,7 @@ async function refreshLcuState() {
       champSelect,
       summoner,
       gameflowPhase,
+      championsById: createChampionsById(championSummary),
       lcuStatus: 'connected',
       error: null
     });
@@ -249,6 +304,7 @@ async function refreshLcuState() {
       summoner: null,
       lobby: null,
       champSelect: null,
+      championsById: {},
       error: error.message
     });
     scheduleRetry();
@@ -376,6 +432,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('lcu:get-state', () => appState);
   ipcMain.handle('lcu:refresh', refreshLcuState);
+  ipcMain.handle('lcu:get-champion-icon', getChampionIcon);
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
