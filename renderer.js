@@ -258,7 +258,8 @@ function renderTeam(container, team, side, turnState = {}) {
     const portraitChampionId = selected ? Number(member.championId) : intendedChampionId;
     const isLocalMember = member.cellId === turnState.localCellId;
     const isActiveMember = member.cellId === turnState.activeAction?.actorCellId;
-    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}${isLocalMember ? ' local-player' : ''}${isActiveMember ? ' active-turn' : ''}`;
+    const isLocalActiveMember = isLocalMember && isActiveMember;
+    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}${isLocalMember ? ' local-player' : ''}${isActiveMember ? ' active-turn' : ''}${isLocalActiveMember ? ' local-active-turn' : ''}`;
 
     const portrait = document.createElement('div');
     portrait.className = `champion-portrait ${hasIntent ? 'intent' : ''}`;
