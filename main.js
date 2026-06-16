@@ -12,11 +12,14 @@ const LCU_ENDPOINTS = {
   summoner: '/lol-summoner/v1/current-summoner',
   gameflowPhase: '/lol-gameflow/v1/gameflow-phase'
 };
+const LOCKFILE_RETRY_MS = 5000;
+const WEBSOCKET_RECONNECT_MS = 3000;
 
 let mainWindow;
 let lcuConnection = null;
 let webSocket = null;
 let reconnectTimer = null;
+let retryTimer = null;
 let appState = createInitialState();
 
 function createInitialState() {
@@ -144,6 +147,7 @@ function requestLcuJson(url, headers) {
 async function refreshLcuState() {
   try {
     lcuConnection = await readLockfile();
+    clearRetryTimer();
     updateState({ lcuStatus: 'connected', error: null });
 
     const [lobby, champSelect, summoner, gameflowPhase] = await Promise.all([
@@ -165,12 +169,17 @@ async function refreshLcuState() {
     connectWebSocket();
     return appState;
   } catch (error) {
-    cleanupWebSocket();
+    closeWebSocket();
     updateState({
       lcuStatus: 'disconnected',
       websocketStatus: 'disconnected',
+      gameflowPhase: null,
+      summoner: null,
+      lobby: null,
+      champSelect: null,
       error: error.message
     });
+    scheduleRetry();
     return appState;
   }
 }
@@ -181,11 +190,33 @@ function cleanupWebSocket() {
     reconnectTimer = null;
   }
 
+  clearRetryTimer();
+
+  closeWebSocket();
+}
+
+function closeWebSocket() {
   if (webSocket) {
     webSocket.removeAllListeners();
     webSocket.close();
     webSocket = null;
   }
+}
+
+function clearRetryTimer() {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+}
+
+function scheduleRetry() {
+  if (retryTimer) return;
+
+  retryTimer = setTimeout(async () => {
+    retryTimer = null;
+    await refreshLcuState();
+  }, LOCKFILE_RETRY_MS);
 }
 
 function scheduleReconnect() {
@@ -194,7 +225,7 @@ function scheduleReconnect() {
   reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
     await refreshLcuState();
-  }, 3000);
+  }, WEBSOCKET_RECONNECT_MS);
 }
 
 function connectWebSocket() {
@@ -260,7 +291,10 @@ async function applyWebSocketEvent(event) {
   } else if (uri === LCU_ENDPOINTS.summoner) {
     updateState({ summoner: data });
   } else if (uri === LCU_ENDPOINTS.gameflowPhase) {
-    updateState({ gameflowPhase: data });
+    updateState({
+      gameflowPhase: data,
+      champSelect: data === 'ChampSelect' ? appState.champSelect : null
+    });
   }
 }
 

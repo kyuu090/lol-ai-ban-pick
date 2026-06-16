@@ -13,7 +13,13 @@
           <h1>LoL AI Draft Coach</h1>
           <p>LCU APIの状態をローカルで監視します。自動操作は行いません。</p>
         </div>
-        <button id="refreshButton" type="button">手動再取得</button>
+        <div class="header-actions">
+          <nav class="view-tabs" aria-label="view switcher">
+            <button class="tab-button active" id="coachTabButton" type="button" data-view="coach">Coach</button>
+            <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
+          </nav>
+          <button id="refreshButton" type="button">手動再取得</button>
+        </div>
       </header>
 
       <section class="status-grid" aria-label="connection status">
@@ -37,28 +43,88 @@
 
       <p id="errorMessage" class="error-message" role="status"></p>
 
-      <section class="content-grid">
-        <article class="panel">
-          <h2>現在のサモナー情報</h2>
-          <pre id="summonerJson">{}</pre>
-        </article>
-        <article class="panel">
-          <h2>ロビー情報</h2>
-          <pre id="lobbyJson">{}</pre>
-        </article>
-        <article class="panel">
-          <h2>チャンピオン選択情報</h2>
-          <pre id="champSelectJson">{}</pre>
-        </article>
-        <article class="panel">
-          <h2>最後に受信したWebSocketイベント</h2>
-          <pre id="lastEventJson">{}</pre>
-        </article>
+      <section id="coachView" class="view-panel">
+        <section id="loggedOutView" class="center-state">
+          <p class="eyebrow">League Client</p>
+          <h2>ログインしてません</h2>
+          <p>LoLクライアントを起動してログインすると、ドラフト情報を表示します。</p>
+        </section>
+
+        <section id="loggedInView" class="center-state" hidden>
+          <p class="eyebrow">Ready</p>
+          <h2 id="helloMessage">こんにちは</h2>
+          <p>ロビーまたはチャンピオン選択に入ると、ドラフト画面に切り替わります。</p>
+        </section>
+
+        <section id="inGameView" class="center-state" hidden>
+          <p class="eyebrow">Gameflow</p>
+          <h2>試合中です</h2>
+          <p>試合が終了したら、次のドラフトを監視します。</p>
+        </section>
+
+        <section id="champSelectView" class="draft-board" hidden>
+          <header class="draft-header">
+            <section class="ban-strip">
+              <span>ALLY BANS</span>
+              <div id="allyBans" class="ban-list"></div>
+            </section>
+            <section class="draft-title">
+              <p class="eyebrow">Draft Pick</p>
+              <h2>CHAMPION SELECT</h2>
+              <strong id="draftTimer">-</strong>
+            </section>
+            <section class="ban-strip align-right">
+              <span>ENEMY BANS</span>
+              <div id="enemyBans" class="ban-list"></div>
+            </section>
+          </header>
+
+          <section class="teams-layout">
+            <section class="team-column ally">
+              <h3>YOUR TEAM</h3>
+              <div id="allyTeam" class="pick-list"></div>
+            </section>
+
+            <section class="draft-focus">
+              <div class="champion-focus">
+                <p class="eyebrow">CURRENT STATE</p>
+                <h3 id="currentAction">待機中</h3>
+                <p id="currentPick">チャンピオン選択情報を監視しています。</p>
+              </div>
+            </section>
+
+            <section class="team-column enemy">
+              <h3>ENEMY TEAM</h3>
+              <div id="enemyTeam" class="pick-list"></div>
+            </section>
+          </section>
+        </section>
       </section>
 
-      <section class="panel full-width">
-        <h2>JSON表示エリア</h2>
-        <pre id="stateJson">{}</pre>
+      <section id="debugView" class="view-panel" hidden>
+        <section class="content-grid">
+          <article class="panel">
+            <h2>現在のサモナー情報</h2>
+            <pre id="summonerJson">{}</pre>
+          </article>
+          <article class="panel">
+            <h2>ロビー情報</h2>
+            <pre id="lobbyJson">{}</pre>
+          </article>
+          <article class="panel">
+            <h2>チャンピオン選択情報</h2>
+            <pre id="champSelectJson">{}</pre>
+          </article>
+          <article class="panel">
+            <h2>最後に受信したWebSocketイベント</h2>
+            <pre id="lastEventJson">{}</pre>
+          </article>
+        </section>
+
+        <section class="panel full-width">
+          <h2>JSON表示エリア</h2>
+          <pre id="stateJson">{}</pre>
+        </section>
       </section>
     </main>
 
