@@ -146,6 +146,7 @@ function renderCoach(state) {
 
   if (!inChampSelect) {
     clearDraftTimer();
+    elements.champSelectView.classList.remove('local-turn');
   }
 
   if (!loggedIn) return;
@@ -168,12 +169,21 @@ function renderChampSelect(champSelect) {
   const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
   const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
   const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
+  const activeAction = getActiveAction(champSelect);
+  const localCellId = champSelect?.localPlayerCellId;
+  const isLocalTurn = activeAction?.actorCellId === localCellId;
 
+  elements.champSelectView.classList.toggle('local-turn', isLocalTurn);
   renderBanList(elements.allyBans, allyBans);
   renderBanList(elements.enemyBans, enemyBans);
-  renderTeam(elements.allyTeam, allyTeam, 'ally');
-  renderTeam(elements.enemyTeam, enemyTeam, 'enemy');
-  renderDraftFocus(champSelect);
+  renderTeam(elements.allyTeam, allyTeam, 'ally', { activeAction, localCellId });
+  renderTeam(elements.enemyTeam, enemyTeam, 'enemy', { activeAction, localCellId });
+  renderDraftFocus(champSelect, activeAction);
+}
+
+function getActiveAction(champSelect) {
+  const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
+  return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
 }
 
 function collectBans(champSelect, allyTeam, enemyTeam) {
@@ -237,7 +247,7 @@ function renderBanList(container, bans) {
   }
 }
 
-function renderTeam(container, team, side) {
+function renderTeam(container, team, side, turnState = {}) {
   const rows = Array.from({ length: 5 }, (_, index) => team[index] ?? { cellId: index, championId: 0 });
 
   container.replaceChildren(...rows.map((member, index) => {
@@ -246,7 +256,9 @@ function renderTeam(container, team, side) {
     const intendedChampionId = Number(member.championPickIntent);
     const hasIntent = !selected && intendedChampionId > 0;
     const portraitChampionId = selected ? Number(member.championId) : intendedChampionId;
-    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}`;
+    const isLocalMember = member.cellId === turnState.localCellId;
+    const isActiveMember = member.cellId === turnState.activeAction?.actorCellId;
+    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}${isLocalMember ? ' local-player' : ''}${isActiveMember ? ' active-turn' : ''}`;
 
     const portrait = document.createElement('div');
     portrait.className = `champion-portrait ${hasIntent ? 'intent' : ''}`;
@@ -283,9 +295,7 @@ function getPendingLabel(member) {
   return 'PICKING NEXT';
 }
 
-function renderDraftFocus(champSelect) {
-  const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
-  const activeAction = actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed);
+function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelect)) {
   const localCellId = champSelect?.localPlayerCellId;
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
   const timer = champSelect?.timer;
@@ -293,9 +303,11 @@ function renderDraftFocus(champSelect) {
   syncDraftTimer(timer);
 
   if (activeAction) {
-    elements.currentAction.textContent = activeAction.type === 'ban' ? 'BAN PHASE' : 'PICK PHASE';
-    elements.currentPick.textContent = activeAction.actorCellId === localCellId
-      ? 'あなたの操作待ちです'
+    const isLocalTurn = activeAction.actorCellId === localCellId;
+    const actionLabel = activeAction.type === 'ban' ? 'BAN' : 'PICK';
+    elements.currentAction.textContent = isLocalTurn ? `YOUR ${actionLabel}` : `${actionLabel} PHASE`;
+    elements.currentPick.textContent = isLocalTurn
+      ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
       : `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです`;
     return;
   }
