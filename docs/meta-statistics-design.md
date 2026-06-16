@@ -1,0 +1,586 @@
+# LoL Meta Statistics Design
+
+## 目的
+
+この文書は、LoL AI Draft Coach が ban/pick の判断材料として利用するメタ統計データの設計方針をまとめる。
+
+最初から完全な統計基盤を作るのではなく、静的な JSON/CSV から始めて、将来的に Riot API などで集計した実データへ差し替えられる構造を目指す。
+
+主な利用目的は次の通り。
+
+- チャンピオン単体のメタ評価
+- レーンごとのチャンピオン強度評価
+- チャンピオン対チャンピオンの相性評価
+- 味方構成と敵構成を踏まえた ban/pick 推薦
+- 統計値の信頼度を加味した安全なスコアリング
+
+## 設計思想
+
+### 統計値と判断スコアを分離する
+
+保存するデータは、できるだけ事実に近い統計値に寄せる。
+
+ban/pick のための推薦スコアは、統計値を直接保存するのではなく、アプリ側または集計バッチ側で計算する。
+
+理由:
+
+- スコア計算式を後から変更しやすい
+- UI、AI プロンプト、検証バッチで同じ元データを使い回せる
+- 「なぜこの champion を薦めたか」を説明しやすい
+
+### 勝率そのものより差分を見る
+
+チャンピオン相性では、単純な勝率よりも `delta_win_rate` を重視する。
+
+例:
+
+```text
+Ahri mid overall win rate: 50.5%
+Ahri mid vs Syndra mid win rate: 47.2%
+delta_win_rate: -3.3%
+```
+
+この場合、Ahri は Syndra に対して通常より 3.3 ポイント勝率が落ちている、と解釈する。
+
+相性評価では、チャンピオン自体の基礎勝率が高い/低いことと、特定の対面に強い/弱いことを分けて扱う。
+
+### サンプル数による信頼度を必ず持つ
+
+相性統計は組み合わせ数が多く、サンプル数が少ないデータが大量に出る。
+
+そのため、`games` と `confidence` を必ず保持または計算できるようにする。
+
+例:
+
+```text
+confidence = min(1.0, games / 300)
+weighted_delta = delta_win_rate * confidence
+```
+
+少数試合で極端な勝率が出ても、判断スコアでは弱く扱う。
+
+### パッチ、ロール、ランク帯を分離軸にする
+
+LoL の統計はパッチで大きく変わる。
+
+同じ champion でも role が違えば意味が変わり、rank tier によってもメタが変わる。
+
+最低限、次の分離軸を持つ。
+
+- `patch`
+- `role`
+- `rank_tier`
+- `region`
+- `queue_id`
+
+最初の MVP では `patch` と `role` を最優先にし、`rank_tier` と `region` は `ALL` などの集約値から始めてもよい。
+
+### 最初は同一ロール対面に限定する
+
+初期実装では、相性統計を同一ロール対面に限定する。
+
+- Top vs Top
+- Jungle vs Jungle
+- Mid vs Mid
+- ADC vs ADC
+- Support vs Support
+
+Bot lane は本来 `ADC + Support` の 2v2 相性が重要だが、組み合わせ数が大きく増えるため後回しにする。
+
+### 生データ、集計データ、推薦データを分ける
+
+データは次のレイヤーに分ける。
+
+- Raw data: Riot API などから取得した試合そのもの
+- Normalized data: アプリで扱いやすい参加者・チーム・ピック情報
+- Aggregated stats: champion_stats や matchup_stats
+- Decision score: ban/pick 推薦用のスコア
+
+Raw data を保存しておくと、集計ロジックを変えたときに再集計できる。
+
+MVP では Raw data を省略し、Aggregated stats だけを静的ファイルで持ってもよい。
+
+## データ構造
+
+### champion_stats
+
+チャンピオン単体のメタ統計。
+
+```text
+champion_id
+champion_key
+champion_name
+role
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+pick_count
+pick_rate
+ban_count
+ban_rate
+presence_rate
+avg_kda
+avg_gold_diff_15
+avg_xp_diff_15
+updated_at
+```
+
+主要な意味:
+
+- `win_rate`: その条件下での勝率
+- `pick_rate`: その条件下でのピック率
+- `ban_rate`: その条件下での BAN 率
+- `presence_rate`: `pick_rate + ban_rate`
+- `avg_gold_diff_15`: 15分時点の平均ゴールド差。レーン強度の補助指標
+- `avg_xp_diff_15`: 15分時点の平均経験値差。レーン強度の補助指標
+
+最小構成では、次だけでもよい。
+
+```text
+champion_id
+role
+patch
+rank_tier
+games
+wins
+win_rate
+pick_rate
+ban_rate
+```
+
+### matchup_stats
+
+チャンピオン対チャンピオンの相性統計。
+
+```text
+champion_id
+champion_role
+opponent_champion_id
+opponent_role
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+baseline_win_rate
+delta_win_rate
+confidence
+weighted_delta_win_rate
+updated_at
+```
+
+主要な意味:
+
+- `champion_id`: 評価対象の champion
+- `opponent_champion_id`: 対面または比較対象の champion
+- `win_rate`: 評価対象 champion が opponent に対して勝った割合
+- `baseline_win_rate`: 同条件における評価対象 champion の通常勝率
+- `delta_win_rate`: `win_rate - baseline_win_rate`
+- `confidence`: サンプル数に基づく信頼度
+- `weighted_delta_win_rate`: `delta_win_rate * confidence`
+
+相性評価では `weighted_delta_win_rate` を中心に使う。
+
+### duo_matchup_stats
+
+Bot lane など、複数 champion の組み合わせを見るための将来拡張。
+
+初期実装では必須ではない。
+
+```text
+ally_champion_1_id
+ally_champion_2_id
+ally_roles
+enemy_champion_1_id
+enemy_champion_2_id
+enemy_roles
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+baseline_win_rate
+delta_win_rate
+confidence
+weighted_delta_win_rate
+updated_at
+```
+
+主な用途:
+
+- ADC + Support vs ADC + Support
+- Jungle + Mid vs Jungle + Mid
+- Top + Jungle などの gank 相性
+
+### team_synergy_stats
+
+味方構成内の相性を扱うための将来拡張。
+
+```text
+champion_id
+ally_champion_id
+champion_role
+ally_role
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+baseline_win_rate
+delta_win_rate
+confidence
+weighted_delta_win_rate
+updated_at
+```
+
+主な用途:
+
+- ADC と Support の相性
+- Mid と Jungle の相性
+- Engage 構成、poke 構成、scaling 構成などの補助評価
+
+### champion_tags
+
+統計だけでは表現しにくい性質を持つ静的マスタ。
+
+```text
+champion_id
+role
+damage_type
+range_type
+scaling_type
+engage
+disengage
+poke
+wave_clear
+lane_bully
+teamfight
+split_push
+cc_score
+mobility_score
+difficulty_score
+```
+
+AI に説明させる場合や、統計の薄い champion を補完する場合に使う。
+
+例:
+
+- チームに engage が不足している
+- AP damage が不足している
+- frontline が不足している
+- scaling に寄りすぎて序盤が弱い
+
+## 推薦スコアの考え方
+
+### Champion strength score
+
+チャンピオン単体の強さ。
+
+```text
+champion_strength_score =
+  win_rate_delta
+  + pick_rate_score
+  + ban_rate_score
+  + presence_score
+```
+
+`win_rate_delta` は 50% からの差分、または同ロール平均からの差分として扱う。
+
+### Counter score
+
+敵チャンピオンへの相性。
+
+```text
+counter_score =
+  matchup_weighted_delta_vs_lane_opponent
+  + matchup_weighted_delta_vs_enemy_team
+```
+
+初期実装では、同一ロールの対面だけを見る。
+
+将来的には敵チーム全体に対する相性も足す。
+
+### Team fit score
+
+味方構成との噛み合い。
+
+```text
+team_fit_score =
+  synergy_with_allies
+  + composition_balance
+  + missing_role_utility
+```
+
+例:
+
+- 味方に engage がないなら engage champion を加点
+- 味方が AD に偏っているなら AP champion を加点
+- 味方が序盤寄りなら scaling を少し加点
+
+### Ban priority score
+
+BAN 候補の優先度。
+
+```text
+ban_priority_score =
+  enemy_champion_strength
+  + threat_to_our_hovered_or_picked_champions
+  + enemy_likely_pick_score
+  + meta_presence_score
+```
+
+主な考え方:
+
+- 敵に取られると強い champion
+- 味方予定 pick に強く当たる champion
+- 現メタで pick/ban 率が高い champion
+- 敵のロール状況から選ばれそうな champion
+
+## JSON 形式の初期案
+
+静的ファイルで始める場合、以下のような形にする。
+
+```json
+{
+  "version": 1,
+  "source": "manual",
+  "patch": "25.12",
+  "rankTier": "EMERALD_PLUS",
+  "region": "ALL",
+  "queueId": 420,
+  "championStats": [
+    {
+      "championId": 103,
+      "championKey": "Ahri",
+      "championName": "Ahri",
+      "role": "MIDDLE",
+      "games": 12000,
+      "wins": 6060,
+      "winRate": 0.505,
+      "pickRate": 0.082,
+      "banRate": 0.041
+    }
+  ],
+  "matchupStats": [
+    {
+      "championId": 103,
+      "championRole": "MIDDLE",
+      "opponentChampionId": 134,
+      "opponentRole": "MIDDLE",
+      "games": 850,
+      "wins": 401,
+      "winRate": 0.472,
+      "baselineWinRate": 0.505,
+      "deltaWinRate": -0.033,
+      "confidence": 1.0,
+      "weightedDeltaWinRate": -0.033
+    }
+  ]
+}
+```
+
+## SQLite 形式の初期案
+
+実データを集め始める場合は SQLite から始める。
+
+### matches
+
+```text
+match_id primary key
+region
+queue_id
+game_version
+patch
+game_start_at
+duration_seconds
+created_at
+```
+
+### participants
+
+```text
+match_id
+participant_id
+team_id
+puuid
+summoner_id
+champion_id
+champion_name
+role
+lane
+win
+kills
+deaths
+assists
+gold_earned
+total_damage_dealt_to_champions
+vision_score
+gold_diff_15
+xp_diff_15
+```
+
+### champion_stats
+
+集計結果。
+
+```text
+champion_id
+role
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+pick_count
+pick_rate
+ban_count
+ban_rate
+presence_rate
+updated_at
+```
+
+### matchup_stats
+
+集計結果。
+
+```text
+champion_id
+champion_role
+opponent_champion_id
+opponent_role
+patch
+rank_tier
+region
+queue_id
+games
+wins
+win_rate
+baseline_win_rate
+delta_win_rate
+confidence
+weighted_delta_win_rate
+updated_at
+```
+
+## 集計方針
+
+### champion_stats の集計
+
+同じ `patch`, `role`, `rank_tier`, `region`, `queue_id` の単位で集計する。
+
+```text
+games = participant count
+wins = participant wins
+win_rate = wins / games
+pick_count = games
+pick_rate = pick_count / total_role_games
+```
+
+BAN 率は match-v5 の通常 match data だけでは取りにくいため、初期は手動データまたは外部データで補う。
+
+### matchup_stats の集計
+
+同じ試合内で、同一ロールの敵 participant を対面として扱う。
+
+```text
+champion = participant champion
+opponent = enemy participant with same role
+games += 1
+wins += participant.win ? 1 : 0
+```
+
+その後、同条件の champion_stats から `baseline_win_rate` を引いて `delta_win_rate` を出す。
+
+```text
+delta_win_rate = matchup_win_rate - baseline_win_rate
+confidence = min(1.0, games / min_reliable_games)
+weighted_delta_win_rate = delta_win_rate * confidence
+```
+
+初期値:
+
+```text
+min_reliable_games = 300
+```
+
+## MVP の現実的な順序
+
+1. `meta_stats.json` を静的ファイルとして用意する
+2. `championStats` と `matchupStats` を読み込める provider を作る
+3. 現在の champ select 状態から、味方 pick、敵 pick、ban 済み champion を抽出する
+4. 候補 champion に対して `champion_strength_score` と `counter_score` を計算する
+5. UI に推薦理由として、勝率差分、相性差分、サンプル数を表示する
+6. 後から SQLite 集計バッチを追加し、静的 JSON を生成する
+
+## 注意点
+
+### Riot API から BAN 率を取るのは難しい
+
+通常の match-v5 データでは、ranked solo queue 全体の ban rate を簡単に集計しにくい。
+
+そのため、BAN 率は最初から完全性を求めず、以下のどれかで扱う。
+
+- 手動入力
+- 外部統計の参考値
+- 収集できる範囲だけでの簡易集計
+- いったん `null` として扱う
+
+### role 判定は完全ではない
+
+Riot API の lane/role 情報は常に完璧ではない。
+
+特に off-meta pick や lane swap ではズレる可能性がある。
+
+初期実装では API の判定を信じ、後から補正ロジックを追加する。
+
+### 古いパッチを混ぜすぎない
+
+統計量を増やすために古いパッチを混ぜると、現在のメタ判断が鈍る。
+
+基本は最新パッチを優先し、サンプル数が少ない場合のみ近いパッチを減衰重み付きで混ぜる。
+
+例:
+
+```text
+current_patch_weight = 1.0
+previous_patch_weight = 0.5
+two_patches_ago_weight = 0.25
+```
+
+### AI には生の巨大統計を渡さない
+
+OpenAI API などに渡す場合は、全 champion の全 matchup をそのまま渡さない。
+
+アプリ側で候補を絞り、上位理由だけを渡す。
+
+例:
+
+```text
+候補: Ahri mid
+単体評価: win rate +0.5pt, pick rate 8.2%
+敵 mid Syndra への相性: -3.3pt, 850 games
+味方 jungle Vi との相性: +1.8pt, 420 games
+```
+
+## 将来拡張
+
+- Champion icon/name mapping を Data Dragon から取得する
+- Patch ごとの統計を自動更新する
+- Rank tier ごとに統計を分離する
+- Bot lane の 2v2 matchup を追加する
+- Team composition tags を整備する
+- 敵プレイヤーの champion pool 推定を追加する
+- 推薦結果に説明可能性スコアを付ける
+- 統計の鮮度と信頼度を UI に表示する
