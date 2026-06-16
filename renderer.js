@@ -35,6 +35,13 @@ const elements = {
 let activeView = 'coach';
 let championsById = {};
 const championIconCache = new Map();
+const POSITION_LABELS = {
+  top: 'TOP',
+  jungle: 'JG',
+  middle: 'MID',
+  bottom: 'BOT',
+  utility: 'SUP'
+};
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -102,7 +109,7 @@ function loadChampionIcon(img, championId) {
 }
 
 function positionLabel(position) {
-  return position ? position.toUpperCase() : '未確定';
+  return position ? POSITION_LABELS[position.toLowerCase()] || position.toUpperCase() : '未確定';
 }
 
 function renderState(state) {
