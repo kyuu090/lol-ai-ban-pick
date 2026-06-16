@@ -35,6 +35,8 @@ const elements = {
 let activeView = 'coach';
 let championsById = {};
 const championIconCache = new Map();
+let draftTimerDeadlineMs = null;
+let draftTimerSignature = null;
 const POSITION_LABELS = {
   top: 'TOP',
   jungle: 'JG',
@@ -141,6 +143,10 @@ function renderCoach(state) {
   const inChampSelect = phase === 'ChampSelect' && Boolean(champSelect) && !inGame;
 
   showOnlyCoachPanel(loggedIn, inChampSelect, inGame);
+
+  if (!inChampSelect) {
+    clearDraftTimer();
+  }
 
   if (!loggedIn) return;
 
@@ -284,9 +290,7 @@ function renderDraftFocus(champSelect) {
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
   const timer = champSelect?.timer;
 
-  elements.draftTimer.textContent = typeof timer?.adjustedTimeLeftInPhase === 'number'
-    ? Math.max(0, Math.ceil(timer.adjustedTimeLeftInPhase / 1000))
-    : '-';
+  syncDraftTimer(timer);
 
   if (activeAction) {
     elements.currentAction.textContent = activeAction.type === 'ban' ? 'BAN PHASE' : 'PICK PHASE';
@@ -298,6 +302,54 @@ function renderDraftFocus(champSelect) {
 
   elements.currentAction.textContent = localMember?.championId ? championLabel(localMember.championId) : '待機中';
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
+}
+
+function getTimerTimeLeftMs(timer) {
+  if (typeof timer?.adjustedTimeLeftInPhase === 'number') {
+    return timer.adjustedTimeLeftInPhase;
+  }
+
+  if (typeof timer?.timeLeftInPhase === 'number') {
+    return timer.timeLeftInPhase;
+  }
+
+  return null;
+}
+
+function syncDraftTimer(timer) {
+  const timeLeftMs = getTimerTimeLeftMs(timer);
+
+  if (timeLeftMs === null) {
+    clearDraftTimer();
+    return;
+  }
+
+  const signature = [
+    timer.phase,
+    timer.adjustedTimeLeftInPhase,
+    timer.timeLeftInPhase,
+    timer.totalTimeInPhase
+  ].join(':');
+
+  if (signature !== draftTimerSignature) {
+    draftTimerSignature = signature;
+    draftTimerDeadlineMs = Date.now() + Math.max(0, timeLeftMs);
+  }
+
+  updateDraftTimerDisplay();
+}
+
+function clearDraftTimer() {
+  draftTimerDeadlineMs = null;
+  draftTimerSignature = null;
+  elements.draftTimer.textContent = '-';
+}
+
+function updateDraftTimerDisplay() {
+  if (draftTimerDeadlineMs === null || elements.champSelectView.hidden) return;
+
+  const timeLeftMs = Math.max(0, draftTimerDeadlineMs - Date.now());
+  elements.draftTimer.textContent = Math.ceil(timeLeftMs / 1000);
 }
 
 function renderDebug(state) {
@@ -372,5 +424,6 @@ elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
 
 setActiveView(activeView);
+setInterval(updateDraftTimerDisplay, 250);
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
