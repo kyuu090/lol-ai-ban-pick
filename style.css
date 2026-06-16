@@ -160,6 +160,11 @@ h2 {
   gap: 14px;
 }
 
+.debug-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .center-state {
   align-items: center;
   display: flex;

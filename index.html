@@ -18,30 +18,8 @@
             <button class="tab-button active" id="coachTabButton" type="button" data-view="coach">Coach</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
-          <button id="refreshButton" type="button">手動再取得</button>
         </div>
       </header>
-
-      <section class="status-grid" aria-label="connection status">
-        <article class="status-card">
-          <span class="label">LCU接続状態</span>
-          <strong id="lcuStatus">-</strong>
-        </article>
-        <article class="status-card">
-          <span class="label">WebSocket接続状態</span>
-          <strong id="websocketStatus">-</strong>
-        </article>
-        <article class="status-card">
-          <span class="label">gameflow phase</span>
-          <strong id="gameflowPhase">-</strong>
-        </article>
-        <article class="status-card">
-          <span class="label">最終更新</span>
-          <strong id="updatedAt">-</strong>
-        </article>
-      </section>
-
-      <p id="errorMessage" class="error-message" role="status"></p>
 
       <section id="coachView" class="view-panel">
         <section id="loggedOutView" class="center-state">
@@ -102,6 +80,31 @@
       </section>
 
       <section id="debugView" class="view-panel" hidden>
+        <section class="debug-toolbar">
+          <button id="refreshButton" type="button">手動再取得</button>
+        </section>
+
+        <section class="status-grid" aria-label="connection status">
+          <article class="status-card">
+            <span class="label">LCU接続状態</span>
+            <strong id="lcuStatus">-</strong>
+          </article>
+          <article class="status-card">
+            <span class="label">WebSocket接続状態</span>
+            <strong id="websocketStatus">-</strong>
+          </article>
+          <article class="status-card">
+            <span class="label">gameflow phase</span>
+            <strong id="gameflowPhase">-</strong>
+          </article>
+          <article class="status-card">
+            <span class="label">最終更新</span>
+            <strong id="updatedAt">-</strong>
+          </article>
+        </section>
+
+        <p id="errorMessage" class="error-message" role="status"></p>
+
         <section class="content-grid">
           <article class="panel">
             <h2>現在のサモナー情報</h2>
