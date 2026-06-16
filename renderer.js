@@ -37,13 +37,15 @@ let championsById = {};
 const championIconCache = new Map();
 let draftTimerDeadlineMs = null;
 let draftTimerSignature = null;
-const POSITION_LABELS = {
-  top: 'TOP',
-  jungle: 'JG',
-  middle: 'MID',
-  bottom: 'BOT',
-  utility: 'SUP'
-};
+const {
+  collectBans,
+  getActiveAction,
+  getCoachPanelState,
+  getPhase,
+  getSummonerName,
+  getTimerTimeLeftMs
+} = window.DraftLogic;
+const { POSITION_LABELS } = window.DraftLogic;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -55,19 +57,6 @@ function formatDate(value) {
     dateStyle: 'short',
     timeStyle: 'medium'
   }).format(new Date(value));
-}
-
-function getPhase(state) {
-  return typeof state.gameflowPhase === 'string' ? state.gameflowPhase : null;
-}
-
-function hasUsableData(value) {
-  return value && typeof value === 'object' && !value.error;
-}
-
-function getSummonerName(summoner) {
-  if (!hasUsableData(summoner)) return '';
-  return summoner.gameName || summoner.displayName || summoner.internalName || summoner.name || 'Summoner';
 }
 
 function championLabel(championId) {
@@ -136,11 +125,7 @@ function renderStatus(state) {
 }
 
 function renderCoach(state) {
-  const phase = getPhase(state);
-  const champSelect = hasUsableData(state.champSelect) ? state.champSelect : null;
-  const loggedIn = state.lcuStatus === 'connected' && hasUsableData(state.summoner);
-  const inGame = ['InProgress', 'GameStart'].includes(phase);
-  const inChampSelect = phase === 'ChampSelect' && Boolean(champSelect) && !inGame;
+  const { champSelect, loggedIn, inGame, inChampSelect } = getCoachPanelState(state);
 
   showOnlyCoachPanel(loggedIn, inChampSelect, inGame);
 
@@ -179,46 +164,6 @@ function renderChampSelect(champSelect) {
   renderTeam(elements.allyTeam, allyTeam, 'ally', { activeAction, localCellId });
   renderTeam(elements.enemyTeam, enemyTeam, 'enemy', { activeAction, localCellId });
   renderDraftFocus(champSelect, activeAction);
-}
-
-function getActiveAction(champSelect) {
-  const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
-  return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
-}
-
-function collectBans(champSelect, allyTeam, enemyTeam) {
-  const allyCellIds = new Set(allyTeam.map((member) => member.cellId));
-  const enemyCellIds = new Set(enemyTeam.map((member) => member.cellId));
-  const allyBans = normalizeChampionIds(champSelect?.bans?.myTeamBans);
-  const enemyBans = normalizeChampionIds(champSelect?.bans?.theirTeamBans);
-  const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
-
-  actions
-    .filter((action) => action?.type === 'ban' && Number(action.championId) > 0)
-    .forEach((action) => {
-      const championId = Number(action.championId);
-
-      if (allyCellIds.has(action.actorCellId)) {
-        allyBans.push(championId);
-      } else if (enemyCellIds.has(action.actorCellId)) {
-        enemyBans.push(championId);
-      }
-    });
-
-  return {
-    allyBans: uniqueChampionIds(allyBans),
-    enemyBans: uniqueChampionIds(enemyBans)
-  };
-}
-
-function normalizeChampionIds(value) {
-  return Array.isArray(value)
-    ? value.map(Number).filter((championId) => championId > 0)
-    : [];
-}
-
-function uniqueChampionIds(championIds) {
-  return [...new Set(championIds)];
 }
 
 function renderBanList(container, bans) {
@@ -315,18 +260,6 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
 
   elements.currentAction.textContent = localMember?.championId ? championLabel(localMember.championId) : '待機中';
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
-}
-
-function getTimerTimeLeftMs(timer) {
-  if (typeof timer?.adjustedTimeLeftInPhase === 'number') {
-    return timer.adjustedTimeLeftInPhase;
-  }
-
-  if (typeof timer?.timeLeftInPhase === 'number') {
-    return timer.timeLeftInPhase;
-  }
-
-  return null;
 }
 
 function syncDraftTimer(timer) {

@@ -45,7 +45,10 @@ main.js
 preload.js
 index.html
 renderer.js
+draft-logic.js
+lcu-logic.js
 style.css
+test/
 README.md
 AGENTS_CONTEXT.md
 .gitignore
@@ -57,7 +60,8 @@ AGENTS_CONTEXT.md
 
 - `package.json` の `npm start` で `electron .` を起動する。
 - メインプロセスは `main.js`。
-- Rendererは `index.html`, `renderer.js`, `style.css`。
+- Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `style.css`。
+- `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 
 ### LCU Lockfile
@@ -120,7 +124,8 @@ const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
   summoner: '/lol-summoner/v1/current-summoner',
-  gameflowPhase: '/lol-gameflow/v1/gameflow-phase'
+  gameflowPhase: '/lol-gameflow/v1/gameflow-phase',
+  championSummary: '/lol-game-data/assets/v1/champion-summary.json'
 };
 ```
 
@@ -206,6 +211,7 @@ const WEBSOCKET_RECONNECT_MS = 3000;
   summoner,
   lobby,
   champSelect,
+  championsById,
   lastEvent,
   error,
   updatedAt
@@ -213,6 +219,13 @@ const WEBSOCKET_RECONNECT_MS = 3000;
 ```
 
 Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
+
+### Shared Logic and Tests
+
+- `lcu-logic.js` は lockfile パース、Basic 認証ヘッダ生成、チャンピオン summary の `championsById` 化を担当する。
+- `draft-logic.js` は Renderer で使うドラフト表示用の純粋関数を持つ。主な対象は BAN 集計、進行中アクション判定、ログイン/ChampSelect/InGame の表示状態判定、タイマー残り時間の取得。
+- `index.html` は `draft-logic.js` を `renderer.js` より先に読み込む。
+- `npm test` で Node.js 標準の `node:test` を実行する。現在は `test/draft-logic.test.js` と `test/lcu-logic.test.js` がある。
 
 ## UI
 

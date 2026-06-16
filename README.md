@@ -11,6 +11,14 @@ npm install
 npm start
 ```
 
+## テスト
+
+```bash
+npm test
+```
+
+Node.js 標準の `node:test` で、LCU lockfile のパース、認証ヘッダ生成、チャンピオン一覧の正規化、ドラフト表示用の BAN 集計・ターン判定・表示状態判定を確認します。
+
 ## 使い方
 
 1. League of Legendsクライアントを起動してログインします。
@@ -75,5 +83,6 @@ curl.exe -k -u "riot:$password" "${protocol}://127.0.0.1:${port}/lol-gameflow/v1
 
 - rendererからNode.js APIを直接触らないように、`preload.js` と `contextBridge` で必要なIPCだけ公開しています。
 - `main.js` でlockfileを読み、REST API初期取得と `OnJsonApiEvent` のWebSocket購読を行います。
+- `lcu-logic.js` にLCU接続用の純粋関数、`draft-logic.js` にドラフト表示用の純粋関数を切り出しています。
 - LCU APIは自己署名証明書を使うため、開発用途としてLCUへのローカル接続だけ証明書検証を緩和しています。
 - WebSocketが切断された場合は3秒後に再接続を試みます。

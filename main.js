@@ -4,6 +4,7 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
+const { createAuthHeader, createChampionsById } = require('./lcu-logic');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
@@ -159,10 +160,6 @@ async function reconnectWithCurrentSettings() {
   await refreshLcuState();
 }
 
-function createAuthHeader(password) {
-  return `Basic ${Buffer.from(`riot:${password}`).toString('base64')}`;
-}
-
 async function lcuFetch(endpoint) {
   if (!lcuConnection) {
     throw new Error('LCU接続情報がありません');
@@ -241,24 +238,6 @@ function requestLcu(url, headers) {
     request.on('error', reject);
     request.end();
   });
-}
-
-function createChampionsById(championSummary) {
-  const champions = Array.isArray(championSummary) ? championSummary : [];
-
-  return champions.reduce((acc, champion) => {
-    const championId = Number(champion.id);
-    if (!championId || championId < 0) return acc;
-
-    acc[championId] = {
-      id: championId,
-      name: champion.name,
-      alias: champion.alias,
-      title: champion.title,
-      squarePortraitPath: champion.squarePortraitPath
-    };
-    return acc;
-  }, {});
 }
 
 async function getChampionIcon(_event, championId) {
