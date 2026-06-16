@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
 
@@ -91,28 +92,53 @@ async function lcuFetch(endpoint) {
   }
 
   const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
-
-  // LCU uses a self-signed certificate. This agent is scoped to local dev LCU calls.
-  const agent = new https.Agent({ rejectUnauthorized: false });
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: createAuthHeader(lcuConnection.password),
-      Accept: 'application/json'
-    },
-    agent
+  const response = await requestLcuJson(url, {
+    Authorization: createAuthHeader(lcuConnection.password),
+    Accept: 'application/json'
   });
 
-  if (response.status === 404) {
-    return null;
+  if (response.statusCode === 404) return null;
+
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`${endpoint} returned HTTP ${response.statusCode}: ${response.body}`);
   }
 
-  if (!response.ok) {
-    throw new Error(`${endpoint} returned HTTP ${response.status}`);
-  }
+  return response.body ? JSON.parse(response.body) : null;
+}
 
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
+function requestLcuJson(url, headers) {
+  const client = url.startsWith('https:') ? https : http;
+
+  return new Promise((resolve, reject) => {
+    const request = client.request(
+      url,
+      {
+        method: 'GET',
+        headers,
+        // LCU uses a self-signed certificate. Keep this scoped to local LCU requests.
+        rejectUnauthorized: false,
+        timeout: 5000
+      },
+      (response) => {
+        const chunks = [];
+
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => {
+          resolve({
+            statusCode: response.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString('utf8')
+          });
+        });
+      }
+    );
+
+    request.on('timeout', () => {
+      request.destroy(new Error(`LCU request timed out: ${url}`));
+    });
+
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 async function refreshLcuState() {
