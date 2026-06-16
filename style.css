@@ -393,6 +393,10 @@ h2 {
   background: linear-gradient(270deg, rgba(198, 59, 72, 0.18), rgba(26, 35, 48, 0.8));
 }
 
+.pick-row.intent {
+  background: rgba(26, 35, 48, 0.78);
+}
+
 .champion-portrait {
   align-items: center;
   aspect-ratio: 1;
@@ -420,6 +424,10 @@ h2 {
   height: 100%;
   object-fit: cover;
   width: 100%;
+}
+
+.champion-portrait.intent img {
+  filter: brightness(55%) saturate(85%);
 }
 
 .pick-meta {

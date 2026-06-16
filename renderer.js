@@ -237,16 +237,19 @@ function renderTeam(container, team, side) {
   container.replaceChildren(...rows.map((member, index) => {
     const row = document.createElement('article');
     const selected = Number(member.championId) > 0;
-    row.className = `pick-row ${side} ${selected ? 'selected' : 'empty'}`;
+    const intendedChampionId = Number(member.championPickIntent);
+    const hasIntent = !selected && intendedChampionId > 0;
+    const portraitChampionId = selected ? Number(member.championId) : intendedChampionId;
+    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}`;
 
     const portrait = document.createElement('div');
-    portrait.className = 'champion-portrait';
-    portrait.title = selected ? championTitle(member.championId) : '';
+    portrait.className = `champion-portrait ${hasIntent ? 'intent' : ''}`;
+    portrait.title = portraitChampionId > 0 ? championTitle(portraitChampionId) : '';
 
-    if (selected) {
+    if (portraitChampionId > 0) {
       const image = document.createElement('img');
-      image.alt = championLabel(member.championId);
-      loadChampionIcon(image, member.championId);
+      image.alt = championLabel(portraitChampionId);
+      loadChampionIcon(image, portraitChampionId);
       portrait.append(image);
     } else {
       portrait.textContent = '?';
