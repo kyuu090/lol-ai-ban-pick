@@ -1,11 +1,11 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
 
-const LOCKFILE_PATH = 'C:\\Riot Games\\League of Legends\\lockfile';
+const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
@@ -20,10 +20,18 @@ let lcuConnection = null;
 let webSocket = null;
 let reconnectTimer = null;
 let retryTimer = null;
+let settings = createDefaultSettings();
 let appState = createInitialState();
+
+function createDefaultSettings() {
+  return {
+    lolInstallDir: DEFAULT_LOL_INSTALL_DIR
+  };
+}
 
 function createInitialState() {
   return {
+    settings,
     lcuStatus: 'disconnected',
     websocketStatus: 'disconnected',
     gameflowPhase: null,
@@ -34,6 +42,37 @@ function createInitialState() {
     error: null,
     updatedAt: null
   };
+}
+
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+async function loadSettings() {
+  try {
+    const raw = await fs.readFile(getSettingsPath(), 'utf8');
+    settings = {
+      ...createDefaultSettings(),
+      ...JSON.parse(raw)
+    };
+  } catch {
+    settings = createDefaultSettings();
+  }
+
+  updateState({ settings });
+  return settings;
+}
+
+async function saveSettings(nextSettings) {
+  settings = {
+    ...settings,
+    ...nextSettings
+  };
+
+  await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
+  await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
+  updateState({ settings });
+  return settings;
 }
 
 function createWindow() {
@@ -69,11 +108,12 @@ function updateState(patch) {
 
 async function readLockfile() {
   let raw;
+  const lockfilePath = path.join(settings.lolInstallDir, 'lockfile');
 
   try {
-    raw = await fs.readFile(LOCKFILE_PATH, 'utf8');
+    raw = await fs.readFile(lockfilePath, 'utf8');
   } catch (error) {
-    throw new Error('LoLクライアントが起動していないか、ログインしていません');
+    throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
   }
 
   const [processName, pid, port, password, protocol] = raw.trim().split(':');
@@ -83,6 +123,38 @@ async function readLockfile() {
   }
 
   return { processName, pid, port, password, protocol };
+}
+
+async function chooseLolInstallDir() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'League of Legends のインストールディレクトリを選択',
+    defaultPath: settings.lolInstallDir,
+    properties: ['openDirectory']
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return settings;
+  }
+
+  await saveSettings({ lolInstallDir: result.filePaths[0] });
+  await reconnectWithCurrentSettings();
+  return settings;
+}
+
+async function updateLolInstallDir(_event, lolInstallDir) {
+  if (!lolInstallDir || typeof lolInstallDir !== 'string') {
+    throw new Error('LoLインストールディレクトリが空です');
+  }
+
+  await saveSettings({ lolInstallDir });
+  await reconnectWithCurrentSettings();
+  return settings;
+}
+
+async function reconnectWithCurrentSettings() {
+  closeWebSocket();
+  lcuConnection = null;
+  await refreshLcuState();
 }
 
 function createAuthHeader(password) {
@@ -300,9 +372,13 @@ async function applyWebSocketEvent(event) {
 
 app.whenReady().then(async () => {
   createWindow();
+  await loadSettings();
 
   ipcMain.handle('lcu:get-state', () => appState);
   ipcMain.handle('lcu:refresh', refreshLcuState);
+  ipcMain.handle('settings:get', () => settings);
+  ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
+  ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
 
   await refreshLcuState();
 

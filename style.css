@@ -52,6 +52,21 @@ button:disabled {
   opacity: 0.7;
 }
 
+input {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+code {
+  color: #f1ddb0;
+}
+
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -163,6 +178,49 @@ h2 {
 .debug-toolbar {
   display: flex;
   justify-content: flex-end;
+}
+
+.settings-panel {
+  background: rgba(17, 24, 33, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px;
+}
+
+.settings-panel h2 {
+  font-size: 22px;
+  margin-top: 4px;
+}
+
+.settings-panel p:not(.eyebrow) {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.path-input-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.settings-message {
+  color: var(--accent);
+  min-height: 22px;
 }
 
 .center-state {
@@ -450,7 +508,8 @@ pre {
   .status-grid,
   .content-grid,
   .draft-header,
-  .teams-layout {
+  .teams-layout,
+  .path-input-row {
     grid-template-columns: 1fr;
   }
 

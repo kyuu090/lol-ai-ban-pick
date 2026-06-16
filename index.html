@@ -16,6 +16,7 @@
         <div class="header-actions">
           <nav class="view-tabs" aria-label="view switcher">
             <button class="tab-button active" id="coachTabButton" type="button" data-view="coach">Coach</button>
+            <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
         </div>
@@ -127,6 +128,27 @@
         <section class="panel full-width">
           <h2>JSON表示エリア</h2>
           <pre id="stateJson">{}</pre>
+        </section>
+      </section>
+
+      <section id="settingsView" class="view-panel" hidden>
+        <section class="settings-panel">
+          <div>
+            <p class="eyebrow">Settings</p>
+            <h2>League of Legends インストールディレクトリ</h2>
+            <p>このディレクトリ直下の <code>lockfile</code> を参照してLCU APIへ接続します。</p>
+          </div>
+
+          <label class="settings-field" for="lolInstallDirInput">
+            <span>インストールディレクトリ</span>
+            <div class="path-input-row">
+              <input id="lolInstallDirInput" type="text" spellcheck="false" />
+              <button id="chooseLolDirButton" type="button">参照</button>
+              <button id="saveLolDirButton" type="button">保存</button>
+            </div>
+          </label>
+
+          <p id="settingsMessage" class="settings-message" role="status"></p>
         </section>
       </section>
     </main>

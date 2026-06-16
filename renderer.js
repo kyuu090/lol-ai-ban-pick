@@ -3,6 +3,11 @@ const elements = {
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
   debugView: document.querySelector('#debugView'),
+  settingsView: document.querySelector('#settingsView'),
+  lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
+  chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
+  saveLolDirButton: document.querySelector('#saveLolDirButton'),
+  settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
   inGameView: document.querySelector('#inGameView'),
@@ -65,8 +70,14 @@ function positionLabel(position) {
 
 function renderState(state) {
   renderStatus(state);
+  renderSettings(state.settings);
   renderCoach(state);
   renderDebug(state);
+}
+
+function renderSettings(settings) {
+  if (!settings?.lolInstallDir || document.activeElement === elements.lolInstallDirInput) return;
+  elements.lolInstallDirInput.value = settings.lolInstallDir;
 }
 
 function renderStatus(state) {
@@ -234,10 +245,42 @@ function setActiveView(viewName) {
   activeView = viewName;
   elements.coachView.hidden = activeView !== 'coach';
   elements.debugView.hidden = activeView !== 'debug';
+  elements.settingsView.hidden = activeView !== 'settings';
 
   elements.tabButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.view === activeView);
   });
+}
+
+async function chooseLolInstallDir() {
+  elements.chooseLolDirButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.chooseLolInstallDir();
+    elements.lolInstallDirInput.value = settings.lolInstallDir;
+    elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
+  } catch (error) {
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.chooseLolDirButton.disabled = false;
+  }
+}
+
+async function saveLolInstallDir() {
+  const lolInstallDir = elements.lolInstallDirInput.value.trim();
+  elements.saveLolDirButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.updateLolInstallDir(lolInstallDir);
+    elements.lolInstallDirInput.value = settings.lolInstallDir;
+    elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
+  } catch (error) {
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveLolDirButton.disabled = false;
+  }
 }
 
 async function refresh() {
@@ -258,6 +301,9 @@ elements.refreshButton.addEventListener('click', refresh);
 elements.tabButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveView(button.dataset.view));
 });
+elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
+elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
 
 setActiveView(activeView);
 window.lcuApi.getState().then(renderState);
+window.lcuApi.getSettings().then(renderSettings);
