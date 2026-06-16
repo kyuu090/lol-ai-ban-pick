@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LoL AI Draft Coach</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <h1>LoL AI Draft Coach</h1>
+          <p>LCU APIの状態をローカルで監視します。自動操作は行いません。</p>
+        </div>
+        <button id="refreshButton" type="button">手動再取得</button>
+      </header>
+
+      <section class="status-grid" aria-label="connection status">
+        <article class="status-card">
+          <span class="label">LCU接続状態</span>
+          <strong id="lcuStatus">-</strong>
+        </article>
+        <article class="status-card">
+          <span class="label">WebSocket接続状態</span>
+          <strong id="websocketStatus">-</strong>
+        </article>
+        <article class="status-card">
+          <span class="label">gameflow phase</span>
+          <strong id="gameflowPhase">-</strong>
+        </article>
+        <article class="status-card">
+          <span class="label">最終更新</span>
+          <strong id="updatedAt">-</strong>
+        </article>
+      </section>
+
+      <p id="errorMessage" class="error-message" role="status"></p>
+
+      <section class="content-grid">
+        <article class="panel">
+          <h2>現在のサモナー情報</h2>
+          <pre id="summonerJson">{}</pre>
+        </article>
+        <article class="panel">
+          <h2>ロビー情報</h2>
+          <pre id="lobbyJson">{}</pre>
+        </article>
+        <article class="panel">
+          <h2>チャンピオン選択情報</h2>
+          <pre id="champSelectJson">{}</pre>
+        </article>
+        <article class="panel">
+          <h2>最後に受信したWebSocketイベント</h2>
+          <pre id="lastEventJson">{}</pre>
+        </article>
+      </section>
+
+      <section class="panel full-width">
+        <h2>JSON表示エリア</h2>
+        <pre id="stateJson">{}</pre>
+      </section>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
