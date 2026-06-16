@@ -105,14 +105,48 @@ function showOnlyCoachPanel(loggedIn, inChampSelect, inGame) {
 function renderChampSelect(champSelect) {
   const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
   const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
-  const myBans = Array.isArray(champSelect?.bans?.myTeamBans) ? champSelect.bans.myTeamBans : [];
-  const enemyBans = Array.isArray(champSelect?.bans?.theirTeamBans) ? champSelect.bans.theirTeamBans : [];
+  const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
 
-  renderBanList(elements.allyBans, myBans);
+  renderBanList(elements.allyBans, allyBans);
   renderBanList(elements.enemyBans, enemyBans);
   renderTeam(elements.allyTeam, allyTeam, 'ally');
   renderTeam(elements.enemyTeam, enemyTeam, 'enemy');
   renderDraftFocus(champSelect);
+}
+
+function collectBans(champSelect, allyTeam, enemyTeam) {
+  const allyCellIds = new Set(allyTeam.map((member) => member.cellId));
+  const enemyCellIds = new Set(enemyTeam.map((member) => member.cellId));
+  const allyBans = normalizeChampionIds(champSelect?.bans?.myTeamBans);
+  const enemyBans = normalizeChampionIds(champSelect?.bans?.theirTeamBans);
+  const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
+
+  actions
+    .filter((action) => action?.type === 'ban' && Number(action.championId) > 0)
+    .forEach((action) => {
+      const championId = Number(action.championId);
+
+      if (allyCellIds.has(action.actorCellId)) {
+        allyBans.push(championId);
+      } else if (enemyCellIds.has(action.actorCellId)) {
+        enemyBans.push(championId);
+      }
+    });
+
+  return {
+    allyBans: uniqueChampionIds(allyBans),
+    enemyBans: uniqueChampionIds(enemyBans)
+  };
+}
+
+function normalizeChampionIds(value) {
+  return Array.isArray(value)
+    ? value.map(Number).filter((championId) => championId > 0)
+    : [];
+}
+
+function uniqueChampionIds(championIds) {
+  return [...new Set(championIds)];
 }
 
 function renderBanList(container, bans) {
