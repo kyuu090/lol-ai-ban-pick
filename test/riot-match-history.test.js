@@ -1,7 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  aggregateEnemyChampionStats,
   aggregateChampionStats,
+  aggregateLaneOpponentStats,
   calculateKda,
   getQueueClassification,
   normalizeRiotMatch,
@@ -115,6 +117,133 @@ test('aggregateChampionStats builds position-specific groups without replacing a
   assert.equal(jungle.games, 1);
   assert.equal(jungle.wins, 0);
   assert.equal(jungle.avgKills, 2);
+});
+
+test('aggregateEnemyChampionStats ranks enemy champions by player win rate', () => {
+  const losingVsSyndra = createMatch({
+    matchId: 'loss-syndra',
+    gameCreation: 3000,
+    participants: createMatch().info.participants.map((participant) => (
+      participant.puuid === 'self-puuid'
+        ? { ...participant, win: false }
+        : participant
+    ))
+  });
+  const winningVsSyndra = createMatch({
+    matchId: 'win-syndra',
+    gameCreation: 2000
+  });
+  const losingVsZed = createMatch({
+    matchId: 'loss-zed',
+    gameCreation: 1000,
+    participants: createMatch().info.participants.map((participant) => {
+      if (participant.puuid === 'self-puuid') return { ...participant, win: false };
+      if (participant.puuid === 'enemy-3') return { ...participant, championId: 238, championName: 'Zed' };
+      return participant;
+    })
+  });
+  const records = normalizeRiotMatches({
+    losingVsSyndra,
+    winningVsSyndra,
+    losingVsZed
+  }, 'self-puuid');
+
+  const stats = aggregateEnemyChampionStats(records);
+  const syndra = stats.find((entry) => entry.championId === 134);
+  const zed = stats.find((entry) => entry.championId === 238);
+
+  assert.equal(syndra.games, 2);
+  assert.equal(syndra.wins, 1);
+  assert.equal(syndra.winRate, 0.5);
+  assert.equal(zed.games, 1);
+  assert.equal(zed.wins, 0);
+  assert.equal(stats[0].championId, 238);
+});
+
+test('aggregateLaneOpponentStats only counts the opponent in the same self position', () => {
+  const middleLoss = createMatch({
+    matchId: 'middle-loss',
+    gameCreation: 3000,
+    participants: createMatch().info.participants.map((participant) => (
+      participant.puuid === 'self-puuid'
+        ? { ...participant, teamPosition: 'MIDDLE', win: false }
+        : participant
+    ))
+  });
+  const middleWin = createMatch({
+    matchId: 'middle-win',
+    gameCreation: 2000,
+    participants: createMatch().info.participants.map((participant) => (
+      participant.puuid === 'self-puuid'
+        ? { ...participant, teamPosition: 'MIDDLE', win: true }
+        : participant
+    ))
+  });
+  const topLoss = createMatch({
+    matchId: 'top-loss',
+    gameCreation: 1000,
+    participants: createMatch().info.participants.map((participant) => {
+      if (participant.puuid === 'self-puuid') return { ...participant, teamPosition: 'TOP', win: false };
+      if (participant.puuid === 'enemy-1') return { ...participant, championId: 24, championName: 'Jax', teamPosition: 'TOP' };
+      return participant;
+    })
+  });
+  const records = normalizeRiotMatches({
+    middleLoss,
+    middleWin,
+    topLoss
+  }, 'self-puuid');
+
+  const stats = aggregateLaneOpponentStats(records);
+  const middleSyndra = stats.find((entry) => entry.position === 'MIDDLE' && entry.championId === 134);
+  const topJax = stats.find((entry) => entry.position === 'TOP' && entry.championId === 24);
+
+  assert.equal(middleSyndra.games, 2);
+  assert.equal(middleSyndra.wins, 1);
+  assert.equal(middleSyndra.winRate, 0.5);
+  assert.equal(topJax.games, 1);
+  assert.equal(topJax.wins, 0);
+  assert.equal(stats.some((entry) => entry.position === 'MIDDLE' && entry.championId === 24), false);
+});
+
+test('opponent stats sort same win rate by more games first', () => {
+  const records = normalizeRiotMatches({
+    syndraLoss: createMatch({
+      matchId: 'syndra-loss',
+      gameCreation: 4000,
+      participants: createMatch().info.participants.map((participant) => (
+        participant.puuid === 'self-puuid'
+          ? { ...participant, win: false }
+          : participant
+      ))
+    }),
+    zedLossOne: createMatch({
+      matchId: 'zed-loss-one',
+      gameCreation: 3000,
+      participants: createMatch().info.participants.map((participant) => {
+        if (participant.puuid === 'self-puuid') return { ...participant, win: false };
+        if (participant.puuid === 'enemy-3') return { ...participant, championId: 238, championName: 'Zed' };
+        return participant;
+      })
+    }),
+    zedLossTwo: createMatch({
+      matchId: 'zed-loss-two',
+      gameCreation: 2000,
+      participants: createMatch().info.participants.map((participant) => {
+        if (participant.puuid === 'self-puuid') return { ...participant, win: false };
+        if (participant.puuid === 'enemy-3') return { ...participant, championId: 238, championName: 'Zed' };
+        return participant;
+      })
+    })
+  }, 'self-puuid');
+
+  const stats = aggregateEnemyChampionStats(records);
+  const zedIndex = stats.findIndex((entry) => entry.championId === 238);
+  const syndraIndex = stats.findIndex((entry) => entry.championId === 134);
+
+  assert.equal(stats[zedIndex].games, 2);
+  assert.equal(stats[syndraIndex].games, 1);
+  assert.equal(zedIndex < syndraIndex, true);
 });
 
 test('calculateKda handles deathless games', () => {

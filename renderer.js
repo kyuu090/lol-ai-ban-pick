@@ -39,6 +39,7 @@ const elements = {
   draftTimer: document.querySelector('#draftTimer'),
   currentAction: document.querySelector('#currentAction'),
   currentPick: document.querySelector('#currentPick'),
+  banInsightPanel: document.querySelector('#banInsightPanel'),
   lcuStatus: document.querySelector('#lcuStatus'),
   websocketStatus: document.querySelector('#websocketStatus'),
   gameflowPhase: document.querySelector('#gameflowPhase'),
@@ -56,6 +57,8 @@ let activeChampionPoolLane = 'top';
 let championsById = {};
 let championPool = {};
 let matchHistoryChampionStats = [];
+let matchHistoryEnemyChampionStats = [];
+let matchHistoryLaneOpponentStats = [];
 let championPoolDirty = false;
 const championIconCache = new Map();
 const championIconQueue = [];
@@ -87,6 +90,7 @@ const CHAMPION_POOL_LANE_TO_POSITION = {
   bottom: 'BOTTOM',
   utility: 'UTILITY'
 };
+const RELIABLE_SAMPLE_GAMES = 5;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -153,6 +157,14 @@ function formatNumber(value, digits = 1) {
 
 function formatStatsPosition(position) {
   return position ? `${positionLabel(position)} ` : '';
+}
+
+function sortWorstWinRateStats(stats) {
+  return [...stats].sort((a, b) => (
+    (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  ));
 }
 
 function createChampionStatsElement(stats, className = 'pool-champion-stats') {
@@ -271,6 +283,8 @@ function processChampionIconQueue() {
 function renderState(state) {
   championsById = state.championsById || {};
   matchHistoryChampionStats = Array.isArray(state.matchHistoryChampionStats) ? state.matchHistoryChampionStats : [];
+  matchHistoryEnemyChampionStats = Array.isArray(state.matchHistoryEnemyChampionStats) ? state.matchHistoryEnemyChampionStats : [];
+  matchHistoryLaneOpponentStats = Array.isArray(state.matchHistoryLaneOpponentStats) ? state.matchHistoryLaneOpponentStats : [];
   if (!championPoolDirty) {
     championPool = normalizeChampionPool(state.championPool);
   }
@@ -650,11 +664,13 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   const timer = champSelect?.timer;
 
   syncDraftTimer(timer);
+  renderBanInsights(false, localMember);
 
   if (activeAction) {
     const isLocalTurn = activeAction.actorCellId === localCellId;
     const actionLabel = activeAction.type === 'ban' ? 'BAN' : 'PICK';
     elements.currentAction.textContent = isLocalTurn ? `YOUR ${actionLabel}` : `${actionLabel} PHASE`;
+    renderBanInsights(isLocalTurn && activeAction.type === 'ban', localMember);
     elements.currentPick.textContent = isLocalTurn
       ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
       : `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです`;
@@ -663,6 +679,84 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
 
   elements.currentAction.textContent = localMember?.championId ? championLabel(localMember.championId) : '待機中';
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
+}
+
+function renderBanInsights(visible, localMember) {
+  const focus = elements.banInsightPanel?.closest('.champion-focus');
+  if (!elements.banInsightPanel || !focus) return;
+
+  elements.banInsightPanel.hidden = !visible;
+  focus.classList.toggle('has-ban-insights', visible);
+  if (!visible) {
+    elements.banInsightPanel.replaceChildren();
+    return;
+  }
+
+  const position = String(localMember?.assignedPosition || '').toUpperCase();
+  const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats).slice(0, 3);
+  const reliableEnemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats.filter((stats) => (
+    Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
+  ))).slice(0, 3);
+  const laneStats = sortWorstWinRateStats(matchHistoryLaneOpponentStats.filter((stats) => (
+    String(stats.position || '').toUpperCase() === position
+  ))).slice(0, 3);
+  const reliableLaneStats = sortWorstWinRateStats(matchHistoryLaneOpponentStats.filter((stats) => (
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
+  ))).slice(0, 3);
+
+  elements.banInsightPanel.replaceChildren(
+    createBanInsightSection('Worst enemy picks', enemyStats),
+    createBanInsightSection(`Reliable enemy picks (${RELIABLE_SAMPLE_GAMES}+g)`, reliableEnemyStats),
+    createBanInsightSection(`${positionLabel(position)} lane opponents`, laneStats),
+    createBanInsightSection(`Reliable ${positionLabel(position)} opponents (${RELIABLE_SAMPLE_GAMES}+g)`, reliableLaneStats)
+  );
+}
+
+function createBanInsightSection(title, statsList) {
+  const section = document.createElement('section');
+  section.className = 'ban-insight-section';
+
+  const heading = document.createElement('h4');
+  heading.textContent = title;
+  section.append(heading);
+
+  if (!statsList.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ban-insight-empty';
+    empty.textContent = 'No match data';
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement('ol');
+  statsList.forEach((stats) => {
+    list.append(createBanInsightItem(stats));
+  });
+  section.append(list);
+  return section;
+}
+
+function createBanInsightItem(stats) {
+  const item = document.createElement('li');
+
+  const name = document.createElement('strong');
+  name.textContent = championLabel(stats.championId);
+
+  const games = Number(stats.games || 0);
+  const wins = Number(stats.wins || 0);
+  const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, games - wins);
+  const detail = document.createElement('span');
+  detail.textContent = `${games}g ${wins}W/${losses}L WR ${formatPercent(stats.winRate)}`;
+
+  item.append(name, detail);
+  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
+    const sample = document.createElement('em');
+    sample.textContent = 'Low sample';
+    item.append(sample);
+  }
+
+  return item;
 }
 
 function syncDraftTimer(timer) {

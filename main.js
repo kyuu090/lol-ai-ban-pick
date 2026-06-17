@@ -14,7 +14,9 @@ const {
   requestRiotJson
 } = require('./riot-api');
 const {
+  aggregateEnemyChampionStats,
   aggregateChampionStats,
+  aggregateLaneOpponentStats,
   normalizeRiotMatches
 } = require('./riot-match-history');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
@@ -45,6 +47,8 @@ let retryTimer = null;
 let settings = createDefaultSettings();
 let championPool = createDefaultChampionPool();
 let matchHistoryChampionStats = [];
+let matchHistoryEnemyChampionStats = [];
+let matchHistoryLaneOpponentStats = [];
 let appState = createInitialState();
 let championIconUnavailableUntil = 0;
 let championIconUnavailableLogged = false;
@@ -80,6 +84,8 @@ function createInitialState() {
     matchHistoryStatus: createMatchHistoryStatus(),
     matchHistorySummary: null,
     matchHistoryChampionStats,
+    matchHistoryEnemyChampionStats,
+    matchHistoryLaneOpponentStats,
     lastEvent: null,
     error: null,
     updatedAt: null
@@ -189,8 +195,12 @@ async function loadMatchHistory() {
 
   if (!history || history.source !== 'riot-api') {
     matchHistoryChampionStats = [];
+    matchHistoryEnemyChampionStats = [];
+    matchHistoryLaneOpponentStats = [];
     updateState({
       matchHistoryChampionStats,
+      matchHistoryEnemyChampionStats,
+      matchHistoryLaneOpponentStats,
       matchHistorySummary: null
     });
     log.debug('Match history file not found or invalid; using empty stats', { path: historyPath });
@@ -199,6 +209,12 @@ async function loadMatchHistory() {
 
   const matches = Array.isArray(history.matches) ? history.matches : [];
   matchHistoryChampionStats = Array.isArray(history.championStats) ? history.championStats : [];
+  matchHistoryEnemyChampionStats = Array.isArray(history.enemyChampionStats)
+    ? history.enemyChampionStats
+    : aggregateEnemyChampionStats(matches);
+  matchHistoryLaneOpponentStats = Array.isArray(history.laneOpponentStats)
+    ? history.laneOpponentStats
+    : aggregateLaneOpponentStats(matches);
   const summary = createMatchHistorySummary({
     updatedAt: history.updatedAt || null,
     requestedMatches: matches.length,
@@ -211,6 +227,8 @@ async function loadMatchHistory() {
 
   updateState({
     matchHistoryChampionStats,
+    matchHistoryEnemyChampionStats,
+    matchHistoryLaneOpponentStats,
     matchHistorySummary: summary
   });
   log.debug('Match history loaded', { path: historyPath, summary });
@@ -498,6 +516,8 @@ async function collectRiotMatchHistory(_event, options = {}) {
 
     const normalizedMatches = normalizeRiotMatches(matchesById, account.puuid).slice(0, requestedMatches);
     const championStats = aggregateChampionStats(normalizedMatches);
+    const enemyChampionStats = aggregateEnemyChampionStats(normalizedMatches);
+    const laneOpponentStats = aggregateLaneOpponentStats(normalizedMatches);
     const history = {
       version: 1,
       source: 'riot-api',
@@ -508,13 +528,17 @@ async function collectRiotMatchHistory(_event, options = {}) {
         tagLine: riotId.tagLine
       },
       matches: normalizedMatches,
-      championStats
+      championStats,
+      enemyChampionStats,
+      laneOpponentStats
     };
 
     await writeJsonFile(historyPath, history);
 
     const phase = failedRequests > 0 ? 'partial' : 'completed';
     matchHistoryChampionStats = championStats;
+    matchHistoryEnemyChampionStats = enemyChampionStats;
+    matchHistoryLaneOpponentStats = laneOpponentStats;
     const summary = createMatchHistorySummary({
       updatedAt,
       requestedMatches,
@@ -527,6 +551,8 @@ async function collectRiotMatchHistory(_event, options = {}) {
 
     updateState({
       matchHistoryChampionStats,
+      matchHistoryEnemyChampionStats,
+      matchHistoryLaneOpponentStats,
       matchHistorySummary: summary
     });
     updateMatchHistoryStatus({

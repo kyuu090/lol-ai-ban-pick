@@ -172,10 +172,90 @@ function aggregateChampionStats(matchRecords) {
     .sort((a, b) => (b.games - a.games) || String(a.championName).localeCompare(String(b.championName), 'en'));
 }
 
+function createOpponentStats(championId, championName, position = null) {
+  return {
+    championId,
+    championName,
+    position,
+    games: 0,
+    wins: 0,
+    losses: 0,
+    winRate: 0
+  };
+}
+
+function addWinLossToOpponentStats(stats, record) {
+  stats.games += 1;
+  stats.wins += record.self.win ? 1 : 0;
+  stats.losses = stats.games - stats.wins;
+}
+
+function finalizeOpponentStats(stats) {
+  return {
+    ...stats,
+    winRate: stats.games > 0 ? stats.wins / stats.games : 0
+  };
+}
+
+function sortWorstOpponentStats(stats) {
+  return stats.sort((a, b) => (
+    (a.winRate - b.winRate) ||
+    (b.games - a.games) ||
+    String(a.championName).localeCompare(String(b.championName), 'en')
+  ));
+}
+
+function aggregateEnemyChampionStats(matchRecords) {
+  const grouped = new Map();
+
+  matchRecords.forEach((record) => {
+    const enemies = Array.isArray(record.enemies) ? record.enemies : [];
+
+    enemies.forEach((enemy) => {
+      const championId = Number(enemy.championId) || 0;
+      if (championId <= 0) return;
+
+      const key = String(championId);
+      if (!grouped.has(key)) {
+        grouped.set(key, createOpponentStats(championId, enemy.championName || ''));
+      }
+
+      addWinLossToOpponentStats(grouped.get(key), record);
+    });
+  });
+
+  return sortWorstOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
+}
+
+function aggregateLaneOpponentStats(matchRecords) {
+  const grouped = new Map();
+
+  matchRecords.forEach((record) => {
+    const selfPosition = String(record.self?.position || '').toUpperCase();
+    if (!selfPosition) return;
+
+    const enemies = Array.isArray(record.enemies) ? record.enemies : [];
+    const laneOpponent = enemies.find((enemy) => String(enemy.position || '').toUpperCase() === selfPosition);
+    const championId = Number(laneOpponent?.championId) || 0;
+    if (championId <= 0) return;
+
+    const key = `${selfPosition}:${championId}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, createOpponentStats(championId, laneOpponent.championName || '', selfPosition));
+    }
+
+    addWinLossToOpponentStats(grouped.get(key), record);
+  });
+
+  return sortWorstOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
+}
+
 module.exports = {
   ALLOWED_SR_5V5_QUEUE_GROUPS,
+  aggregateEnemyChampionStats,
   getQueueClassification,
   isSupportedSr5v5Match,
+  aggregateLaneOpponentStats,
   calculateKda,
   normalizeRiotMatch,
   normalizeRiotMatches,
