@@ -62,9 +62,9 @@ settings.json
 champion-pool.json
 ```
 
-`settings.json` にはLoLインストールディレクトリに加えて、Riot API連携用の開発者トークンとRegionを保存できます。トークン本文はDebug画面のstate表示には出しません。
+`settings.json` にはLoLインストールディレクトリに加えて、将来のRiot API連携用の開発者トークンとRegionを保存できます。トークン本文はDebug画面のstate表示には出しません。
 
-Riot APIのRegionは `JP1` などのplatform routing valueとして保存します。Match-V5などregional routingを使うAPIでは、保存したRegionから `ASIA` / `AMERICAS` / `EUROPE` / `SEA` を導出します。
+当面の試合履歴取得はRiot APIではなくLCU match historyを優先します。Riot APIのRegionは `JP1` などのplatform routing valueとして保存し、将来Match-V5などregional routingを使うAPIでは、保存したRegionから `ASIA` / `AMERICAS` / `EUROPE` / `SEA` を導出します。
 
 ## LCU lockfile
 
