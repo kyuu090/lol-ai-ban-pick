@@ -1,5 +1,9 @@
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
+  collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
+  matchHistoryToast: document.querySelector('#matchHistoryToast'),
+  matchHistoryToastPhase: document.querySelector('#matchHistoryToastPhase'),
+  matchHistoryToastMessage: document.querySelector('#matchHistoryToastMessage'),
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
@@ -62,6 +66,8 @@ const championIconObserver = typeof IntersectionObserver === 'function'
   : null;
 let draftTimerDeadlineMs = null;
 let draftTimerSignature = null;
+let matchHistoryToastTimer = null;
+let dismissedMatchHistoryToastKey = null;
 const {
   collectBans,
   getActiveAction,
@@ -198,10 +204,49 @@ function renderState(state) {
     championPool = normalizeChampionPool(state.championPool);
   }
   renderStatus(state);
+  renderMatchHistoryStatus(state.matchHistoryStatus);
   renderSettings(state.settings);
   renderChampionPool();
   renderCoach(state);
   renderDebug(state);
+}
+
+function renderMatchHistoryStatus(status) {
+  const toastKey = `${status?.phase || 'idle'}:${status?.updatedAt || ''}`;
+
+  if (!status || status.phase === 'idle') {
+    elements.matchHistoryToast.hidden = true;
+    elements.collectRiotMatchesButton.disabled = false;
+    return;
+  }
+
+  const activePhases = ['collecting', 'normalizing', 'aggregating', 'retrying'];
+  const isActive = activePhases.includes(status.phase);
+
+  if (matchHistoryToastTimer) {
+    clearTimeout(matchHistoryToastTimer);
+    matchHistoryToastTimer = null;
+  }
+
+  if (!isActive && dismissedMatchHistoryToastKey === toastKey) {
+    elements.matchHistoryToast.hidden = true;
+    elements.collectRiotMatchesButton.disabled = false;
+    return;
+  }
+
+  elements.matchHistoryToast.hidden = false;
+  elements.matchHistoryToast.dataset.phase = status.phase;
+  elements.matchHistoryToastPhase.textContent = status.phase;
+  elements.matchHistoryToastMessage.textContent = status.message || '';
+  elements.collectRiotMatchesButton.disabled = isActive;
+
+  if (!isActive) {
+    const delayMs = status.phase === 'completed' ? 3000 : 5000;
+    matchHistoryToastTimer = setTimeout(() => {
+      elements.matchHistoryToast.hidden = true;
+      dismissedMatchHistoryToastKey = toastKey;
+    }, delayMs);
+  }
 }
 
 function renderSettings(settings) {
@@ -690,8 +735,26 @@ async function refresh() {
   }
 }
 
+async function collectRiotMatchHistory() {
+  elements.collectRiotMatchesButton.disabled = true;
+  elements.collectRiotMatchesButton.textContent = '取得中...';
+
+  try {
+    logDebug('Manual Riot match history collection requested');
+    const summary = await window.lcuApi.collectRiotMatchHistory();
+    logDebug('Manual Riot match history collection completed', summary);
+  } catch (error) {
+    logWarn('Manual Riot match history collection failed', { message: error.message, stack: error.stack });
+  } finally {
+    elements.collectRiotMatchesButton.textContent = 'Riot試合取得';
+    const status = await window.lcuApi.getState().then((state) => state.matchHistoryStatus);
+    elements.collectRiotMatchesButton.disabled = ['collecting', 'normalizing', 'aggregating', 'retrying'].includes(status?.phase);
+  }
+}
+
 window.lcuApi.onState(renderState);
 elements.refreshButton.addEventListener('click', refresh);
+elements.collectRiotMatchesButton.addEventListener('click', collectRiotMatchHistory);
 elements.tabButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveView(button.dataset.view));
 });

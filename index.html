@@ -23,6 +23,11 @@
         </div>
       </header>
 
+      <section id="matchHistoryToast" class="match-history-toast" role="status" hidden>
+        <strong id="matchHistoryToastPhase">Match History</strong>
+        <span id="matchHistoryToastMessage"></span>
+      </section>
+
       <section id="coachView" class="view-panel">
         <section id="loggedOutView" class="center-state">
           <p class="eyebrow">League Client</p>
@@ -83,6 +88,7 @@
 
       <section id="debugView" class="view-panel" hidden>
         <section class="debug-toolbar">
+          <button id="collectRiotMatchesButton" type="button">Riot試合取得</button>
           <button id="refreshButton" type="button">手動再取得</button>
         </section>
 

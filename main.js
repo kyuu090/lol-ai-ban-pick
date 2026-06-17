@@ -10,8 +10,13 @@ const {
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
   createRiotApiHosts,
-  normalizeRiotPlatformRegion
+  normalizeRiotPlatformRegion,
+  requestRiotJson
 } = require('./riot-api');
+const {
+  aggregateChampionStats,
+  normalizeRiotMatches
+} = require('./riot-match-history');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
@@ -24,6 +29,9 @@ const LCU_ENDPOINTS = {
 };
 const LOCKFILE_RETRY_MS = 5000;
 const WEBSOCKET_RECONNECT_MS = 3000;
+const RIOT_MATCHES_PER_RUN = 90;
+const RIOT_MATCH_DETAIL_CONCURRENCY = 5;
+const RIOT_MATCH_DETAIL_BATCH_DELAY_MS = 350;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 
@@ -37,6 +45,7 @@ let championPool = createDefaultChampionPool();
 let appState = createInitialState();
 let championIconUnavailableUntil = 0;
 let championIconUnavailableLogged = false;
+let matchHistoryInProgress = false;
 
 configureLogger();
 
@@ -63,9 +72,30 @@ function createInitialState() {
     champSelect: null,
     championsById: {},
     championPool,
+    matchHistoryStatus: createMatchHistoryStatus(),
+    matchHistorySummary: null,
     lastEvent: null,
     error: null,
     updatedAt: null
+  };
+}
+
+function createMatchHistoryStatus(patch = {}) {
+  return {
+    phase: 'idle',
+    source: 'manual',
+    requestedMatches: RIOT_MATCHES_PER_RUN,
+    fetchedMatches: 0,
+    normalizedMatches: 0,
+    updatedMatches: 0,
+    failedRequests: 0,
+    retryAttempt: 0,
+    nextRetryAt: null,
+    message: '',
+    error: null,
+    startedAt: null,
+    updatedAt: null,
+    ...patch
   };
 }
 
@@ -88,6 +118,14 @@ function getSettingsPath() {
 
 function getChampionPoolPath() {
   return path.join(app.getPath('userData'), 'champion-pool.json');
+}
+
+function getRiotMatchCachePath() {
+  return path.join(app.getPath('userData'), 'riot-match-cache.json');
+}
+
+function getMatchHistoryPath() {
+  return path.join(app.getPath('userData'), 'match-history.json');
 }
 
 async function loadSettings() {
@@ -175,6 +213,241 @@ function updateState(patch) {
     updatedAt: new Date().toISOString()
   };
   sendState();
+}
+
+function updateMatchHistoryStatus(patch) {
+  updateState({
+    matchHistoryStatus: createMatchHistoryStatus({
+      ...appState.matchHistoryStatus,
+      ...patch,
+      updatedAt: new Date().toISOString()
+    })
+  });
+}
+
+async function readJsonFile(filePath, fallback) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeJsonFile(filePath, value) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
+}
+
+function getRiotIdFromSummoner(summoner) {
+  if (!summoner || summoner.error) {
+    throw new Error('Riot IDを取得するにはLoLクライアントへログインしてください');
+  }
+
+  const rawGameName = summoner.gameName || summoner.riotIdGameName || '';
+  const rawTagLine = summoner.tagLine || summoner.riotIdTagline || summoner.riotIdTagLine || '';
+  if (rawGameName && rawTagLine) {
+    return { gameName: rawGameName, tagLine: rawTagLine };
+  }
+
+  const displayName = summoner.displayName || summoner.name || '';
+  if (displayName.includes('#')) {
+    const [gameName, tagLine] = displayName.split('#');
+    if (gameName && tagLine) return { gameName, tagLine };
+  }
+
+  throw new Error('LCU current summonerからRiot IDとTaglineを取得できませんでした');
+}
+
+function encodePathSegment(value) {
+  return encodeURIComponent(String(value));
+}
+
+function createRiotRetryHandler() {
+  return ({ attempt, delayMs }) => {
+    updateMatchHistoryStatus({
+      phase: 'retrying',
+      retryAttempt: attempt,
+      nextRetryAt: new Date(Date.now() + delayMs).toISOString(),
+      message: `Riot API制限のため再試行します ${Math.ceil(delayMs / 1000)}秒後`
+    });
+  };
+}
+
+async function collectRiotMatchHistory(_event, options = {}) {
+  if (matchHistoryInProgress) {
+    throw new Error('試合データを取得中です');
+  }
+  if (!settings.riotApiToken) {
+    throw new Error('Riot APIトークンが未設定です');
+  }
+
+  matchHistoryInProgress = true;
+  const requestedMatches = Number(options.count) || RIOT_MATCHES_PER_RUN;
+  const startedAt = new Date().toISOString();
+
+  updateMatchHistoryStatus({
+    phase: 'collecting',
+    source: 'manual',
+    requestedMatches,
+    fetchedMatches: 0,
+    normalizedMatches: 0,
+    updatedMatches: 0,
+    failedRequests: 0,
+    retryAttempt: 0,
+    nextRetryAt: null,
+    message: `試合データ収集中... 0/${requestedMatches} 試合`,
+    error: null,
+    startedAt
+  });
+
+  try {
+    const riotId = getRiotIdFromSummoner(appState.summoner);
+    const hosts = createRiotApiHosts(settings.riotPlatformRegion);
+    const onRetry = createRiotRetryHandler();
+    const account = await requestRiotJson({
+      host: hosts.regionalHost,
+      path: `/riot/account/v1/accounts/by-riot-id/${encodePathSegment(riotId.gameName)}/${encodePathSegment(riotId.tagLine)}`,
+      apiToken: settings.riotApiToken,
+      onRetry
+    });
+
+    if (!account?.puuid) {
+      throw new Error('Riot APIからPUUIDを取得できませんでした');
+    }
+
+    const matchIds = await requestRiotJson({
+      host: hosts.regionalHost,
+      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(account.puuid)}/ids?start=0&count=${requestedMatches}`,
+      apiToken: settings.riotApiToken,
+      onRetry
+    });
+
+    const normalizedMatchIds = Array.isArray(matchIds) ? matchIds.slice(0, requestedMatches) : [];
+    const cachePath = getRiotMatchCachePath();
+    const historyPath = getMatchHistoryPath();
+    const cache = await readJsonFile(cachePath, {
+      version: 1,
+      source: 'riot-api',
+      updatedAt: null,
+      matchesById: {}
+    });
+    const matchesById = cache.matchesById && typeof cache.matchesById === 'object' ? cache.matchesById : {};
+    const missingMatchIds = normalizedMatchIds.filter((matchId) => !matchesById[matchId]);
+    let fetchedMatches = 0;
+    let failedRequests = 0;
+
+    for (let index = 0; index < missingMatchIds.length; index += RIOT_MATCH_DETAIL_CONCURRENCY) {
+      const batch = missingMatchIds.slice(index, index + RIOT_MATCH_DETAIL_CONCURRENCY);
+
+      updateMatchHistoryStatus({
+        phase: 'collecting',
+        message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
+      });
+
+      const results = await Promise.all(batch.map(async (matchId) => {
+        try {
+          const detail = await requestRiotJson({
+            host: hosts.regionalHost,
+            path: `/lol/match/v5/matches/${encodePathSegment(matchId)}`,
+            apiToken: settings.riotApiToken,
+            onRetry
+          });
+          return { matchId, detail };
+        } catch (error) {
+          failedRequests += 1;
+          log.warn(`Riot match detail fetch failed for matchId=${matchId}`, serializeForLog(error));
+          return { matchId, error };
+        }
+      }));
+
+      results.forEach((result) => {
+        if (result.detail) {
+          matchesById[result.matchId] = result.detail;
+          fetchedMatches += 1;
+        }
+      });
+
+      updateMatchHistoryStatus({
+        phase: 'collecting',
+        fetchedMatches,
+        failedRequests,
+        message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
+      });
+
+      if (index + RIOT_MATCH_DETAIL_CONCURRENCY < missingMatchIds.length) {
+        await new Promise((resolve) => setTimeout(resolve, RIOT_MATCH_DETAIL_BATCH_DELAY_MS));
+      }
+    }
+
+    const updatedAt = new Date().toISOString();
+    await writeJsonFile(cachePath, {
+      version: 1,
+      source: 'riot-api',
+      updatedAt,
+      matchesById
+    });
+
+    updateMatchHistoryStatus({
+      phase: 'normalizing',
+      message: '試合データを正規化しています'
+    });
+
+    const normalizedMatches = normalizeRiotMatches(matchesById, account.puuid, normalizedMatchIds);
+    const championStats = aggregateChampionStats(normalizedMatches);
+    const history = {
+      version: 1,
+      source: 'riot-api',
+      updatedAt,
+      puuid: account.puuid,
+      riotId: {
+        gameName: riotId.gameName,
+        tagLine: riotId.tagLine
+      },
+      matches: normalizedMatches,
+      championStats
+    };
+
+    await writeJsonFile(historyPath, history);
+
+    const phase = failedRequests > 0 ? 'partial' : 'completed';
+    const summary = {
+      updatedAt,
+      requestedMatches,
+      matchIds: normalizedMatchIds.length,
+      updatedMatches: fetchedMatches,
+      normalizedMatches: normalizedMatches.length,
+      failedRequests,
+      championStats: championStats.length
+    };
+
+    updateState({ matchHistorySummary: summary });
+    updateMatchHistoryStatus({
+      phase,
+      fetchedMatches,
+      normalizedMatches: normalizedMatches.length,
+      updatedMatches: fetchedMatches,
+      failedRequests,
+      retryAttempt: 0,
+      nextRetryAt: null,
+      message: phase === 'completed'
+        ? `試合データ収集完了 ${fetchedMatches}試合を更新しました`
+        : `一部の試合データを収集しました ${fetchedMatches}試合を更新 / ${failedRequests}件失敗`,
+      error: null
+    });
+
+    log.info('Riot match history collected', summary);
+    return summary;
+  } catch (error) {
+    log.warn('Riot match history collection failed', serializeForLog(error));
+    updateMatchHistoryStatus({
+      phase: 'error',
+      message: `試合データ収集に失敗しました ${error.message}`,
+      error: error.message
+    });
+    throw error;
+  } finally {
+    matchHistoryInProgress = false;
+  }
 }
 
 async function readLockfile() {
@@ -574,6 +847,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
   ipcMain.handle('settings:update-riot-api-token', updateRiotApiToken);
   ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
+  ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
   ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();

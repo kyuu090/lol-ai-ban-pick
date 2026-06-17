@@ -176,8 +176,47 @@ h2 {
   gap: 14px;
 }
 
+.match-history-toast {
+  align-items: center;
+  align-self: center;
+  background: rgba(17, 24, 33, 0.96);
+  border: 1px solid rgba(212, 175, 55, 0.58);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  max-width: min(720px, 100%);
+  min-height: 44px;
+  padding: 10px 16px;
+  position: sticky;
+  top: 10px;
+  width: fit-content;
+  z-index: 10;
+}
+
+.match-history-toast strong {
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.match-history-toast span {
+  color: var(--text);
+}
+
+.match-history-toast[data-phase="error"],
+.match-history-toast[data-phase="partial"] {
+  border-color: rgba(255, 107, 107, 0.68);
+}
+
+.match-history-toast[data-phase="error"] strong,
+.match-history-toast[data-phase="partial"] strong {
+  color: var(--danger);
+}
+
 .debug-toolbar {
   display: flex;
+  gap: 10px;
   justify-content: flex-end;
 }
 

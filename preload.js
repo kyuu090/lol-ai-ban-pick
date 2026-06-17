@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
   updateLolInstallDir: (lolInstallDir) => ipcRenderer.invoke('settings:update-lol-install-dir', lolInstallDir),
   updateRiotApiToken: (riotApiToken) => ipcRenderer.invoke('settings:update-riot-api-token', riotApiToken),
   updateRiotPlatformRegion: (riotPlatformRegion) => ipcRenderer.invoke('settings:update-riot-platform-region', riotPlatformRegion),
+  collectRiotMatchHistory: () => ipcRenderer.invoke('riot-match-history:collect'),
   onState: (callback) => {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('lcu:state', listener);

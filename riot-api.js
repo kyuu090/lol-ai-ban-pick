@@ -40,7 +40,7 @@ const PLATFORM_TO_REGIONAL_ROUTE = {
 
 const DEFAULT_RIOT_PLATFORM_REGION = 'JP1';
 const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_RETRY_DELAY_MS = 1000;
+const DEFAULT_RETRY_DELAY_MS = 30000;
 
 function normalizeRiotPlatformRegion(value) {
   const region = String(value || '').trim().toUpperCase();
@@ -99,7 +99,8 @@ async function requestRiotJson(options) {
     apiToken,
     maxRetries = DEFAULT_MAX_RETRIES,
     requestFn = requestHttpsJson,
-    wait = delay
+    wait = delay,
+    onRetry = null
   } = options || {};
 
   if (!host) throw new Error('Riot API host is required');
@@ -119,7 +120,11 @@ async function requestRiotJson(options) {
     });
 
     if (response.statusCode === 429 && attempt < maxRetries) {
-      await wait(getRetryDelayMs(response, attempt));
+      const delayMs = getRetryDelayMs(response, attempt);
+      if (typeof onRetry === 'function') {
+        onRetry({ attempt: attempt + 1, delayMs, response });
+      }
+      await wait(delayMs);
       continue;
     }
 
