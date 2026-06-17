@@ -130,11 +130,32 @@ function formatNumber(value, digits = 1) {
   return Number(value || 0).toFixed(digits);
 }
 
-function formatChampionStats(stats) {
-  if (!stats || !stats.games) return '戦績なし';
+function createChampionStatsElement(stats) {
+  const container = document.createElement('div');
+  container.className = 'pool-champion-stats';
 
-  const recentLosses = Math.max(0, Number(stats.recentGames || 0) - Number(stats.recentWins || 0));
-  return `${stats.games}戦 ${formatPercent(stats.winRate)} / 平均KDA ${formatNumber(stats.avgKda)} / 直近${stats.recentGames}戦 ${stats.recentWins}勝${recentLosses}敗`;
+  if (!stats || !stats.games) {
+    const empty = document.createElement('span');
+    empty.className = 'pool-stat-line muted';
+    empty.textContent = 'No games';
+    container.append(empty);
+    return container;
+  }
+
+  const wins = Number(stats.wins || 0);
+  const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
+  [
+    `${stats.games}games`,
+    `Ave KDA ${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`,
+    `${wins}W/${losses}L WR ${formatPercent(stats.winRate)}`
+  ].forEach((text, index) => {
+    const line = document.createElement('span');
+    line.className = `pool-stat-line${index === 0 ? ' games' : ''}`;
+    line.textContent = text;
+    container.append(line);
+  });
+
+  return container;
 }
 
 function loadChampionIcon(img, championId) {
@@ -420,11 +441,7 @@ function renderChampionPool() {
     const name = document.createElement('strong');
     name.textContent = championLabel(championId);
 
-    const stats = document.createElement('span');
-    stats.className = 'pool-champion-stats';
-    stats.textContent = formatChampionStats(getChampionPoolDisplayStats(championId));
-
-    meta.append(name, stats);
+    meta.append(name, createChampionStatsElement(getChampionPoolDisplayStats(championId)));
 
     const removeButton = document.createElement('button');
     removeButton.type = 'button';

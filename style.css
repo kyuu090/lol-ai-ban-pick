@@ -351,8 +351,8 @@ h2 {
   display: grid;
   gap: 12px;
   grid-template-columns: 48px minmax(0, 1fr) auto;
-  min-height: 70px;
-  padding: 10px;
+  min-height: 94px;
+  padding: 12px;
 }
 
 .pool-champion strong {
@@ -364,14 +364,29 @@ h2 {
 .pool-champion-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
   min-width: 0;
 }
 
 .pool-champion-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pool-stat-line {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.pool-stat-line.games {
+  color: #f1ddb0;
+  font-weight: 800;
+}
+
+.pool-stat-line.muted {
+  color: rgba(154, 167, 184, 0.72);
 }
 
 .pool-remove-button {
