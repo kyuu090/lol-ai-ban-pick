@@ -42,6 +42,7 @@ let reconnectTimer = null;
 let retryTimer = null;
 let settings = createDefaultSettings();
 let championPool = createDefaultChampionPool();
+let matchHistoryChampionStats = [];
 let appState = createInitialState();
 let championIconUnavailableUntil = 0;
 let championIconUnavailableLogged = false;
@@ -74,6 +75,7 @@ function createInitialState() {
     championPool,
     matchHistoryStatus: createMatchHistoryStatus(),
     matchHistorySummary: null,
+    matchHistoryChampionStats,
     lastEvent: null,
     error: null,
     updatedAt: null
@@ -157,6 +159,40 @@ async function loadChampionPool() {
 
   updateState({ championPool });
   return championPool;
+}
+
+async function loadMatchHistory() {
+  const historyPath = getMatchHistoryPath();
+  const history = await readJsonFile(historyPath, null);
+
+  if (!history || history.source !== 'riot-api') {
+    matchHistoryChampionStats = [];
+    updateState({
+      matchHistoryChampionStats,
+      matchHistorySummary: null
+    });
+    log.debug('Match history file not found or invalid; using empty stats', { path: historyPath });
+    return null;
+  }
+
+  const matches = Array.isArray(history.matches) ? history.matches : [];
+  matchHistoryChampionStats = Array.isArray(history.championStats) ? history.championStats : [];
+  const summary = {
+    updatedAt: history.updatedAt || null,
+    requestedMatches: matches.length,
+    matchIds: matches.length,
+    updatedMatches: 0,
+    normalizedMatches: matches.length,
+    failedRequests: 0,
+    championStats: matchHistoryChampionStats.length
+  };
+
+  updateState({
+    matchHistoryChampionStats,
+    matchHistorySummary: summary
+  });
+  log.debug('Match history loaded', { path: historyPath, summary });
+  return history;
 }
 
 async function saveChampionPool(_event, nextChampionPool) {
@@ -392,7 +428,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
       message: '試合データを正規化しています'
     });
 
-    const normalizedMatches = normalizeRiotMatches(matchesById, account.puuid, normalizedMatchIds);
+    const normalizedMatches = normalizeRiotMatches(matchesById, account.puuid).slice(0, requestedMatches);
     const championStats = aggregateChampionStats(normalizedMatches);
     const history = {
       version: 1,
@@ -410,6 +446,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
     await writeJsonFile(historyPath, history);
 
     const phase = failedRequests > 0 ? 'partial' : 'completed';
+    matchHistoryChampionStats = championStats;
     const summary = {
       updatedAt,
       requestedMatches,
@@ -420,7 +457,10 @@ async function collectRiotMatchHistory(_event, options = {}) {
       championStats: championStats.length
     };
 
-    updateState({ matchHistorySummary: summary });
+    updateState({
+      matchHistoryChampionStats,
+      matchHistorySummary: summary
+    });
     updateMatchHistoryStatus({
       phase,
       fetchedMatches,
@@ -836,6 +876,7 @@ app.whenReady().then(async () => {
   log.info('App ready');
   await loadSettings();
   await loadChampionPool();
+  await loadMatchHistory();
 
   ipcMain.handle('lcu:get-state', () => appState);
   ipcMain.handle('lcu:refresh', refreshLcuState);

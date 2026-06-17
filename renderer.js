@@ -56,6 +56,7 @@ let activeView = 'coach';
 let activeChampionPoolLane = 'top';
 let championsById = {};
 let championPool = {};
+let matchHistoryChampionStats = [];
 let championPoolDirty = false;
 const championIconCache = new Map();
 const championIconQueue = [];
@@ -111,6 +112,29 @@ function championLabel(championId) {
 function championTitle(championId) {
   const champion = championsById[Number(championId)];
   return champion?.title ? `${champion.name} - ${champion.title}` : championLabel(championId);
+}
+
+function getChampionPoolDisplayStats(championId) {
+  const id = Number(championId);
+  return matchHistoryChampionStats.find((stats) => (
+    Number(stats.championId) === id &&
+    stats.queueGroup === 'all_sr_5v5'
+  )) || null;
+}
+
+function formatPercent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`;
+}
+
+function formatNumber(value, digits = 1) {
+  return Number(value || 0).toFixed(digits);
+}
+
+function formatChampionStats(stats) {
+  if (!stats || !stats.games) return '戦績なし';
+
+  const recentLosses = Math.max(0, Number(stats.recentGames || 0) - Number(stats.recentWins || 0));
+  return `${stats.games}戦 ${formatPercent(stats.winRate)} / 平均KDA ${formatNumber(stats.avgKda)} / 直近${stats.recentGames}戦 ${stats.recentWins}勝${recentLosses}敗`;
 }
 
 function loadChampionIcon(img, championId) {
@@ -200,6 +224,7 @@ function processChampionIconQueue() {
 
 function renderState(state) {
   championsById = state.championsById || {};
+  matchHistoryChampionStats = Array.isArray(state.matchHistoryChampionStats) ? state.matchHistoryChampionStats : [];
   if (!championPoolDirty) {
     championPool = normalizeChampionPool(state.championPool);
   }
@@ -389,8 +414,17 @@ function renderChampionPool() {
     loadChampionIcon(image, championId);
     portrait.append(image);
 
+    const meta = document.createElement('div');
+    meta.className = 'pool-champion-meta';
+
     const name = document.createElement('strong');
     name.textContent = championLabel(championId);
+
+    const stats = document.createElement('span');
+    stats.className = 'pool-champion-stats';
+    stats.textContent = formatChampionStats(getChampionPoolDisplayStats(championId));
+
+    meta.append(name, stats);
 
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
@@ -399,7 +433,7 @@ function renderChampionPool() {
     removeButton.textContent = '削除';
     removeButton.addEventListener('click', () => removeChampionFromPool(championId));
 
-    item.append(portrait, name, removeButton);
+    item.append(portrait, meta, removeButton);
     return item;
   }));
 }

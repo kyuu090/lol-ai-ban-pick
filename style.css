@@ -361,6 +361,19 @@ h2 {
   white-space: nowrap;
 }
 
+.pool-champion-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pool-champion-stats {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .pool-remove-button {
   background: transparent;
   border-color: var(--border);
