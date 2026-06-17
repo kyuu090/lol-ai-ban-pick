@@ -16,6 +16,7 @@
         <div class="header-actions">
           <nav class="view-tabs" aria-label="view switcher">
             <button class="tab-button active" id="coachTabButton" type="button" data-view="coach">Coach</button>
+            <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool">ChampionPool</button>
             <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
@@ -128,6 +129,39 @@
         <section class="panel full-width">
           <h2>JSON表示エリア</h2>
           <pre id="stateJson">{}</pre>
+        </section>
+      </section>
+
+      <section id="championPoolView" class="view-panel" hidden>
+        <section class="champion-pool-panel">
+          <div class="champion-pool-header">
+            <div>
+              <p class="eyebrow">Champion Pool</p>
+              <h2>得意チャンピオン登録</h2>
+              <p>レーンごとに、普段使うチャンピオンを登録します。</p>
+            </div>
+            <button id="saveChampionPoolButton" type="button">保存</button>
+          </div>
+
+          <nav id="laneTabs" class="lane-tabs" aria-label="lane switcher"></nav>
+
+          <section class="pool-editor">
+            <section class="selected-pool">
+              <h3 id="championPoolListTitle">TOP</h3>
+              <div id="championPoolList" class="champion-pool-list"></div>
+              <p id="championPoolEmpty" class="pool-empty">まだ登録されていません。</p>
+            </section>
+
+            <section class="champion-picker">
+              <label class="settings-field" for="championPoolSearchInput">
+                <input id="championPoolSearchInput" type="search" placeholder="チャンピオン名で検索" spellcheck="false" />
+              </label>
+              <div id="championPoolPickerGrid" class="champion-picker-grid"></div>
+              <p id="championPoolPickerEmpty" class="pool-empty">一致するチャンピオンがありません。</p>
+            </section>
+          </section>
+
+          <p id="championPoolMessage" class="settings-message" role="status"></p>
         </section>
       </section>
 

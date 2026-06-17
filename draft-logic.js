@@ -16,6 +16,13 @@
     bottom: 'BOT',
     utility: 'SUP'
   };
+  const CHAMPION_POOL_LANES = [
+    { id: 'top', label: 'TOP' },
+    { id: 'jungle', label: 'JG' },
+    { id: 'middle', label: 'MID' },
+    { id: 'bottom', label: 'BOT' },
+    { id: 'utility', label: 'SUP' }
+  ];
 
   function hasUsableData(value) {
     return value && typeof value === 'object' && !value.error;
@@ -49,6 +56,24 @@
 
   function uniqueChampionIds(championIds) {
     return [...new Set(championIds)];
+  }
+
+  function createDefaultChampionPool() {
+    return CHAMPION_POOL_LANES.reduce((pool, lane) => {
+      pool[lane.id] = [];
+      return pool;
+    }, {});
+  }
+
+  function normalizeChampionPool(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const pool = createDefaultChampionPool();
+
+    CHAMPION_POOL_LANES.forEach((lane) => {
+      pool[lane.id] = uniqueChampionIds(normalizeChampionIds(source[lane.id]));
+    });
+
+    return pool;
   }
 
   function collectBans(champSelect, allyTeam = [], enemyTeam = []) {
@@ -111,6 +136,7 @@
 
   return {
     POSITION_LABELS,
+    CHAMPION_POOL_LANES,
     hasUsableData,
     getPhase,
     getSummonerName,
@@ -118,6 +144,8 @@
     getPendingLabel,
     normalizeChampionIds,
     uniqueChampionIds,
+    createDefaultChampionPool,
+    normalizeChampionPool,
     collectBans,
     getActiveAction,
     getTimerTimeLeftMs,

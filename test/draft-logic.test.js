@@ -6,6 +6,7 @@ const {
   getCoachPanelState,
   getSummonerName,
   getTimerTimeLeftMs,
+  normalizeChampionPool,
   normalizeChampionIds,
   positionLabel
 } = require('../draft-logic');
@@ -83,4 +84,26 @@ test('small normalization helpers handle LCU edge cases', () => {
   assert.equal(getSummonerName({ error: 'not logged in' }), '');
   assert.equal(positionLabel('jungle'), 'JG');
   assert.equal(positionLabel('fill'), 'FILL');
+});
+
+test('normalizeChampionPool keeps one positive champion id list per lane', () => {
+  assert.deepEqual(normalizeChampionPool({
+    top: [122, '122', 0, 'bad', 103],
+    middle: ['99'],
+    unknown: [1]
+  }), {
+    top: [122, 103],
+    jungle: [],
+    middle: [99],
+    bottom: [],
+    utility: []
+  });
+
+  assert.deepEqual(normalizeChampionPool(null), {
+    top: [],
+    jungle: [],
+    middle: [],
+    bottom: [],
+    utility: []
+  });
 });

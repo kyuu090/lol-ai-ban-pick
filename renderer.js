@@ -2,8 +2,18 @@ const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
+  championPoolView: document.querySelector('#championPoolView'),
   debugView: document.querySelector('#debugView'),
   settingsView: document.querySelector('#settingsView'),
+  laneTabs: document.querySelector('#laneTabs'),
+  championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
+  championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
+  championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
+  saveChampionPoolButton: document.querySelector('#saveChampionPoolButton'),
+  championPoolListTitle: document.querySelector('#championPoolListTitle'),
+  championPoolList: document.querySelector('#championPoolList'),
+  championPoolEmpty: document.querySelector('#championPoolEmpty'),
+  championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
   saveLolDirButton: document.querySelector('#saveLolDirButton'),
@@ -33,8 +43,17 @@ const elements = {
 };
 
 let activeView = 'coach';
+let activeChampionPoolLane = 'top';
 let championsById = {};
+let championPool = {};
+let championPoolDirty = false;
 const championIconCache = new Map();
+const championIconQueue = [];
+const ICON_REQUEST_CONCURRENCY = 4;
+let activeChampionIconRequests = 0;
+const championIconObserver = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
+  : null;
 let draftTimerDeadlineMs = null;
 let draftTimerSignature = null;
 const {
@@ -43,9 +62,10 @@ const {
   getCoachPanelState,
   getPhase,
   getSummonerName,
+  normalizeChampionPool,
   getTimerTimeLeftMs
 } = window.DraftLogic;
-const { POSITION_LABELS } = window.DraftLogic;
+const { CHAMPION_POOL_LANES, POSITION_LABELS } = window.DraftLogic;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -83,20 +103,77 @@ function loadChampionIcon(img, championId) {
     return;
   }
 
-  const iconPromise = cached || window.lcuApi.getChampionIcon(id)
-    .then((src) => {
-      if (src) championIconCache.set(id, src);
-      return src;
-    })
-    .catch(() => null);
+  if (cached === null) return;
 
-  championIconCache.set(id, iconPromise);
+  if (cached) {
+    attachChampionIcon(img, id, cached);
+    return;
+  }
 
+  if (championIconObserver) {
+    championIconObserver.observe(img);
+    return;
+  }
+
+  attachChampionIcon(img, id, enqueueChampionIconRequest(id));
+}
+
+function handleChampionIconIntersections(entries) {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+
+    championIconObserver.unobserve(entry.target);
+    const id = Number(entry.target.dataset.championId);
+    if (!id) return;
+
+    attachChampionIcon(entry.target, id, enqueueChampionIconRequest(id));
+  });
+}
+
+function attachChampionIcon(img, id, iconPromise) {
   iconPromise.then((src) => {
     if (src && img.dataset.championId === String(id)) {
       img.src = src;
     }
   });
+}
+
+function enqueueChampionIconRequest(id) {
+  const cached = championIconCache.get(id);
+  if (cached) return cached;
+  if (cached === null) return Promise.resolve(null);
+
+  let resolveRequest;
+  const iconPromise = new Promise((resolve) => {
+    resolveRequest = resolve;
+  });
+
+  championIconCache.set(id, iconPromise);
+  championIconQueue.push({ id, resolve: resolveRequest });
+  processChampionIconQueue();
+
+  return iconPromise;
+}
+
+function processChampionIconQueue() {
+  while (activeChampionIconRequests < ICON_REQUEST_CONCURRENCY && championIconQueue.length > 0) {
+    const { id, resolve } = championIconQueue.shift();
+    activeChampionIconRequests += 1;
+
+    window.lcuApi.getChampionIcon(id)
+      .then((src) => {
+        championIconCache.set(id, src || null);
+        resolve(src || null);
+      })
+      .catch(() => {
+        championIconCache.set(id, null);
+        resolve(null);
+      })
+      .finally(() => {
+        activeChampionIconRequests -= 1;
+        processChampionIconQueue();
+      });
+  }
 }
 
 function positionLabel(position) {
@@ -105,8 +182,12 @@ function positionLabel(position) {
 
 function renderState(state) {
   championsById = state.championsById || {};
+  if (!championPoolDirty) {
+    championPool = normalizeChampionPool(state.championPool);
+  }
   renderStatus(state);
   renderSettings(state.settings);
+  renderChampionPool();
   renderCoach(state);
   renderDebug(state);
 }
@@ -114,6 +195,128 @@ function renderState(state) {
 function renderSettings(settings) {
   if (!settings?.lolInstallDir || document.activeElement === elements.lolInstallDirInput) return;
   elements.lolInstallDirInput.value = settings.lolInstallDir;
+}
+
+function getActiveChampionPoolLane() {
+  return CHAMPION_POOL_LANES.find((lane) => lane.id === activeChampionPoolLane) || CHAMPION_POOL_LANES[0];
+}
+
+function getChampionOptions() {
+  return Object.values(championsById)
+    .filter((champion) => Number(champion.id) > 0 && champion.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+}
+
+function normalizeSearchText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function renderLaneTabs() {
+  if (elements.laneTabs.childElementCount > 0) {
+    elements.laneTabs.querySelectorAll('button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lane === activeChampionPoolLane);
+    });
+    return;
+  }
+
+  const buttons = CHAMPION_POOL_LANES.map((lane) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.lane = lane.id;
+    button.textContent = lane.label;
+    button.className = `lane-tab${lane.id === activeChampionPoolLane ? ' active' : ''}`;
+    button.addEventListener('click', () => {
+      activeChampionPoolLane = lane.id;
+      elements.championPoolMessage.textContent = '';
+      renderChampionPool();
+    });
+    return button;
+  });
+
+  elements.laneTabs.replaceChildren(...buttons);
+}
+
+function renderChampionPicker(championIds) {
+  const options = getChampionOptions();
+  const searchText = normalizeSearchText(elements.championPoolSearchInput.value);
+  const selectedChampionIds = new Set(championIds);
+  const filteredOptions = options.filter((champion) => {
+    if (!searchText) return true;
+    return [
+      champion.name,
+      champion.alias,
+      champion.title
+    ].some((value) => normalizeSearchText(value).includes(searchText));
+  });
+
+  elements.championPoolPickerGrid.replaceChildren(...filteredOptions.map((champion) => {
+    const championId = Number(champion.id);
+    const selected = selectedChampionIds.has(championId);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `champion-picker-card${selected ? ' selected' : ''}`;
+    button.title = selected ? `${champion.name} は登録済みです` : championTitle(championId);
+    button.dataset.championId = String(championId);
+
+    const portrait = document.createElement('div');
+    portrait.className = 'champion-portrait';
+
+    const image = document.createElement('img');
+    image.alt = champion.name;
+    loadChampionIcon(image, championId);
+    portrait.append(image);
+
+    const name = document.createElement('span');
+    name.textContent = champion.name;
+
+    button.append(portrait, name);
+    button.addEventListener('click', () => addChampionToPool(championId));
+    return button;
+  }));
+
+  elements.championPoolPickerEmpty.hidden = filteredOptions.length > 0;
+  elements.championPoolPickerEmpty.textContent = options.length > 0
+    ? '一致するチャンピオンがありません。'
+    : 'LCU接続後にチャンピオン一覧を取得します。';
+}
+
+function renderChampionPool() {
+  championPool = normalizeChampionPool(championPool);
+
+  const lane = getActiveChampionPoolLane();
+  const championIds = championPool[lane.id] || [];
+
+  renderLaneTabs();
+  renderChampionPicker(championIds);
+
+  elements.championPoolListTitle.textContent = lane.label;
+  elements.championPoolEmpty.hidden = championIds.length > 0;
+  elements.championPoolList.replaceChildren(...championIds.map((championId) => {
+    const item = document.createElement('article');
+    item.className = 'pool-champion';
+    item.title = championTitle(championId);
+
+    const portrait = document.createElement('div');
+    portrait.className = 'champion-portrait';
+
+    const image = document.createElement('img');
+    image.alt = championLabel(championId);
+    loadChampionIcon(image, championId);
+    portrait.append(image);
+
+    const name = document.createElement('strong');
+    name.textContent = championLabel(championId);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'pool-remove-button';
+    removeButton.dataset.championId = String(championId);
+    removeButton.textContent = '削除';
+    removeButton.addEventListener('click', () => removeChampionFromPool(championId));
+
+    item.append(portrait, name, removeButton);
+    return item;
+  }));
 }
 
 function renderStatus(state) {
@@ -309,12 +512,52 @@ function renderDebug(state) {
 function setActiveView(viewName) {
   activeView = viewName;
   elements.coachView.hidden = activeView !== 'coach';
+  elements.championPoolView.hidden = activeView !== 'championPool';
   elements.debugView.hidden = activeView !== 'debug';
   elements.settingsView.hidden = activeView !== 'settings';
 
   elements.tabButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.view === activeView);
   });
+}
+
+function addChampionToPool(nextChampionId) {
+  const championId = Number(nextChampionId);
+  if (!championId) return;
+
+  championPool = normalizeChampionPool(championPool);
+  const lane = getActiveChampionPoolLane();
+  if ((championPool[lane.id] || []).includes(championId)) return;
+
+  championPool[lane.id] = [...new Set([...(championPool[lane.id] || []), championId])];
+  championPoolDirty = true;
+  elements.championPoolMessage.textContent = '';
+  renderChampionPool();
+}
+
+function removeChampionFromPool(championId) {
+  championPool = normalizeChampionPool(championPool);
+  const lane = getActiveChampionPoolLane();
+  championPool[lane.id] = (championPool[lane.id] || []).filter((id) => id !== Number(championId));
+  championPoolDirty = true;
+  elements.championPoolMessage.textContent = '';
+  renderChampionPool();
+}
+
+async function saveChampionPool() {
+  elements.saveChampionPoolButton.disabled = true;
+  elements.championPoolMessage.textContent = '';
+
+  try {
+    championPool = await window.lcuApi.saveChampionPool(championPool);
+    championPoolDirty = false;
+    renderChampionPool();
+    elements.championPoolMessage.textContent = 'チャンピオンプールを保存しました。';
+  } catch (error) {
+    elements.championPoolMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveChampionPoolButton.disabled = false;
+  }
 }
 
 async function chooseLolInstallDir() {
@@ -368,8 +611,15 @@ elements.tabButtons.forEach((button) => {
 });
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
+elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
+elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 
 setActiveView(activeView);
 setInterval(updateDraftTimerDisplay, 250);
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
+window.lcuApi.getChampionPool().then((savedChampionPool) => {
+  championPool = normalizeChampionPool(savedChampionPool);
+  championPoolDirty = false;
+  renderChampionPool();
+});

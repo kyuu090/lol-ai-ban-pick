@@ -5,6 +5,7 @@ const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
 const { createAuthHeader, createChampionsById } = require('./lcu-logic');
+const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
@@ -23,7 +24,10 @@ let webSocket = null;
 let reconnectTimer = null;
 let retryTimer = null;
 let settings = createDefaultSettings();
+let championPool = createDefaultChampionPool();
 let appState = createInitialState();
+let championIconUnavailableUntil = 0;
+let championIconUnavailableLogged = false;
 
 function createDefaultSettings() {
   return {
@@ -41,6 +45,7 @@ function createInitialState() {
     lobby: null,
     champSelect: null,
     championsById: {},
+    championPool,
     lastEvent: null,
     error: null,
     updatedAt: null
@@ -49,6 +54,10 @@ function createInitialState() {
 
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function getChampionPoolPath() {
+  return path.join(app.getPath('userData'), 'champion-pool.json');
 }
 
 async function loadSettings() {
@@ -64,6 +73,27 @@ async function loadSettings() {
 
   updateState({ settings });
   return settings;
+}
+
+async function loadChampionPool() {
+  try {
+    const raw = await fs.readFile(getChampionPoolPath(), 'utf8');
+    championPool = normalizeChampionPool(JSON.parse(raw));
+  } catch {
+    championPool = createDefaultChampionPool();
+  }
+
+  updateState({ championPool });
+  return championPool;
+}
+
+async function saveChampionPool(_event, nextChampionPool) {
+  championPool = normalizeChampionPool(nextChampionPool);
+
+  await fs.mkdir(path.dirname(getChampionPoolPath()), { recursive: true });
+  await fs.writeFile(getChampionPoolPath(), JSON.stringify(championPool, null, 2), 'utf8');
+  updateState({ championPool });
+  return championPool;
 }
 
 async function saveSettings(nextSettings) {
@@ -243,16 +273,44 @@ function requestLcu(url, headers) {
 async function getChampionIcon(_event, championId) {
   const id = Number(championId);
   if (!Number.isInteger(id) || id <= 0) return null;
+  if (!lcuConnection || appState.lcuStatus !== 'connected') return null;
+  if (Date.now() < championIconUnavailableUntil) return null;
 
-  const buffer = await lcuFetchBuffer(`/lol-game-data/assets/v1/champion-icons/${id}.png`);
-  return `data:image/png;base64,${buffer.toString('base64')}`;
+  try {
+    const buffer = await lcuFetchBuffer(`/lol-game-data/assets/v1/champion-icons/${id}.png`);
+    return `data:image/png;base64,${buffer.toString('base64')}`;
+  } catch (error) {
+    if (isTransientIconFetchError(error)) {
+      championIconUnavailableUntil = Date.now() + 10000;
+
+      if (!championIconUnavailableLogged) {
+        championIconUnavailableLogged = true;
+        console.warn(`Champion icon fetch is temporarily unavailable; suppressing repeated icon errors. First failed championId=${id}`, error);
+      }
+    } else {
+      console.warn(`Failed to fetch champion icon for championId=${id}`, error);
+    }
+
+    return null;
+  }
+}
+
+function isTransientIconFetchError(error) {
+  return [
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EPIPE'
+  ].includes(error?.code) || String(error?.message || '').includes('LCU request timed out');
 }
 
 async function refreshLcuState() {
   try {
     lcuConnection = await readLockfile();
     clearRetryTimer();
-    updateState({ lcuStatus: 'connected', error: null });
+    championIconUnavailableUntil = 0;
+    championIconUnavailableLogged = false;
+    updateState({ lcuStatus: 'connecting', error: null });
 
     const [lobby, champSelect, summoner, gameflowPhase, championSummary] = await Promise.all([
       lcuFetch(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
@@ -261,6 +319,10 @@ async function refreshLcuState() {
       lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.championSummary).catch(() => [])
     ]);
+
+    if (summoner?.error && gameflowPhase?.error) {
+      throw new Error(`LCU API request failed: ${summoner.error}`);
+    }
 
     updateState({
       lobby,
@@ -276,6 +338,7 @@ async function refreshLcuState() {
     return appState;
   } catch (error) {
     closeWebSocket();
+    lcuConnection = null;
     updateState({
       lcuStatus: 'disconnected',
       websocketStatus: 'disconnected',
@@ -376,7 +439,11 @@ function connectWebSocket() {
   });
 
   webSocket.on('close', () => {
-    updateState({ websocketStatus: 'disconnected' });
+    lcuConnection = null;
+    updateState({
+      lcuStatus: 'disconnected',
+      websocketStatus: 'disconnected'
+    });
     scheduleReconnect();
   });
 
@@ -406,16 +473,19 @@ async function applyWebSocketEvent(event) {
 }
 
 app.whenReady().then(async () => {
-  createWindow();
   await loadSettings();
+  await loadChampionPool();
 
   ipcMain.handle('lcu:get-state', () => appState);
   ipcMain.handle('lcu:refresh', refreshLcuState);
   ipcMain.handle('lcu:get-champion-icon', getChampionIcon);
+  ipcMain.handle('champion-pool:get', () => championPool);
+  ipcMain.handle('champion-pool:save', saveChampionPool);
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
 
+  createWindow();
   await refreshLcuState();
 
   app.on('activate', () => {
