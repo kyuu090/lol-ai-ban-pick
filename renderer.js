@@ -91,6 +91,7 @@ const CHAMPION_POOL_LANE_TO_POSITION = {
   utility: 'UTILITY'
 };
 const RELIABLE_SAMPLE_GAMES = 5;
+const PICK_POOL_CANDIDATE_LIMIT = 6;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -405,6 +406,11 @@ function getChampionPoolLanePosition(laneId) {
   return CHAMPION_POOL_LANE_TO_POSITION[laneId] || null;
 }
 
+function getChampionPoolLaneByPosition(position) {
+  const normalizedPosition = String(position || '').toUpperCase();
+  return CHAMPION_POOL_LANES.find((lane) => CHAMPION_POOL_LANE_TO_POSITION[lane.id] === normalizedPosition) || null;
+}
+
 function getChampionOptions() {
   return Object.values(championsById)
     .filter((champion) => Number(champion.id) > 0 && champion.name)
@@ -662,18 +668,20 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   const localCellId = champSelect?.localPlayerCellId;
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
   const timer = champSelect?.timer;
+  const isDraftActionPhase = String(timer?.phase || '').toUpperCase() === 'BAN_PICK';
 
   syncDraftTimer(timer);
-  renderBanInsights(false, localMember);
+  renderDraftInsights(null);
 
   if (activeAction) {
-    const isLocalTurn = activeAction.actorCellId === localCellId;
+    const isActionInProgress = Boolean(activeAction.isInProgress);
+    const isLocalTurn = isDraftActionPhase && isActionInProgress && activeAction.actorCellId === localCellId;
     const actionLabel = activeAction.type === 'ban' ? 'BAN' : 'PICK';
-    elements.currentAction.textContent = isLocalTurn ? `YOUR ${actionLabel}` : `${actionLabel} PHASE`;
-    renderBanInsights(isLocalTurn && activeAction.type === 'ban', localMember);
+    elements.currentAction.textContent = isLocalTurn ? `YOUR ${actionLabel}` : isDraftActionPhase && isActionInProgress ? `${actionLabel} PHASE` : 'Waiting';
+    renderDraftInsights(isLocalTurn ? activeAction.type : null, { champSelect, localMember });
     elements.currentPick.textContent = isLocalTurn
       ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
-      : `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです`;
+      : isDraftActionPhase && isActionInProgress ? `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです` : 'チャンピオン選択情報を監視しています。';
     return;
   }
 
@@ -681,16 +689,35 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
 }
 
-function renderBanInsights(visible, localMember) {
+function renderDraftInsights(type, context = {}) {
+  if (type === 'ban') {
+    renderBanInsights(true, context.localMember);
+  } else if (type === 'pick') {
+    renderPickPoolInsights(true, context.champSelect, context.localMember);
+  } else {
+    renderInsightPanel(false);
+  }
+}
+
+function renderInsightPanel(visible, mode = '') {
   const focus = elements.banInsightPanel?.closest('.champion-focus');
-  if (!elements.banInsightPanel || !focus) return;
+  if (!elements.banInsightPanel || !focus) return null;
 
   elements.banInsightPanel.hidden = !visible;
+  elements.banInsightPanel.className = `ban-insight-panel${mode ? ` ${mode}` : ''}`;
   focus.classList.toggle('has-ban-insights', visible);
+  focus.classList.toggle('insight-only', visible);
   if (!visible) {
     elements.banInsightPanel.replaceChildren();
-    return;
+    return null;
   }
+
+  return elements.banInsightPanel;
+}
+
+function renderBanInsights(visible, localMember) {
+  const panel = renderInsightPanel(visible, 'ban-mode');
+  if (!panel) return;
 
   const position = String(localMember?.assignedPosition || '').toUpperCase();
   const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats).slice(0, 3);
@@ -705,12 +732,165 @@ function renderBanInsights(visible, localMember) {
     Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
   ))).slice(0, 3);
 
-  elements.banInsightPanel.replaceChildren(
+  panel.replaceChildren(
     createBanInsightSection('Worst enemy picks', enemyStats),
     createBanInsightSection(`Reliable enemy picks (${RELIABLE_SAMPLE_GAMES}+g)`, reliableEnemyStats),
     createBanInsightSection(`${positionLabel(position)} lane opponents`, laneStats),
     createBanInsightSection(`Reliable ${positionLabel(position)} opponents (${RELIABLE_SAMPLE_GAMES}+g)`, reliableLaneStats)
   );
+}
+
+function renderPickPoolInsights(visible, champSelect, localMember) {
+  const panel = renderInsightPanel(visible, 'pick-mode');
+  if (!panel) return;
+
+  championPool = normalizeChampionPool(championPool);
+  const lane = getChampionPoolLaneByPosition(localMember?.assignedPosition);
+  const position = String(localMember?.assignedPosition || '').toUpperCase();
+  const championIds = lane ? championPool[lane.id] || [] : [];
+  const unavailableReasons = collectUnavailableChampionReasons(champSelect);
+  const candidates = championIds.map((championId) => {
+    const stats = getChampionRoleDisplayStats(championId, position);
+    const unavailableReason = unavailableReasons.get(Number(championId)) || '';
+
+    return {
+      championId,
+      stats,
+      unavailableReason,
+      available: !unavailableReason
+    };
+  });
+  const sortedCandidates = sortPickPoolCandidates(candidates);
+  const visibleCandidates = sortedCandidates.slice(0, PICK_POOL_CANDIDATE_LIMIT);
+
+  const header = document.createElement('section');
+  header.className = 'pick-pool-header';
+
+  const title = document.createElement('h4');
+  title.textContent = lane ? `Your ${lane.label} Pool` : 'Your Pool';
+
+  const summary = document.createElement('p');
+  summary.textContent = championIds.length > 0
+    ? `${visibleCandidates.length}/${championIds.length} candidates`
+    : 'No champions registered for this role';
+
+  header.append(title, summary);
+
+  if (!visibleCandidates.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ban-insight-empty';
+    empty.textContent = lane ? 'ChampionPool is empty' : 'Assigned role is unknown';
+    panel.replaceChildren(header, empty);
+    return;
+  }
+
+  const list = document.createElement('ol');
+  list.className = 'pick-pool-list';
+  visibleCandidates.forEach((candidate) => {
+    list.append(createPickPoolCandidateItem(candidate, position));
+  });
+
+  panel.replaceChildren(header, list);
+}
+
+function collectUnavailableChampionReasons(champSelect) {
+  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+  const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
+  const reasons = new Map();
+
+  [...allyBans, ...enemyBans].forEach((championId) => {
+    reasons.set(Number(championId), 'Banned');
+  });
+
+  [...allyTeam, ...enemyTeam].forEach((member) => {
+    const championId = Number(member?.championId) || 0;
+    if (championId > 0 && !reasons.has(championId)) {
+      reasons.set(championId, 'Picked');
+    }
+  });
+
+  return reasons;
+}
+
+function sortPickPoolCandidates(candidates) {
+  return [...candidates].sort((a, b) => {
+    if (a.available !== b.available) return a.available ? -1 : 1;
+
+    const aGames = Number(a.stats?.games || 0);
+    const bGames = Number(b.stats?.games || 0);
+    if (Boolean(aGames) !== Boolean(bGames)) return aGames > 0 ? -1 : 1;
+
+    const aReliable = aGames >= RELIABLE_SAMPLE_GAMES;
+    const bReliable = bGames >= RELIABLE_SAMPLE_GAMES;
+    if (aReliable !== bReliable) return aReliable ? -1 : 1;
+
+    return (
+      (Number(b.stats?.winRate || 0) - Number(a.stats?.winRate || 0)) ||
+      (bGames - aGames) ||
+      championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+    );
+  });
+}
+
+function createPickPoolCandidateItem(candidate, position) {
+  const item = document.createElement('li');
+  item.className = `pick-pool-candidate${candidate.available ? '' : ' unavailable'}`;
+
+  const name = document.createElement('strong');
+  name.textContent = championLabel(candidate.championId);
+
+  const detail = createPickPoolCandidateStatsElement(candidate.stats, position);
+
+  item.append(name, detail);
+
+  if (candidate.unavailableReason) {
+    const status = document.createElement('em');
+    status.textContent = candidate.unavailableReason;
+    item.append(status);
+  } else if (Number(candidate.stats?.games || 0) > 0 && Number(candidate.stats?.games || 0) < RELIABLE_SAMPLE_GAMES) {
+    const sample = document.createElement('em');
+    sample.textContent = 'Low sample';
+    item.append(sample);
+  }
+
+  return item;
+}
+
+function createPickPoolCandidateStatsElement(stats, position) {
+  const container = document.createElement('span');
+  container.className = 'pick-pool-stats';
+
+  if (!stats || !stats.games) {
+    container.append(createPickPoolStatChip('Games', `No ${positionLabel(position)}`));
+    return container;
+  }
+
+  const wins = Number(stats.wins || 0);
+  const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
+  [
+    ['W-L', `${wins}-${losses}`],
+    ['WR', formatPercent(stats.winRate)],
+    ['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]
+  ].forEach(([label, value]) => {
+    container.append(createPickPoolStatChip(label, value));
+  });
+
+  return container;
+}
+
+function createPickPoolStatChip(label, value) {
+  const chip = document.createElement('span');
+  chip.className = 'pick-pool-stat-chip';
+
+  const labelElement = document.createElement('small');
+  labelElement.textContent = label;
+
+  const valueElement = document.createElement('b');
+  valueElement.textContent = value;
+
+  chip.append(labelElement, valueElement);
+  return chip;
 }
 
 function createBanInsightSection(title, statsList) {
@@ -742,21 +922,39 @@ function createBanInsightItem(stats) {
 
   const name = document.createElement('strong');
   name.textContent = championLabel(stats.championId);
+  const nameBlock = document.createElement('span');
+  nameBlock.className = 'ban-insight-name';
+  nameBlock.append(name);
+
+  const detail = createWinRateStatsElement(stats);
+
+  item.append(nameBlock, detail);
+  const games = Number(stats.games || 0);
+  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
+    const sample = document.createElement('em');
+    sample.textContent = 'Low sample';
+    nameBlock.append(sample);
+  }
+
+  return item;
+}
+
+function createWinRateStatsElement(stats) {
+  const container = document.createElement('span');
+  container.className = 'compact-stat-chips';
 
   const games = Number(stats.games || 0);
   const wins = Number(stats.wins || 0);
   const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, games - wins);
-  const detail = document.createElement('span');
-  detail.textContent = `${games}g ${wins}W/${losses}L WR ${formatPercent(stats.winRate)}`;
+  [
+    ['Games', `${games}`],
+    ['W-L', `${wins}-${losses}`],
+    ['WR', formatPercent(stats.winRate)]
+  ].forEach(([label, value]) => {
+    container.append(createPickPoolStatChip(label, value));
+  });
 
-  item.append(name, detail);
-  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
-    const sample = document.createElement('em');
-    sample.textContent = 'Low sample';
-    item.append(sample);
-  }
-
-  return item;
+  return container;
 }
 
 function syncDraftTimer(timer) {

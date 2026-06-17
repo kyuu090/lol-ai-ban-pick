@@ -840,8 +840,18 @@ h2 {
   border-radius: 8px;
   gap: 12px;
   max-width: 560px;
-  padding: 20px;
+  padding: 16px 18px;
   width: min(96%, 560px);
+}
+
+.champion-focus.insight-only > .eyebrow,
+.champion-focus.insight-only > p {
+  display: none;
+}
+
+.champion-focus.insight-only > h3 {
+  font-size: 22px;
+  line-height: 1.1;
 }
 
 .draft-board.local-turn .champion-focus p:last-child {
@@ -861,13 +871,23 @@ h2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 2px;
+  margin-top: 0;
   text-align: left;
+}
+
+.ban-insight-panel.pick-mode {
+  grid-template-columns: 1fr;
 }
 
 .ban-insight-section {
   border-top: 1px solid rgba(212, 175, 55, 0.22);
   padding-top: 9px;
+}
+
+.ban-insight-section:first-child,
+.pick-pool-header:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .ban-insight-section h4 {
@@ -879,19 +899,26 @@ h2 {
 
 .ban-insight-section ol {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   list-style-position: inside;
   margin: 0;
   padding: 0;
 }
 
 .ban-insight-section li {
-  align-items: center;
+  align-items: start;
   color: var(--muted);
   display: grid;
   gap: 6px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(76px, 0.8fr) minmax(0, 1.2fr);
   line-height: 1.2;
+}
+
+.ban-insight-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .ban-insight-section strong {
@@ -905,20 +932,152 @@ h2 {
 .ban-insight-section span {
   color: #d9e4f2;
   font-size: 12px;
-  white-space: nowrap;
 }
 
 .ban-insight-section em {
   color: var(--accent);
-  font-size: 11px;
+  font-size: 10px;
   font-style: normal;
-  grid-column: 2;
-  justify-self: end;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.compact-stat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
 }
 
 .ban-insight-empty {
   color: rgba(154, 167, 184, 0.72);
   font-size: 12px;
+}
+
+.pick-pool-header {
+  border-top: 1px solid rgba(212, 175, 55, 0.22);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding-top: 9px;
+}
+
+.pick-pool-header h4 {
+  color: #f1ddb0;
+  font-size: 13px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.pick-pool-header p {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pick-pool-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pick-pool-candidate {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(36, 182, 217, 0.12), rgba(26, 35, 48, 0.72));
+  border: 1px solid rgba(36, 182, 217, 0.24);
+  border-radius: 6px;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(72px, 0.65fr) minmax(0, 2fr) auto;
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.pick-pool-candidate strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick-pool-candidate span {
+  color: rgba(217, 228, 242, 0.88);
+  font-size: 12px;
+}
+
+.pick-pool-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pick-pool-stat-chip {
+  align-items: center;
+  background: rgba(8, 12, 18, 0.24);
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 5px;
+  display: inline-flex;
+  gap: 4px;
+  min-height: 20px;
+  padding: 2px 5px;
+}
+
+.pick-pool-stat-chip small {
+  color: rgba(154, 167, 184, 0.82);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.pick-pool-stat-chip b {
+  color: #d9e4f2;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.compact-stat-chips .pick-pool-stat-chip {
+  min-height: 20px;
+  padding: 2px 5px;
+}
+
+.compact-stat-chips .pick-pool-stat-chip small {
+  font-size: 9px;
+}
+
+.compact-stat-chips .pick-pool-stat-chip b {
+  font-size: 10px;
+}
+
+.pick-pool-candidate em {
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.pick-pool-candidate.unavailable {
+  background: rgba(26, 35, 48, 0.46);
+  border-color: rgba(154, 167, 184, 0.18);
+  opacity: 0.66;
+}
+
+.pick-pool-candidate.unavailable em {
+  background: rgba(154, 167, 184, 0.12);
+  border-color: rgba(154, 167, 184, 0.26);
+  color: var(--muted);
 }
 
 .panel {
