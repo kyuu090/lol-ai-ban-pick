@@ -542,14 +542,6 @@ h2 {
   font-size: 24px;
 }
 
-.draft-title strong {
-  color: var(--accent);
-  display: block;
-  font-size: 34px;
-  line-height: 1;
-  margin-top: 4px;
-}
-
 .ban-strip {
   display: flex;
   flex-direction: column;

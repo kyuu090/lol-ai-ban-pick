@@ -112,18 +112,6 @@
     return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
   }
 
-  function getTimerTimeLeftMs(timer) {
-    if (typeof timer?.adjustedTimeLeftInPhase === 'number') {
-      return timer.adjustedTimeLeftInPhase;
-    }
-
-    if (typeof timer?.timeLeftInPhase === 'number') {
-      return timer.timeLeftInPhase;
-    }
-
-    return null;
-  }
-
   function getCoachPanelState(state) {
     const phase = getPhase(state);
     const champSelect = hasUsableData(state?.champSelect) ? state.champSelect : null;
@@ -155,7 +143,6 @@
     normalizeChampionPool,
     collectBans,
     getActiveAction,
-    getTimerTimeLeftMs,
     getCoachPanelState
   };
 });

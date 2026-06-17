@@ -6,7 +6,6 @@ const {
   getCoachPanelState,
   getPendingLabel,
   getSummonerName,
-  getTimerTimeLeftMs,
   normalizeChampionId,
   normalizeChampionPool,
   normalizeChampionIds,
@@ -84,9 +83,6 @@ test('small normalization helpers handle LCU edge cases', () => {
   assert.equal(normalizeChampionId(12.5), null);
   assert.equal(normalizeChampionId(Infinity), null);
   assert.deepEqual(normalizeChampionIds(['1', 2, 0, -5, 'x', Infinity, 12.5]), [1, 2]);
-  assert.equal(getTimerTimeLeftMs({ adjustedTimeLeftInPhase: 1500, timeLeftInPhase: 9000 }), 1500);
-  assert.equal(getTimerTimeLeftMs({ timeLeftInPhase: 9000 }), 9000);
-  assert.equal(getTimerTimeLeftMs({}), null);
   assert.equal(getSummonerName({ gameName: 'RiftName', displayName: 'OldName' }), 'RiftName');
   assert.equal(getSummonerName({ error: 'not logged in' }), '');
   assert.equal(positionLabel('jungle'), 'JG');

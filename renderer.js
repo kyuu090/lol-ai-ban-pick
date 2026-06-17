@@ -36,7 +36,6 @@ const elements = {
   enemyBans: document.querySelector('#enemyBans'),
   allyTeam: document.querySelector('#allyTeam'),
   enemyTeam: document.querySelector('#enemyTeam'),
-  draftTimer: document.querySelector('#draftTimer'),
   currentAction: document.querySelector('#currentAction'),
   currentPick: document.querySelector('#currentPick'),
   banInsightPanel: document.querySelector('#banInsightPanel'),
@@ -69,8 +68,6 @@ let activeChampionIconRequests = 0;
 const championIconObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
   : null;
-let draftTimerDeadlineMs = null;
-let draftTimerSignature = null;
 let matchHistoryButtonTimer = null;
 let dismissedMatchHistoryButtonKey = null;
 const {
@@ -81,8 +78,7 @@ const {
   getPendingLabel,
   getSummonerName,
   normalizeChampionPool,
-  positionLabel,
-  getTimerTimeLeftMs
+  positionLabel
 } = window.DraftLogic;
 const { CHAMPION_POOL_LANES } = window.DraftLogic;
 const CHAMPION_POOL_LANE_TO_POSITION = {
@@ -557,7 +553,6 @@ function renderCoach(state) {
   showOnlyCoachPanel(loggedIn, inChampSelect, inGame);
 
   if (!inChampSelect) {
-    clearDraftTimer();
     elements.champSelectView.classList.remove('local-turn');
     markedLaneOpponentCellId = null;
   }
@@ -715,10 +710,7 @@ function toggleMarkedLaneOpponent(cellId) {
 function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelect)) {
   const localCellId = champSelect?.localPlayerCellId;
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
-  const timer = champSelect?.timer;
-  const isDraftActionPhase = String(timer?.phase || '').toUpperCase() === 'BAN_PICK';
-
-  syncDraftTimer(timer);
+  const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
   renderDraftInsights(null);
 
   if (activeAction) {
@@ -1005,42 +997,6 @@ function createWinRateStatsElement(stats) {
   return container;
 }
 
-function syncDraftTimer(timer) {
-  const timeLeftMs = getTimerTimeLeftMs(timer);
-
-  if (timeLeftMs === null) {
-    clearDraftTimer();
-    return;
-  }
-
-  const signature = [
-    timer.phase,
-    timer.adjustedTimeLeftInPhase,
-    timer.timeLeftInPhase,
-    timer.totalTimeInPhase
-  ].join(':');
-
-  if (signature !== draftTimerSignature) {
-    draftTimerSignature = signature;
-    draftTimerDeadlineMs = Date.now() + Math.max(0, timeLeftMs);
-  }
-
-  updateDraftTimerDisplay();
-}
-
-function clearDraftTimer() {
-  draftTimerDeadlineMs = null;
-  draftTimerSignature = null;
-  elements.draftTimer.textContent = '-';
-}
-
-function updateDraftTimerDisplay() {
-  if (draftTimerDeadlineMs === null || elements.champSelectView.hidden) return;
-
-  const timeLeftMs = Math.max(0, draftTimerDeadlineMs - Date.now());
-  elements.draftTimer.textContent = Math.ceil(timeLeftMs / 1000);
-}
-
 function renderDebug(state) {
   elements.summonerJson.textContent = stringify(state.summoner);
   elements.lobbyJson.textContent = stringify(state.lobby);
@@ -1227,7 +1183,6 @@ elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 
 setActiveView(activeView);
-setInterval(updateDraftTimerDisplay, 250);
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
 window.lcuApi.getChampionPool().then((savedChampionPool) => {
