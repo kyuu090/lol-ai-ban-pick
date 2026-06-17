@@ -17,7 +17,7 @@ function createChampionsById(championSummary) {
 
   return champions.reduce((acc, champion) => {
     const championId = Number(champion.id);
-    if (!championId || championId < 0) return acc;
+    if (!Number.isInteger(championId) || championId <= 0) return acc;
 
     acc[championId] = {
       id: championId,

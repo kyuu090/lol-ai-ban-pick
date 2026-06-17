@@ -35,6 +35,8 @@ test('createChampionsById normalizes valid champion summary entries', () => {
     },
     { id: 0, name: 'None' },
     { id: -1, name: 'Invalid' },
+    { id: 12.5, name: 'Invalid' },
+    { id: Infinity, name: 'Invalid' },
     { id: 'not-a-number', name: 'Invalid' }
   ]), {
     122: {

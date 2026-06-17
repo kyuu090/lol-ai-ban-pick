@@ -50,7 +50,7 @@
 
   function normalizeChampionIds(value) {
     return Array.isArray(value)
-      ? value.map(Number).filter((championId) => championId > 0)
+      ? value.map(Number).filter((championId) => Number.isInteger(championId) && championId > 0)
       : [];
   }
 

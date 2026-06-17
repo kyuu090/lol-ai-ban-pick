@@ -76,7 +76,7 @@ test('getCoachPanelState distinguishes logged out, champ select, and in-game sta
 });
 
 test('small normalization helpers handle LCU edge cases', () => {
-  assert.deepEqual(normalizeChampionIds(['1', 2, 0, -5, 'x']), [1, 2]);
+  assert.deepEqual(normalizeChampionIds(['1', 2, 0, -5, 'x', Infinity, 12.5]), [1, 2]);
   assert.equal(getTimerTimeLeftMs({ adjustedTimeLeftInPhase: 1500, timeLeftInPhase: 9000 }), 1500);
   assert.equal(getTimerTimeLeftMs({ timeLeftInPhase: 9000 }), 9000);
   assert.equal(getTimerTimeLeftMs({}), null);
