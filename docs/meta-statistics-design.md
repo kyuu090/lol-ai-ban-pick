@@ -367,6 +367,7 @@ champion_id
 champion_name
 queue_type
 queue_group
+role
 games
 wins
 losses
@@ -403,7 +404,69 @@ participant count === 10
 
 Ranked と Normal は混ぜず、`queue_type` 別に集計する。queueId は保持し、`queue_group` で Ranked Solo/Duo、Ranked Flex、Normal Draft、Normal Blind、Quickplay などを分ける。
 
+現在の実装では、ChampionPool と ChampSelect の表示に使うため、`champion_id + queue_group + role` および `champion_id + all_sr_5v5 + role` のロール別集計も作る。`role` がない集計は全ロール合算として扱う。
+
+ChampionPool画面では、選択中レーンに対応する role の自己戦績だけを表示する。該当 role のサンプルがない場合、全ロール合算に fallback せず `No games` と表示する。
+
+ChampSelect中は、自分の行だけ `assignedPosition + championId` の自己戦績を表示する。味方全員や敵側には、自分の戦績を表示しない。
+
+表示例:
+
+```text
+JG 4games
+Ave KDA 5.2/4.0/8.1
+3W/1L WR 75%
+```
+
 ## 推薦スコアの考え方
+
+## ChampSelect 中に表示すると嬉しい情報
+
+現状のアプリが持っている LCU state、ChampionPool、Riot API Match-V5 の正規化済み自己戦績だけでも、バンピック中に次の情報を表示できる。
+
+### すぐ出せる情報
+
+- 自分の現在ロール + hover / pick intent / 確定 champion のロール別自己戦績
+- 現在ロールの ChampionPool 候補一覧
+- 候補ごとのロール別 games / Ave KDA / WR
+- BAN済み / 選択済み champion の候補除外またはグレーアウト
+- 自分のターン中だけ候補パネルを強調
+- ロール別サンプルがない候補への `No games` 表示
+- 少数サンプル候補への `Low sample` 表示
+
+### 正規化済み match-history から作れる情報
+
+- 最近使った ChampionPool 内 champion
+- 最近勝っている ChampionPool 内 champion
+- ロール別に実績がない ChampionPool champion
+- 自分の champion と味方 champion の同時ピック実績
+- 自分の champion と敵 champion の対戦実績
+- 自分が負けがちな敵 champion の注意表示
+
+同時ピック実績や対敵実績は、直近90件ではサンプルが薄くなりやすい。表示する場合は `Low sample` や games 数を必ず添え、推薦スコアでは弱く扱う。
+
+### 次に実装したい候補パネル
+
+最優先の次実装候補は、バンピック中の自分用 ChampionPool 候補パネル。
+
+```text
+Your MID Pool
+Ahri        MID 12games  WR 58%  Ave KDA 5.1/3.0/7.2
+Syndra      MID 4games   WR 75%  Low sample
+Orianna     No MID games
+```
+
+仕様案:
+
+- `champSelect.localPlayerCellId` から自分の assignedPosition を取る
+- assignedPosition を ChampionPool lane に変換し、そのレーンの登録 champion を候補にする
+- BAN済み、味方/敵が確定済みの champion は除外または disabled 表示にする
+- 自分が pick 中のときだけ候補パネルを強調する
+- 候補はロール別自己戦績を優先して並べる
+- ロール別サンプルがない場合は fallback せず `No games`
+- サンプルが少ない場合は勝率を強調しすぎず `Low sample` を表示する
+
+この候補パネルは、AI 推薦に進む前の deterministic な非AIモードとして扱う。
 
 ### Champion strength score
 

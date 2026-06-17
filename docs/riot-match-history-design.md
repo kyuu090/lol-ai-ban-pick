@@ -282,12 +282,32 @@ match-history.json
 
 `match-history.json` はアプリが通常利用する正規化済みデータ。
 
+現在の実装では、Riot API から取得する match id 一覧は直近90件だが、`match-history.json` の再生成では `riot-match-cache.json` に存在する 5v5 Summoner's Rift 対象試合を `gameCreation` の新しい順に並べ、その直近90件を使う。
+
+そのため、91試合目が ARAM / Arena などの統計対象外だった場合でも、5v5 SR の自己戦績から古いSR試合がすぐ押し出されるわけではない。
+
+```text
+riot-match-cache.json
+  = 過去に取得した raw match detail を matchId 単位で蓄積するキャッシュ
+
+match-history.json
+  = cache 内の対象5v5 SR試合から作る、現在の直近90件の利用データ
+```
+
+現時点では `riot-match-cache.json` の古い試合は削除しない。将来、`cachedAt` や上限件数/日数による掃除を追加してよい。
+
 ```js
 {
   version: 1,
   source: "riot-api",
   updatedAt: "2026-06-17T...",
-  matches: []
+  puuid: "...",
+  riotId: {
+    gameName: "PlayerName",
+    tagLine: "JP1"
+  },
+  matches: [],
+  championStats: []
 }
 ```
 
@@ -367,12 +387,24 @@ self.teamId と違う participant -> enemies
 
 正規化済み match records から champion ごとに集計する。
 
+現在の実装では、次の粒度で集計する。
+
+```text
+championId + queueGroup + all positions
+championId + all_sr_5v5 + all positions
+championId + queueGroup + position
+championId + all_sr_5v5 + position
+```
+
+`position === null` は全ロール合算を表す。`position` に `TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY` などが入る場合は、そのロールで使った試合だけを表す。
+
 ```js
 {
   championId: 103,
   championName: "Ahri",
   queueType: "ranked",
   queueGroup: "ranked_solo",
+  position: "MIDDLE",
   games: 18,
   wins: 11,
   losses: 7,
@@ -401,6 +433,26 @@ kda = deaths === 0 ? kills + assists : (kills + assists) / deaths
 ## ChampionPool との照合
 
 ChampionPool はユーザーが使える champion の主観的制約として扱う。
+
+現在の ChampionPool 表示では、選択中レーンを Riot API の `position` に変換し、その `assignedPosition + championId` に該当するロール別自己戦績だけを表示する。該当ロールのサンプルがない場合、全ロール合算へ fallback せず `No games` と表示する。
+
+```text
+top -> TOP
+jungle -> JUNGLE
+middle -> MIDDLE
+bottom -> BOTTOM
+utility -> UTILITY
+```
+
+表示例:
+
+```text
+JG 4games
+Ave KDA 5.2/4.0/8.1
+3W/1L WR 75%
+```
+
+ChampSelect 中も、自分の行だけ現在の `assignedPosition + championId` のロール別戦績を表示する。味方全員や敵側には、自分の使用戦績を表示しない。
 
 表示・推薦では次を判定する。
 
@@ -470,11 +522,9 @@ AIモードは raw match detail を直接渡さない。
 
 AIモードの初期役割は、推薦そのものではなく説明役とする。
 
-## 取得ステータスと通知
+## 取得ステータスと表示
 
-試合履歴の取得、正規化、集計中は、画面上部にかぶる一時的なステータス通知を表示する。
-
-通知はモーダルではない。ユーザー操作をブロックせず、Coach / ChampionPool / Settings / Debug のどの画面でも同じ位置に表示する。
+試合履歴の取得、正規化、集計中は、ヘッダーの `Update match data` ボタンを disabled にし、ボタン内テキストで状態を表示する。
 
 `appState` に `matchHistoryStatus` を持たせる想定。
 
@@ -519,21 +569,22 @@ error
 表示例:
 
 ```text
-試合データ収集中... 25/90 試合
-Riot API制限のため再試行します 17秒後
-試合データ収集完了 84試合を更新しました
-一部の試合データを収集しました 72試合を更新 / 3件失敗
-試合データ収集に失敗しました Riot APIトークンを確認してください
+Update match data
+Updating...
+Saving...
+Retrying...
+Updated 3 matches data
+Update failed
 ```
 
-自動クローズ:
+完了/一部完了/エラー時の短い文言は一定時間だけ表示し、その後 `Update match data` に戻す。同じ完了状態を LCU state 更新のたびに再表示しない。
 
 ```text
-completed: 3秒後に自動で閉じる
-partial: 5秒後に自動で閉じる
-error: 5秒後に自動で閉じる
-collecting / normalizing / aggregating: 処理中は表示し続ける
-retrying: 次の状態へ遷移するまで表示し続ける
+completed: 3秒後に Update match data へ戻す
+partial: 5秒後に Update match data へ戻す
+error: 5秒後に Update match data へ戻す
+collecting / normalizing / aggregating: 処理中は disabled のまま表示し続ける
+retrying: 次の状態へ遷移するまで disabled のまま表示し続ける
 ```
 
 完了通知では、取得件数ではなく更新件数を表示する。
@@ -548,7 +599,28 @@ updatedMatches
 
 初期実装では既存処理のキャンセルや再開始は行わない。
 
-将来自動更新を追加する場合も、手動取得と自動取得が同時に走らないようにする。
+自動更新でも、手動取得と同じ `matchHistoryInProgress` を使って二重起動を防ぐ。
+
+## 自動更新
+
+現在の実装では、次のタイミングで自動取得を試みる。
+
+```text
+起動後、LCU接続に成功してログイン中、Riot API tokenあり、ChampSelect/試合中でなければ約2秒後
+gameflow phase が GameStart / InProgress から抜けた約20秒後
+```
+
+次の条件では自動取得を静かに skip する。
+
+```text
+Riot API token 未設定
+未ログイン
+LCU current summoner から Riot ID を取得できない
+ChampSelect / GameStart / InProgress 中
+手動または自動取得がすでに進行中
+```
+
+ChampSelect 中の LCU WebSocket event、hover、pick intent、pick確定などの操作では Riot API 取得を走らせない。
 
 ## 初期実装順
 
