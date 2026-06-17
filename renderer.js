@@ -60,6 +60,8 @@ let matchHistoryChampionStats = [];
 let matchHistoryEnemyChampionStats = [];
 let matchHistoryLaneOpponentStats = [];
 let championPoolDirty = false;
+let markedLaneOpponentCellId = null;
+let lastRenderedState = null;
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
@@ -282,6 +284,7 @@ function processChampionIconQueue() {
 }
 
 function renderState(state) {
+  lastRenderedState = state;
   championsById = state.championsById || {};
   matchHistoryChampionStats = Array.isArray(state.matchHistoryChampionStats) ? state.matchHistoryChampionStats : [];
   matchHistoryEnemyChampionStats = Array.isArray(state.matchHistoryEnemyChampionStats) ? state.matchHistoryEnemyChampionStats : [];
@@ -556,6 +559,7 @@ function renderCoach(state) {
   if (!inChampSelect) {
     clearDraftTimer();
     elements.champSelectView.classList.remove('local-turn');
+    markedLaneOpponentCellId = null;
   }
 
   if (!loggedIn) return;
@@ -580,13 +584,22 @@ function renderChampSelect(champSelect) {
   const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
   const activeAction = getActiveAction(champSelect);
   const localCellId = champSelect?.localPlayerCellId;
+  const localMember = allyTeam.find((member) => member.cellId === localCellId);
   const isLocalTurn = activeAction?.actorCellId === localCellId;
+  if (markedLaneOpponentCellId !== null && !enemyTeam.some((member) => member.cellId === markedLaneOpponentCellId)) {
+    markedLaneOpponentCellId = null;
+  }
 
   elements.champSelectView.classList.toggle('local-turn', isLocalTurn);
   renderBanList(elements.allyBans, allyBans);
   renderBanList(elements.enemyBans, enemyBans);
   renderTeam(elements.allyTeam, allyTeam, 'ally', { activeAction, localCellId });
-  renderTeam(elements.enemyTeam, enemyTeam, 'enemy', { activeAction, localCellId });
+  renderTeam(elements.enemyTeam, enemyTeam, 'enemy', {
+    activeAction,
+    localCellId,
+    localAssignedPosition: localMember?.assignedPosition,
+    markedLaneOpponentCellId
+  });
   renderDraftFocus(champSelect, activeAction);
 }
 
@@ -621,6 +634,7 @@ function renderTeam(container, team, side, turnState = {}) {
 
   container.replaceChildren(...rows.map((member, index) => {
     const row = document.createElement('article');
+    const isRealMember = team.includes(member);
     const selected = Number(member.championId) > 0;
     const intendedChampionId = Number(member.championPickIntent);
     const hasIntent = !selected && intendedChampionId > 0;
@@ -628,7 +642,22 @@ function renderTeam(container, team, side, turnState = {}) {
     const isLocalMember = member.cellId === turnState.localCellId;
     const isActiveMember = member.cellId === turnState.activeAction?.actorCellId;
     const isLocalActiveMember = isLocalMember && isActiveMember;
-    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}${isLocalMember ? ' local-player' : ''}${isActiveMember ? ' active-turn' : ''}${isLocalActiveMember ? ' local-active-turn' : ''}`;
+    const isEnemyMember = side === 'enemy' && isRealMember;
+    const isMarkedLaneOpponent = isEnemyMember && member.cellId === turnState.markedLaneOpponentCellId;
+    row.className = `pick-row ${side} ${selected ? 'selected' : hasIntent ? 'intent' : 'empty'}${isLocalMember ? ' local-player' : ''}${isActiveMember ? ' active-turn' : ''}${isLocalActiveMember ? ' local-active-turn' : ''}${isEnemyMember ? ' lane-opponent-target' : ''}${isMarkedLaneOpponent ? ' marked-lane-opponent' : ''}`;
+    if (isEnemyMember) {
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-pressed', String(isMarkedLaneOpponent));
+      row.title = isMarkedLaneOpponent ? 'Click to unmark lane opponent' : 'Click to mark as lane opponent';
+      row.addEventListener('click', () => toggleMarkedLaneOpponent(member.cellId));
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleMarkedLaneOpponent(member.cellId);
+        }
+      });
+    }
 
     const portrait = document.createElement('div');
     portrait.className = `champion-portrait ${hasIntent ? 'intent' : ''}`;
@@ -653,6 +682,14 @@ function renderTeam(container, team, side, turnState = {}) {
     detail.textContent = `${positionLabel(member.assignedPosition)} / Summoner ${index + 1}`;
 
     meta.append(champion, detail);
+    if (isMarkedLaneOpponent) {
+      const marker = document.createElement('span');
+      marker.className = 'lane-opponent-marker';
+      marker.textContent = turnState.localAssignedPosition
+        ? `${positionLabel(turnState.localAssignedPosition)} OPPONENT`
+        : 'LANE OPPONENT';
+      meta.append(marker);
+    }
     if (side === 'ally' && isLocalMember && portraitChampionId > 0) {
       meta.append(createChampionStatsElement(
         getChampionRoleDisplayStats(portraitChampionId, member.assignedPosition),
@@ -662,6 +699,17 @@ function renderTeam(container, team, side, turnState = {}) {
     row.append(portrait, meta);
     return row;
   }));
+}
+
+function toggleMarkedLaneOpponent(cellId) {
+  const normalizedCellId = Number(cellId);
+  if (!Number.isInteger(normalizedCellId)) return;
+
+  markedLaneOpponentCellId = markedLaneOpponentCellId === normalizedCellId ? null : normalizedCellId;
+  logDebug('Lane opponent marker changed', { markedLaneOpponentCellId });
+  if (lastRenderedState) {
+    renderCoach(lastRenderedState);
+  }
 }
 
 function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelect)) {

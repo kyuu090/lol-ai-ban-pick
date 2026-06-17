@@ -652,6 +652,16 @@ h2 {
   text-align: right;
 }
 
+.pick-row.lane-opponent-target {
+  cursor: pointer;
+}
+
+.pick-row.lane-opponent-target:hover,
+.pick-row.lane-opponent-target:focus-visible {
+  border-color: rgba(245, 214, 131, 0.62);
+  outline: 0;
+}
+
 .pick-row.selected {
   background: linear-gradient(90deg, rgba(36, 182, 217, 0.16), rgba(26, 35, 48, 0.8));
 }
@@ -700,6 +710,12 @@ h2 {
 
 .pick-row.enemy.active-turn {
   background: linear-gradient(270deg, rgba(245, 214, 131, 0.14), rgba(26, 35, 48, 0.82));
+}
+
+.pick-row.enemy.marked-lane-opponent {
+  background: linear-gradient(270deg, rgba(212, 175, 55, 0.22), rgba(26, 35, 48, 0.84));
+  border-color: rgba(245, 214, 131, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(245, 214, 131, 0.2), 0 0 16px rgba(212, 175, 55, 0.16);
 }
 
 .pick-row.local-active-turn {
@@ -768,6 +784,19 @@ h2 {
 .pick-meta span {
   color: var(--muted);
   font-size: 12px;
+}
+
+.pick-meta .lane-opponent-marker {
+  align-self: flex-end;
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.48);
+  border-radius: 999px;
+  color: #f9e5a8;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 4px 7px;
+  width: fit-content;
 }
 
 .draft-champion-stats {
