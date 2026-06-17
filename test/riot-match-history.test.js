@@ -4,6 +4,7 @@ const {
   aggregateEnemyChampionStats,
   aggregateChampionStats,
   aggregateLaneOpponentStats,
+  aggregateSelfChampionVsLaneOpponentStats,
   calculateKda,
   getQueueClassification,
   normalizeRiotMatch,
@@ -244,6 +245,59 @@ test('opponent stats sort same win rate by more games first', () => {
   assert.equal(stats[zedIndex].games, 2);
   assert.equal(stats[syndraIndex].games, 1);
   assert.equal(zedIndex < syndraIndex, true);
+});
+
+test('aggregateSelfChampionVsLaneOpponentStats ranks own picks into same-lane opponent', () => {
+  const ahriWin = createMatch({
+    matchId: 'ahri-win',
+    gameCreation: 4000
+  });
+  const ahriLoss = createMatch({
+    matchId: 'ahri-loss',
+    gameCreation: 3000,
+    participants: createMatch().info.participants.map((participant) => (
+      participant.puuid === 'self-puuid'
+        ? { ...participant, championId: 103, championName: 'Ahri', teamPosition: 'MIDDLE', win: false }
+        : participant
+    ))
+  });
+  const viktorWin = createMatch({
+    matchId: 'viktor-win',
+    gameCreation: 2000,
+    participants: createMatch().info.participants.map((participant) => (
+      participant.puuid === 'self-puuid'
+        ? { ...participant, championId: 112, championName: 'Viktor', teamPosition: 'MIDDLE', win: true }
+        : participant
+    ))
+  });
+  const topVsJax = createMatch({
+    matchId: 'top-vs-jax',
+    gameCreation: 1000,
+    participants: createMatch().info.participants.map((participant) => {
+      if (participant.puuid === 'self-puuid') return { ...participant, championId: 122, championName: 'Darius', teamPosition: 'TOP', win: true };
+      if (participant.puuid === 'enemy-1') return { ...participant, championId: 24, championName: 'Jax', teamPosition: 'TOP' };
+      return participant;
+    })
+  });
+  const records = normalizeRiotMatches({
+    ahriWin,
+    ahriLoss,
+    viktorWin,
+    topVsJax
+  }, 'self-puuid');
+
+  const stats = aggregateSelfChampionVsLaneOpponentStats(records);
+  const syndraStats = stats.filter((entry) => entry.position === 'MIDDLE' && entry.opponentChampionId === 134);
+  const viktorVsSyndra = stats.find((entry) => entry.position === 'MIDDLE' && entry.championId === 112 && entry.opponentChampionId === 134);
+  const ahriVsSyndra = stats.find((entry) => entry.position === 'MIDDLE' && entry.championId === 103 && entry.opponentChampionId === 134);
+
+  assert.equal(viktorVsSyndra.games, 1);
+  assert.equal(viktorVsSyndra.winRate, 1);
+  assert.equal(ahriVsSyndra.games, 2);
+  assert.equal(ahriVsSyndra.wins, 1);
+  assert.equal(ahriVsSyndra.winRate, 0.5);
+  assert.equal(syndraStats[0].championId, 112);
+  assert.equal(stats.some((entry) => entry.position === 'MIDDLE' && entry.opponentChampionId === 24), false);
 });
 
 test('calculateKda handles deathless games', () => {

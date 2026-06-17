@@ -205,6 +205,14 @@ function sortWorstOpponentStats(stats) {
   ));
 }
 
+function sortBestOpponentStats(stats) {
+  return stats.sort((a, b) => (
+    (b.winRate - a.winRate) ||
+    (b.games - a.games) ||
+    String(a.championName).localeCompare(String(b.championName), 'en')
+  ));
+}
+
 function aggregateEnemyChampionStats(matchRecords) {
   const grouped = new Map();
 
@@ -225,6 +233,44 @@ function aggregateEnemyChampionStats(matchRecords) {
   });
 
   return sortWorstOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
+}
+
+function createSelfVsLaneOpponentStats(record, laneOpponent, position) {
+  return {
+    championId: record.self.championId,
+    championName: record.self.championName,
+    opponentChampionId: laneOpponent.championId,
+    opponentChampionName: laneOpponent.championName,
+    position,
+    games: 0,
+    wins: 0,
+    losses: 0,
+    winRate: 0
+  };
+}
+
+function aggregateSelfChampionVsLaneOpponentStats(matchRecords) {
+  const grouped = new Map();
+
+  matchRecords.forEach((record) => {
+    const selfPosition = String(record.self?.position || '').toUpperCase();
+    const selfChampionId = Number(record.self?.championId) || 0;
+    if (!selfPosition || selfChampionId <= 0) return;
+
+    const enemies = Array.isArray(record.enemies) ? record.enemies : [];
+    const laneOpponent = enemies.find((enemy) => String(enemy.position || '').toUpperCase() === selfPosition);
+    const opponentChampionId = Number(laneOpponent?.championId) || 0;
+    if (opponentChampionId <= 0) return;
+
+    const key = `${selfPosition}:${selfChampionId}:${opponentChampionId}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, createSelfVsLaneOpponentStats(record, laneOpponent, selfPosition));
+    }
+
+    addWinLossToOpponentStats(grouped.get(key), record);
+  });
+
+  return sortBestOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
 }
 
 function aggregateLaneOpponentStats(matchRecords) {
@@ -253,6 +299,7 @@ function aggregateLaneOpponentStats(matchRecords) {
 module.exports = {
   ALLOWED_SR_5V5_QUEUE_GROUPS,
   aggregateEnemyChampionStats,
+  aggregateSelfChampionVsLaneOpponentStats,
   getQueueClassification,
   isSupportedSr5v5Match,
   aggregateLaneOpponentStats,

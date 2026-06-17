@@ -996,6 +996,26 @@ h2 {
   white-space: nowrap;
 }
 
+.marked-opponent-insight {
+  display: grid;
+  gap: 8px;
+}
+
+.marked-opponent-insight + .pick-pool-header {
+  margin-top: 4px;
+}
+
+.marked-opponent-list {
+  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
+  padding-bottom: 8px;
+}
+
+.marked-opponent-candidate {
+  background:
+    linear-gradient(90deg, rgba(212, 175, 55, 0.14), rgba(26, 35, 48, 0.72));
+  border-color: rgba(212, 175, 55, 0.28);
+}
+
 .pick-pool-list {
   display: grid;
   gap: 8px;
