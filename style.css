@@ -91,6 +91,13 @@ code {
   gap: 12px;
 }
 
+.match-data-header {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+}
+
 .match-data-summary {
   display: flex;
   flex-direction: column;
@@ -107,6 +114,20 @@ code {
 .match-data-summary span:last-child {
   color: var(--muted);
   font-size: 13px;
+}
+
+.match-data-update-button {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.54);
+  color: #f1ddb0;
+  min-height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.match-data-update-button:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.22);
+  border-color: rgba(212, 175, 55, 0.78);
 }
 
 .view-tabs {
@@ -799,7 +820,8 @@ pre {
   }
 
   .app-header,
-  .header-actions {
+  .header-actions,
+  .match-data-header {
     align-items: stretch;
     flex-direction: column;
   }

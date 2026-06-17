@@ -9,10 +9,13 @@
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <div class="match-data-summary">
-          <span class="label">5v5 SR match data</span>
-          <strong id="matchDataCount">No data</strong>
-          <span id="matchDataRange">Riot試合取得後に表示します</span>
+        <div class="match-data-header">
+          <div class="match-data-summary">
+            <span class="label">5v5 SR match data</span>
+            <strong id="matchDataCount">No data</strong>
+            <span id="matchDataRange">Riot試合取得後に表示します</span>
+          </div>
+          <button id="collectRiotMatchesButton" class="match-data-update-button" type="button">Update match data</button>
         </div>
         <div class="header-actions">
           <nav class="view-tabs" aria-label="view switcher">
@@ -89,7 +92,6 @@
 
       <section id="debugView" class="view-panel" hidden>
         <section class="debug-toolbar">
-          <button id="collectRiotMatchesButton" type="button">Riot試合取得</button>
           <button id="refreshButton" type="button">手動再取得</button>
         </section>
 

@@ -818,7 +818,7 @@ async function refresh() {
 
 async function collectRiotMatchHistory() {
   elements.collectRiotMatchesButton.disabled = true;
-  elements.collectRiotMatchesButton.textContent = '取得中...';
+  elements.collectRiotMatchesButton.textContent = 'Updating...';
 
   try {
     logDebug('Manual Riot match history collection requested');
@@ -827,7 +827,7 @@ async function collectRiotMatchHistory() {
   } catch (error) {
     logWarn('Manual Riot match history collection failed', { message: error.message, stack: error.stack });
   } finally {
-    elements.collectRiotMatchesButton.textContent = 'Riot試合取得';
+    elements.collectRiotMatchesButton.textContent = 'Update match data';
     const status = await window.lcuApi.getState().then((state) => state.matchHistoryStatus);
     elements.collectRiotMatchesButton.disabled = ['collecting', 'normalizing', 'aggregating', 'retrying'].includes(status?.phase);
   }

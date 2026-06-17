@@ -32,6 +32,8 @@ const WEBSOCKET_RECONNECT_MS = 3000;
 const RIOT_MATCHES_PER_RUN = 90;
 const RIOT_MATCH_DETAIL_CONCURRENCY = 5;
 const RIOT_MATCH_DETAIL_BATCH_DELAY_MS = 350;
+const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
+const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 
@@ -47,6 +49,8 @@ let appState = createInitialState();
 let championIconUnavailableUntil = 0;
 let championIconUnavailableLogged = false;
 let matchHistoryInProgress = false;
+let startupMatchHistoryScheduled = false;
+let autoMatchHistoryTimer = null;
 
 configureLogger();
 
@@ -327,6 +331,51 @@ function createRiotRetryHandler() {
   };
 }
 
+function isInBlockingGamePhase(phase) {
+  return ['ChampSelect', 'GameStart', 'InProgress'].includes(phase);
+}
+
+function canAutoCollectRiotMatchHistory() {
+  if (matchHistoryInProgress || !settings.riotApiToken) return false;
+  if (isInBlockingGamePhase(appState.gameflowPhase)) return false;
+
+  try {
+    getRiotIdFromSummoner(appState.summoner);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function scheduleAutoRiotMatchHistory(reason, delayMs) {
+  if (autoMatchHistoryTimer) {
+    clearTimeout(autoMatchHistoryTimer);
+    autoMatchHistoryTimer = null;
+  }
+
+  log.debug('Scheduling automatic Riot match history collection', { reason, delayMs });
+  autoMatchHistoryTimer = setTimeout(async () => {
+    autoMatchHistoryTimer = null;
+
+    if (!canAutoCollectRiotMatchHistory()) {
+      log.debug('Automatic Riot match history collection skipped', {
+        reason,
+        hasRiotApiToken: Boolean(settings.riotApiToken),
+        lcuStatus: appState.lcuStatus,
+        gameflowPhase: appState.gameflowPhase,
+        matchHistoryInProgress
+      });
+      return;
+    }
+
+    try {
+      await collectRiotMatchHistory(null, { source: 'auto' });
+    } catch (error) {
+      log.warn('Automatic Riot match history collection failed', { reason, error: serializeForLog(error) });
+    }
+  }, delayMs);
+}
+
 async function collectRiotMatchHistory(_event, options = {}) {
   if (matchHistoryInProgress) {
     throw new Error('試合データを取得中です');
@@ -337,11 +386,12 @@ async function collectRiotMatchHistory(_event, options = {}) {
 
   matchHistoryInProgress = true;
   const requestedMatches = Number(options.count) || RIOT_MATCHES_PER_RUN;
+  const source = options.source === 'auto' ? 'auto' : 'manual';
   const startedAt = new Date().toISOString();
 
   updateMatchHistoryStatus({
     phase: 'collecting',
-    source: 'manual',
+    source,
     requestedMatches,
     fetchedMatches: 0,
     normalizedMatches: 0,
@@ -740,6 +790,10 @@ async function refreshLcuState() {
     });
 
     connectWebSocket();
+    if (!startupMatchHistoryScheduled && canAutoCollectRiotMatchHistory()) {
+      startupMatchHistoryScheduled = true;
+      scheduleAutoRiotMatchHistory('startup', AUTO_MATCH_HISTORY_STARTUP_DELAY_MS);
+    }
     return appState;
   } catch (error) {
     log.warn('Failed to refresh LCU state', serializeForLog(error));
@@ -764,6 +818,11 @@ function cleanupWebSocket() {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+
+  if (autoMatchHistoryTimer) {
+    clearTimeout(autoMatchHistoryTimer);
+    autoMatchHistoryTimer = null;
   }
 
   clearRetryTimer();
@@ -883,10 +942,15 @@ async function applyWebSocketEvent(event) {
   } else if (uri === LCU_ENDPOINTS.summoner) {
     updateState({ summoner: data });
   } else if (uri === LCU_ENDPOINTS.gameflowPhase) {
+    const previousPhase = appState.gameflowPhase;
     updateState({
       gameflowPhase: data,
       champSelect: data === 'ChampSelect' ? appState.champSelect : null
     });
+
+    if (['GameStart', 'InProgress'].includes(previousPhase) && !['GameStart', 'InProgress'].includes(data)) {
+      scheduleAutoRiotMatchHistory('game-end', AUTO_MATCH_HISTORY_GAME_END_DELAY_MS);
+    }
   }
 }
 
