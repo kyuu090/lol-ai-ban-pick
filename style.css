@@ -91,6 +91,24 @@ code {
   gap: 12px;
 }
 
+.match-data-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.match-data-summary strong {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.match-data-summary span:last-child {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .view-tabs {
   background: rgba(8, 12, 18, 0.72);
   border: 1px solid var(--border);

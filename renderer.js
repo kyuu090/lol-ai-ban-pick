@@ -4,6 +4,8 @@ const elements = {
   matchHistoryToast: document.querySelector('#matchHistoryToast'),
   matchHistoryToastPhase: document.querySelector('#matchHistoryToastPhase'),
   matchHistoryToastMessage: document.querySelector('#matchHistoryToastMessage'),
+  matchDataCount: document.querySelector('#matchDataCount'),
+  matchDataRange: document.querySelector('#matchDataRange'),
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
@@ -99,6 +101,17 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('ja-JP', {
     dateStyle: 'short',
     timeStyle: 'medium'
+  }).format(new Date(value));
+}
+
+function formatMatchDataDate(value) {
+  if (!value) return null;
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
   }).format(new Date(value));
 }
 
@@ -251,10 +264,27 @@ function renderState(state) {
   }
   renderStatus(state);
   renderMatchHistoryStatus(state.matchHistoryStatus);
+  renderMatchDataSummary(state.matchHistorySummary);
   renderSettings(state.settings);
   renderChampionPool();
   renderCoach(state);
   renderDebug(state);
+}
+
+function renderMatchDataSummary(summary) {
+  const matchCount = Number(summary?.normalizedMatches || 0);
+  if (matchCount <= 0) {
+    elements.matchDataCount.textContent = 'No data';
+    elements.matchDataRange.textContent = 'Riot試合取得後に表示します';
+    return;
+  }
+
+  const oldest = formatMatchDataDate(summary.oldestGameCreation);
+  const newest = formatMatchDataDate(summary.newestGameCreation);
+  elements.matchDataCount.textContent = `${matchCount} matches`;
+  elements.matchDataRange.textContent = oldest && newest
+    ? `${oldest} - ${newest}`
+    : '期間不明';
 }
 
 function renderMatchHistoryStatus(status) {

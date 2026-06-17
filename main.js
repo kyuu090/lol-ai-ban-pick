@@ -101,6 +101,24 @@ function createMatchHistoryStatus(patch = {}) {
   };
 }
 
+function createMatchHistorySummary({ updatedAt = null, requestedMatches = 0, matchIds = 0, updatedMatches = 0, matches = [], failedRequests = 0, championStats = 0 } = {}) {
+  const gameCreations = matches
+    .map((match) => Number(match.gameCreation))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  return {
+    updatedAt,
+    requestedMatches,
+    matchIds,
+    updatedMatches,
+    normalizedMatches: matches.length,
+    failedRequests,
+    championStats,
+    oldestGameCreation: gameCreations.length > 0 ? Math.min(...gameCreations) : null,
+    newestGameCreation: gameCreations.length > 0 ? Math.max(...gameCreations) : null
+  };
+}
+
 function createPublicSettings(sourceSettings = settings) {
   const riotPlatformRegion = normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion);
   const riotHosts = createRiotApiHosts(riotPlatformRegion);
@@ -177,15 +195,15 @@ async function loadMatchHistory() {
 
   const matches = Array.isArray(history.matches) ? history.matches : [];
   matchHistoryChampionStats = Array.isArray(history.championStats) ? history.championStats : [];
-  const summary = {
+  const summary = createMatchHistorySummary({
     updatedAt: history.updatedAt || null,
     requestedMatches: matches.length,
     matchIds: matches.length,
     updatedMatches: 0,
-    normalizedMatches: matches.length,
     failedRequests: 0,
-    championStats: matchHistoryChampionStats.length
-  };
+    championStats: matchHistoryChampionStats.length,
+    matches
+  });
 
   updateState({
     matchHistoryChampionStats,
@@ -447,15 +465,15 @@ async function collectRiotMatchHistory(_event, options = {}) {
 
     const phase = failedRequests > 0 ? 'partial' : 'completed';
     matchHistoryChampionStats = championStats;
-    const summary = {
+    const summary = createMatchHistorySummary({
       updatedAt,
       requestedMatches,
       matchIds: normalizedMatchIds.length,
       updatedMatches: fetchedMatches,
-      normalizedMatches: normalizedMatches.length,
       failedRequests,
-      championStats: championStats.length
-    };
+      championStats: championStats.length,
+      matches: normalizedMatches
+    });
 
     updateState({
       matchHistoryChampionStats,

@@ -9,9 +9,10 @@
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <div>
-          <h1>LoL AI Draft Coach</h1>
-          <p>LCU APIの状態をローカルで監視します。自動操作は行いません。</p>
+        <div class="match-data-summary">
+          <span class="label">5v5 SR match data</span>
+          <strong id="matchDataCount">No data</strong>
+          <span id="matchDataRange">Riot試合取得後に表示します</span>
         </div>
         <div class="header-actions">
           <nav class="view-tabs" aria-label="view switcher">
