@@ -508,7 +508,11 @@ function renderChampionPool() {
     removeButton.type = 'button';
     removeButton.className = 'pool-remove-button';
     removeButton.dataset.championId = String(championId);
-    removeButton.textContent = '削除';
+    removeButton.title = `${championLabel(championId)} を削除`;
+    removeButton.setAttribute('aria-label', `${championLabel(championId)} を削除`);
+    const removeIcon = document.createElement('span');
+    removeIcon.className = 'remove-x-icon';
+    removeButton.append(removeIcon);
     removeButton.addEventListener('click', () => removeChampionFromPool(championId));
 
     item.append(portrait, meta, removeButton);

@@ -351,9 +351,10 @@ h2 {
   border-radius: 8px;
   display: grid;
   gap: 12px;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr);
   min-height: 94px;
   padding: 12px;
+  position: relative;
 }
 
 .pool-champion strong {
@@ -391,11 +392,55 @@ h2 {
 }
 
 .pool-remove-button {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--muted);
-  min-height: 34px;
-  padding: 0 12px;
+  align-items: center;
+  background: rgba(8, 12, 18, 0.28);
+  border-color: rgba(154, 167, 184, 0.28);
+  border-radius: 6px;
+  color: rgba(154, 167, 184, 0.86);
+  display: grid;
+  font-size: 15px;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+}
+
+.pool-remove-button:hover {
+  background: rgba(255, 107, 107, 0.14);
+  border-color: rgba(255, 107, 107, 0.48);
+  color: #ffb4b4;
+}
+
+.remove-x-icon {
+  display: block;
+  height: 12px;
+  position: relative;
+  width: 12px;
+}
+
+.remove-x-icon::before,
+.remove-x-icon::after {
+  background: currentColor;
+  border-radius: 999px;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  top: 5px;
+  width: 12px;
+}
+
+.remove-x-icon::before {
+  transform: rotate(45deg);
+}
+
+.remove-x-icon::after {
+  transform: rotate(-45deg);
 }
 
 .pool-empty {
