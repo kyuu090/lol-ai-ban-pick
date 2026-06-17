@@ -87,12 +87,13 @@ function normalizeRiotMatches(matchesById, targetPuuid, matchIds = Object.keys(m
     .sort((a, b) => (b.gameCreation || 0) - (a.gameCreation || 0));
 }
 
-function createEmptyStats(record, queueGroup = record.queueGroup, queueType = record.queueType) {
+function createEmptyStats(record, queueGroup = record.queueGroup, queueType = record.queueType, position = null) {
   return {
     championId: record.self.championId,
     championName: record.self.championName,
     queueType,
     queueGroup,
+    position,
     games: 0,
     wins: 0,
     losses: 0,
@@ -144,15 +145,20 @@ function aggregateChampionStats(matchRecords) {
   const grouped = new Map();
 
   matchRecords.forEach((record) => {
+    const position = record.self.position || 'UNKNOWN';
     [
-      `${record.self.championId}:${record.queueGroup}`,
-      `${record.self.championId}:all_sr_5v5`
-    ].forEach((key) => {
-      const queueGroup = key.endsWith(':all_sr_5v5') ? 'all_sr_5v5' : record.queueGroup;
-      const queueType = queueGroup === 'all_sr_5v5' ? 'all' : record.queueType;
+      { key: `${record.self.championId}:${record.queueGroup}:all_positions`, queueGroup: record.queueGroup, queueType: record.queueType, position: null },
+      { key: `${record.self.championId}:all_sr_5v5:all_positions`, queueGroup: 'all_sr_5v5', queueType: 'all', position: null },
+      { key: `${record.self.championId}:${record.queueGroup}:${position}`, queueGroup: record.queueGroup, queueType: record.queueType, position },
+      { key: `${record.self.championId}:all_sr_5v5:${position}`, queueGroup: 'all_sr_5v5', queueType: 'all', position }
+    ].forEach((groupDefinition) => {
+      const { key, queueGroup, queueType } = groupDefinition;
 
       if (!grouped.has(key)) {
-        grouped.set(key, { stats: createEmptyStats(record, queueGroup, queueType), records: [] });
+        grouped.set(key, {
+          stats: createEmptyStats(record, queueGroup, queueType, groupDefinition.position),
+          records: []
+        });
       }
 
       const group = grouped.get(key);

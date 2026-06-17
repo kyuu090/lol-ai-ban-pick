@@ -93,6 +93,30 @@ test('aggregateChampionStats builds queue-specific and all SR 5v5 groups', () =>
   assert.equal(stats.some((entry) => entry.queueGroup === 'normal_draft'), true);
 });
 
+test('aggregateChampionStats builds position-specific groups without replacing all-position groups', () => {
+  const records = normalizeRiotMatches({
+    middle: createMatch({ matchId: 'middle', gameCreation: 3000 }),
+    jungle: createMatch({
+      matchId: 'jungle',
+      gameCreation: 2000,
+      participants: createMatch().info.participants.map((participant) => (
+        participant.puuid === 'self-puuid'
+          ? { ...participant, teamPosition: 'JUNGLE', win: false, kills: 2, deaths: 5, assists: 6 }
+          : participant
+      ))
+    })
+  }, 'self-puuid');
+
+  const stats = aggregateChampionStats(records);
+  const allPositions = stats.find((entry) => entry.queueGroup === 'all_sr_5v5' && entry.position === null);
+  const jungle = stats.find((entry) => entry.queueGroup === 'all_sr_5v5' && entry.position === 'JUNGLE');
+
+  assert.equal(allPositions.games, 2);
+  assert.equal(jungle.games, 1);
+  assert.equal(jungle.wins, 0);
+  assert.equal(jungle.avgKills, 2);
+});
+
 test('calculateKda handles deathless games', () => {
   assert.equal(calculateKda(5, 0, 7), 12);
 });

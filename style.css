@@ -729,6 +729,32 @@ h2 {
   font-size: 12px;
 }
 
+.draft-champion-stats {
+  border-top: 1px solid rgba(154, 167, 184, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 3px;
+  padding-top: 5px;
+}
+
+.draft-champion-stats .pool-stat-line {
+  color: rgba(217, 228, 242, 0.76);
+  font-size: 11px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-champion-stats .pool-stat-line.games {
+  color: #f1ddb0;
+}
+
+.draft-champion-stats .pool-stat-line.muted {
+  color: rgba(154, 167, 184, 0.66);
+}
+
 .draft-focus {
   align-items: center;
   background:

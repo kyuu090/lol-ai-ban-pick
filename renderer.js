@@ -83,6 +83,13 @@ const {
   getTimerTimeLeftMs
 } = window.DraftLogic;
 const { CHAMPION_POOL_LANES } = window.DraftLogic;
+const CHAMPION_POOL_LANE_TO_POSITION = {
+  top: 'TOP',
+  jungle: 'JUNGLE',
+  middle: 'MIDDLE',
+  bottom: 'BOTTOM',
+  utility: 'UTILITY'
+};
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -127,11 +134,15 @@ function championTitle(championId) {
   return champion?.title ? `${champion.name} - ${champion.title}` : championLabel(championId);
 }
 
-function getChampionPoolDisplayStats(championId) {
+function getChampionRoleDisplayStats(championId, position) {
   const id = Number(championId);
+  const normalizedPosition = String(position || '').toUpperCase();
+  if (!id || !normalizedPosition) return null;
+
   return matchHistoryChampionStats.find((stats) => (
     Number(stats.championId) === id &&
-    stats.queueGroup === 'all_sr_5v5'
+    stats.queueGroup === 'all_sr_5v5' &&
+    String(stats.position || '').toUpperCase() === normalizedPosition
   )) || null;
 }
 
@@ -143,9 +154,13 @@ function formatNumber(value, digits = 1) {
   return Number(value || 0).toFixed(digits);
 }
 
-function createChampionStatsElement(stats) {
+function formatStatsPosition(position) {
+  return position ? `${positionLabel(position)} ` : '';
+}
+
+function createChampionStatsElement(stats, className = 'pool-champion-stats') {
   const container = document.createElement('div');
-  container.className = 'pool-champion-stats';
+  container.className = className;
 
   if (!stats || !stats.games) {
     const empty = document.createElement('span');
@@ -158,7 +173,7 @@ function createChampionStatsElement(stats) {
   const wins = Number(stats.wins || 0);
   const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
   [
-    `${stats.games}games`,
+    `${formatStatsPosition(stats.position)}${stats.games}games`,
     `Ave KDA ${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`,
     `${wins}W/${losses}L WR ${formatPercent(stats.winRate)}`
   ].forEach((text, index) => {
@@ -362,6 +377,10 @@ function getActiveChampionPoolLane() {
   return CHAMPION_POOL_LANES.find((lane) => lane.id === activeChampionPoolLane) || CHAMPION_POOL_LANES[0];
 }
 
+function getChampionPoolLanePosition(laneId) {
+  return CHAMPION_POOL_LANE_TO_POSITION[laneId] || null;
+}
+
 function getChampionOptions() {
   return Object.values(championsById)
     .filter((champion) => Number(champion.id) > 0 && champion.name)
@@ -471,7 +490,9 @@ function renderChampionPool() {
     const name = document.createElement('strong');
     name.textContent = championLabel(championId);
 
-    meta.append(name, createChampionStatsElement(getChampionPoolDisplayStats(championId)));
+    meta.append(name, createChampionStatsElement(
+      getChampionRoleDisplayStats(championId, getChampionPoolLanePosition(lane.id))
+    ));
 
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
@@ -598,6 +619,12 @@ function renderTeam(container, team, side, turnState = {}) {
     detail.textContent = `${positionLabel(member.assignedPosition)} / Summoner ${index + 1}`;
 
     meta.append(champion, detail);
+    if (side === 'ally' && isLocalMember && portraitChampionId > 0) {
+      meta.append(createChampionStatsElement(
+        getChampionRoleDisplayStats(portraitChampionId, member.assignedPosition),
+        'draft-champion-stats'
+      ));
+    }
     row.append(portrait, meta);
     return row;
   }));
