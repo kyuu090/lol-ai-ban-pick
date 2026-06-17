@@ -1,9 +1,6 @@
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
-  matchHistoryToast: document.querySelector('#matchHistoryToast'),
-  matchHistoryToastPhase: document.querySelector('#matchHistoryToastPhase'),
-  matchHistoryToastMessage: document.querySelector('#matchHistoryToastMessage'),
   matchDataCount: document.querySelector('#matchDataCount'),
   matchDataRange: document.querySelector('#matchDataRange'),
   tabButtons: document.querySelectorAll('.tab-button'),
@@ -69,8 +66,8 @@ const championIconObserver = typeof IntersectionObserver === 'function'
   : null;
 let draftTimerDeadlineMs = null;
 let draftTimerSignature = null;
-let matchHistoryToastTimer = null;
-let dismissedMatchHistoryToastKey = null;
+let matchHistoryButtonTimer = null;
+let dismissedMatchHistoryButtonKey = null;
 const {
   collectBans,
   getActiveAction,
@@ -303,41 +300,54 @@ function renderMatchDataSummary(summary) {
 }
 
 function renderMatchHistoryStatus(status) {
-  const toastKey = `${status?.phase || 'idle'}:${status?.updatedAt || ''}`;
+  const statusKey = `${status?.phase || 'idle'}:${status?.updatedAt || ''}`;
+
+  if (matchHistoryButtonTimer) {
+    clearTimeout(matchHistoryButtonTimer);
+    matchHistoryButtonTimer = null;
+  }
 
   if (!status || status.phase === 'idle') {
-    elements.matchHistoryToast.hidden = true;
     elements.collectRiotMatchesButton.disabled = false;
+    elements.collectRiotMatchesButton.textContent = 'Update match data';
+    dismissedMatchHistoryButtonKey = null;
     return;
   }
 
   const activePhases = ['collecting', 'normalizing', 'aggregating', 'retrying'];
   const isActive = activePhases.includes(status.phase);
 
-  if (matchHistoryToastTimer) {
-    clearTimeout(matchHistoryToastTimer);
-    matchHistoryToastTimer = null;
-  }
-
-  if (!isActive && dismissedMatchHistoryToastKey === toastKey) {
-    elements.matchHistoryToast.hidden = true;
+  if (isActive) {
+    dismissedMatchHistoryButtonKey = null;
+  } else if (dismissedMatchHistoryButtonKey === statusKey) {
     elements.collectRiotMatchesButton.disabled = false;
+    elements.collectRiotMatchesButton.textContent = 'Update match data';
     return;
   }
 
-  elements.matchHistoryToast.hidden = false;
-  elements.matchHistoryToast.dataset.phase = status.phase;
-  elements.matchHistoryToastPhase.textContent = status.phase;
-  elements.matchHistoryToastMessage.textContent = status.message || '';
   elements.collectRiotMatchesButton.disabled = isActive;
+  elements.collectRiotMatchesButton.textContent = getMatchHistoryButtonText(status);
 
   if (!isActive) {
     const delayMs = status.phase === 'completed' ? 3000 : 5000;
-    matchHistoryToastTimer = setTimeout(() => {
-      elements.matchHistoryToast.hidden = true;
-      dismissedMatchHistoryToastKey = toastKey;
+    matchHistoryButtonTimer = setTimeout(() => {
+      elements.collectRiotMatchesButton.textContent = 'Update match data';
+      dismissedMatchHistoryButtonKey = statusKey;
     }, delayMs);
   }
+}
+
+function getMatchHistoryButtonText(status) {
+  if (!status) return 'Update match data';
+
+  if (status.phase === 'collecting') return 'Updating...';
+  if (status.phase === 'normalizing' || status.phase === 'aggregating') return 'Saving...';
+  if (status.phase === 'retrying') return 'Retrying...';
+  if (status.phase === 'completed') return `Updated ${Number(status.updatedMatches || 0)} matches data`;
+  if (status.phase === 'partial') return `Updated ${Number(status.updatedMatches || 0)} matches data`;
+  if (status.phase === 'error') return 'Update failed';
+
+  return 'Update match data';
 }
 
 function renderSettings(settings) {
@@ -854,9 +864,8 @@ async function collectRiotMatchHistory() {
   } catch (error) {
     logWarn('Manual Riot match history collection failed', { message: error.message, stack: error.stack });
   } finally {
-    elements.collectRiotMatchesButton.textContent = 'Update match data';
-    const status = await window.lcuApi.getState().then((state) => state.matchHistoryStatus);
-    elements.collectRiotMatchesButton.disabled = ['collecting', 'normalizing', 'aggregating', 'retrying'].includes(status?.phase);
+    const state = await window.lcuApi.getState();
+    renderMatchHistoryStatus(state.matchHistoryStatus);
   }
 }
 
