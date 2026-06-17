@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('lcuApi', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   chooseLolInstallDir: () => ipcRenderer.invoke('settings:choose-lol-install-dir'),
   updateLolInstallDir: (lolInstallDir) => ipcRenderer.invoke('settings:update-lol-install-dir', lolInstallDir),
+  updateRiotApiToken: (riotApiToken) => ipcRenderer.invoke('settings:update-riot-api-token', riotApiToken),
+  updateRiotPlatformRegion: (riotPlatformRegion) => ipcRenderer.invoke('settings:update-riot-platform-region', riotPlatformRegion),
   onState: (callback) => {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('lcu:state', listener);

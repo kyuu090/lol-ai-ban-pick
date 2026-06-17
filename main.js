@@ -6,6 +6,12 @@ const https = require('node:https');
 const WebSocket = require('ws');
 const { createAuthHeader, createChampionsById, parseLockfile } = require('./lcu-logic');
 const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
+const {
+  RIOT_PLATFORM_REGIONS,
+  DEFAULT_RIOT_PLATFORM_REGION,
+  createRiotApiHosts,
+  normalizeRiotPlatformRegion
+} = require('./riot-api');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
@@ -18,6 +24,8 @@ const LCU_ENDPOINTS = {
 };
 const LOCKFILE_RETRY_MS = 5000;
 const WEBSOCKET_RECONNECT_MS = 3000;
+const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
+const APP_USER_MODEL_ID = 'com.banpick.ai';
 
 let mainWindow;
 let lcuConnection = null;
@@ -32,15 +40,21 @@ let championIconUnavailableLogged = false;
 
 configureLogger();
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_USER_MODEL_ID);
+}
+
 function createDefaultSettings() {
   return {
-    lolInstallDir: DEFAULT_LOL_INSTALL_DIR
+    lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
+    riotApiToken: '',
+    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION
   };
 }
 
 function createInitialState() {
   return {
-    settings,
+    settings: createPublicSettings(settings),
     lcuStatus: 'disconnected',
     websocketStatus: 'disconnected',
     gameflowPhase: null,
@@ -52,6 +66,19 @@ function createInitialState() {
     lastEvent: null,
     error: null,
     updatedAt: null
+  };
+}
+
+function createPublicSettings(sourceSettings = settings) {
+  const riotPlatformRegion = normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion);
+  const riotHosts = createRiotApiHosts(riotPlatformRegion);
+
+  return {
+    lolInstallDir: sourceSettings.lolInstallDir,
+    hasRiotApiToken: Boolean(sourceSettings.riotApiToken),
+    riotPlatformRegion,
+    riotRegionalRoute: riotHosts.regionalRoute,
+    riotPlatformRegions: RIOT_PLATFORM_REGIONS
   };
 }
 
@@ -70,14 +97,14 @@ async function loadSettings() {
       ...createDefaultSettings(),
       ...JSON.parse(raw)
     };
-    log.debug('Settings loaded', { path: getSettingsPath(), settings });
+    log.debug('Settings loaded', { path: getSettingsPath(), settings: createPublicSettings(settings) });
   } catch {
     settings = createDefaultSettings();
-    log.debug('Settings file not found or invalid; using defaults', { path: getSettingsPath(), settings });
+    log.debug('Settings file not found or invalid; using defaults', { path: getSettingsPath(), settings: createPublicSettings(settings) });
   }
 
-  updateState({ settings });
-  return settings;
+  updateState({ settings: createPublicSettings(settings) });
+  return createPublicSettings(settings);
 }
 
 async function loadChampionPool() {
@@ -112,8 +139,8 @@ async function saveSettings(nextSettings) {
 
   await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
   await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
-  log.debug('Settings saved', { path: getSettingsPath(), settings });
-  updateState({ settings });
+  log.debug('Settings saved', { path: getSettingsPath(), settings: createPublicSettings(settings) });
+  updateState({ settings: createPublicSettings(settings) });
   return settings;
 }
 
@@ -125,6 +152,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 680,
     title: 'LoL AI Draft Coach',
+    icon: APP_ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -174,12 +202,12 @@ async function chooseLolInstallDir() {
   });
 
   if (result.canceled || result.filePaths.length === 0) {
-    return settings;
+    return createPublicSettings(settings);
   }
 
   await saveSettings({ lolInstallDir: result.filePaths[0] });
   await reconnectWithCurrentSettings();
-  return settings;
+  return createPublicSettings(settings);
 }
 
 async function updateLolInstallDir(_event, lolInstallDir) {
@@ -189,7 +217,21 @@ async function updateLolInstallDir(_event, lolInstallDir) {
 
   await saveSettings({ lolInstallDir });
   await reconnectWithCurrentSettings();
-  return settings;
+  return createPublicSettings(settings);
+}
+
+async function updateRiotApiToken(_event, riotApiToken) {
+  if (typeof riotApiToken !== 'string') {
+    throw new Error('Riot APIトークンが文字列ではありません');
+  }
+
+  await saveSettings({ riotApiToken: riotApiToken.trim() });
+  return createPublicSettings(settings);
+}
+
+async function updateRiotPlatformRegion(_event, riotPlatformRegion) {
+  await saveSettings({ riotPlatformRegion: normalizeRiotPlatformRegion(riotPlatformRegion) });
+  return createPublicSettings(settings);
 }
 
 async function reconnectWithCurrentSettings() {
@@ -527,9 +569,11 @@ app.whenReady().then(async () => {
   ipcMain.handle('lcu:get-champion-icon', getChampionIcon);
   ipcMain.handle('champion-pool:get', () => championPool);
   ipcMain.handle('champion-pool:save', saveChampionPool);
-  ipcMain.handle('settings:get', () => settings);
+  ipcMain.handle('settings:get', () => createPublicSettings(settings));
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
+  ipcMain.handle('settings:update-riot-api-token', updateRiotApiToken);
+  ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
   ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();

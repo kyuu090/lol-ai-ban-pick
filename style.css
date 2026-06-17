@@ -52,7 +52,8 @@ button:disabled {
   opacity: 0.7;
 }
 
-input {
+input,
+select {
   background: var(--panel-soft);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -349,6 +350,21 @@ h2 {
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.token-input-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.settings-divider {
+  border-top: 1px solid var(--border);
+}
+
+.settings-help {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .settings-message {
@@ -707,7 +723,8 @@ pre {
   .content-grid,
   .draft-header,
   .teams-layout,
-  .path-input-row {
+  .path-input-row,
+  .token-input-row {
     grid-template-columns: 1fr;
   }
 

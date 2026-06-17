@@ -15,8 +15,14 @@ const elements = {
   championPoolEmpty: document.querySelector('#championPoolEmpty'),
   championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
+  riotApiTokenInput: document.querySelector('#riotApiTokenInput'),
+  riotApiTokenStatus: document.querySelector('#riotApiTokenStatus'),
+  riotPlatformRegionSelect: document.querySelector('#riotPlatformRegionSelect'),
+  riotRegionalRouteStatus: document.querySelector('#riotRegionalRouteStatus'),
   chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
   saveLolDirButton: document.querySelector('#saveLolDirButton'),
+  saveRiotApiTokenButton: document.querySelector('#saveRiotApiTokenButton'),
+  saveRiotPlatformRegionButton: document.querySelector('#saveRiotPlatformRegionButton'),
   settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
@@ -199,8 +205,36 @@ function renderState(state) {
 }
 
 function renderSettings(settings) {
-  if (!settings?.lolInstallDir || document.activeElement === elements.lolInstallDirInput) return;
-  elements.lolInstallDirInput.value = settings.lolInstallDir;
+  if (!settings) return;
+
+  if (settings.lolInstallDir && document.activeElement !== elements.lolInstallDirInput) {
+    elements.lolInstallDirInput.value = settings.lolInstallDir;
+  }
+
+  elements.riotApiTokenStatus.textContent = settings.hasRiotApiToken
+    ? '登録済みです。空欄で保存すると削除できます。'
+    : '未登録';
+
+  renderRiotPlatformRegions(settings);
+  elements.riotRegionalRouteStatus.textContent = `Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
+}
+
+function renderRiotPlatformRegions(settings) {
+  const regions = Array.isArray(settings.riotPlatformRegions) ? settings.riotPlatformRegions : [];
+  const selectedRegion = settings.riotPlatformRegion || 'JP1';
+
+  if (elements.riotPlatformRegionSelect.childElementCount === 0 && regions.length > 0) {
+    elements.riotPlatformRegionSelect.replaceChildren(...regions.map((region) => {
+      const option = document.createElement('option');
+      option.value = region;
+      option.textContent = region;
+      return option;
+    }));
+  }
+
+  if (document.activeElement !== elements.riotPlatformRegionSelect) {
+    elements.riotPlatformRegionSelect.value = selectedRegion;
+  }
 }
 
 function getActiveChampionPoolLane() {
@@ -599,6 +633,48 @@ async function saveLolInstallDir() {
   }
 }
 
+async function saveRiotApiToken() {
+  const riotApiToken = elements.riotApiTokenInput.value.trim();
+  elements.saveRiotApiTokenButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.updateRiotApiToken(riotApiToken);
+    elements.riotApiTokenInput.value = '';
+    renderSettings(settings);
+    logDebug('Riot API token saved', { hasRiotApiToken: settings.hasRiotApiToken });
+    elements.settingsMessage.textContent = settings.hasRiotApiToken
+      ? 'Riot APIトークンを保存しました。'
+      : 'Riot APIトークンを削除しました。';
+  } catch (error) {
+    logWarn('Riot API token save failed', { message: error.message, stack: error.stack });
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveRiotApiTokenButton.disabled = false;
+  }
+}
+
+async function saveRiotPlatformRegion() {
+  const riotPlatformRegion = elements.riotPlatformRegionSelect.value;
+  elements.saveRiotPlatformRegionButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.updateRiotPlatformRegion(riotPlatformRegion);
+    renderSettings(settings);
+    logDebug('Riot platform region saved', {
+      riotPlatformRegion: settings.riotPlatformRegion,
+      riotRegionalRoute: settings.riotRegionalRoute
+    });
+    elements.settingsMessage.textContent = `Regionを${settings.riotPlatformRegion}に保存しました。`;
+  } catch (error) {
+    logWarn('Riot platform region save failed', { message: error.message, stack: error.stack });
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveRiotPlatformRegionButton.disabled = false;
+  }
+}
+
 async function refresh() {
   elements.refreshButton.disabled = true;
   elements.refreshButton.textContent = '取得中...';
@@ -621,6 +697,8 @@ elements.tabButtons.forEach((button) => {
 });
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
+elements.saveRiotApiTokenButton.addEventListener('click', saveRiotApiToken);
+elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 

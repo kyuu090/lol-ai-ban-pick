@@ -142,6 +142,11 @@ Settings画面を実装済み。
 - `参照` ボタンでディレクトリ選択できる
 - `保存` ボタンで設定を保存できる
 - 保存後、既存WebSocketを閉じてLCUへ再接続する
+- Riot API連携用の開発者トークンを入力・保存できる
+- Riot APIトークンを空欄で保存すると削除できる
+- Riot APIトークン本文はRendererへ返さず、Debug画面のstateにも表示しない
+- Riot APIのplatform regionを選択・保存できる
+- Match-V5などで使うregional routeはplatform regionから自動導出する
 
 設定保存先:
 
@@ -153,9 +158,13 @@ app.getPath('userData')/settings.json
 
 ```json
 {
-  "lolInstallDir": "C:\\Riot Games\\League of Legends"
+  "lolInstallDir": "C:\\Riot Games\\League of Legends",
+  "riotApiToken": "RGAPI-...",
+  "riotPlatformRegion": "JP1"
 }
 ```
+
+RendererやDebug画面へ返す公開settingsは、`riotApiToken` 本文を含めず、`hasRiotApiToken`, `riotPlatformRegion`, `riotRegionalRoute` だけを含める。
 
 ### ChampionPool
 
@@ -442,6 +451,15 @@ PowerShellでは `"$protocol://..."` が変数展開エラーになるため、`
 ```powershell
 Invoke-RestMethod "${protocol}://127.0.0.1:${port}/lol-gameflow/v1/gameflow-phase" -Headers $headers -SkipCertificateCheck
 ```
+
+## Riot API Client
+
+Riot API用の薄いクライアント基盤は `riot-api.js` に置く。
+
+- `riotPlatformRegion` は `JP1`, `NA1`, `KR` などのplatform routing value
+- Match-V5のようなregional routing APIでは `createRiotApiHosts` で `ASIA`, `AMERICAS`, `EUROPE`, `SEA` を導出する
+- HTTP 429が返った場合は `Retry-After` ヘッダを優先して待機し、ヘッダがなければ短いfallback delayでretryする
+- Riot APIトークンは `X-Riot-Token` ヘッダにだけ入れ、ログに出さない
 
 ## Important Implementation Notes
 

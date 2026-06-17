@@ -182,6 +182,31 @@
             </div>
           </label>
 
+          <div class="settings-divider"></div>
+
+          <div>
+            <h2>Riot API トークン</h2>
+            <p>Riot API連携で使う開発者トークンを保存します。画面やDebugのstateには表示しません。</p>
+          </div>
+
+          <label class="settings-field" for="riotApiTokenInput">
+            <span>APIトークン</span>
+            <div class="token-input-row">
+              <input id="riotApiTokenInput" type="password" spellcheck="false" autocomplete="off" placeholder="RGAPI-..." />
+              <button id="saveRiotApiTokenButton" type="button">保存</button>
+            </div>
+            <small id="riotApiTokenStatus" class="settings-help">未登録</small>
+          </label>
+
+          <label class="settings-field" for="riotPlatformRegionSelect">
+            <span>Region</span>
+            <div class="token-input-row">
+              <select id="riotPlatformRegionSelect"></select>
+              <button id="saveRiotPlatformRegionButton" type="button">保存</button>
+            </div>
+            <small id="riotRegionalRouteStatus" class="settings-help">Match-V5 route: ASIA</small>
+          </label>
+
           <p id="settingsMessage" class="settings-message" role="status"></p>
         </section>
       </section>
