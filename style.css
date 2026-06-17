@@ -665,7 +665,31 @@ h2 {
 }
 
 .pick-row.local-player {
-  border-color: rgba(36, 182, 217, 0.58);
+  background: linear-gradient(90deg, rgba(36, 182, 217, 0.24), rgba(26, 35, 48, 0.84));
+  border-color: rgba(36, 182, 217, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(36, 182, 217, 0.14);
+  padding-right: 48px;
+  position: relative;
+}
+
+.pick-row.local-player::after {
+  background: rgba(36, 182, 217, 0.16);
+  border: 1px solid rgba(36, 182, 217, 0.42);
+  border-radius: 999px;
+  color: #a9ecfb;
+  content: "YOU";
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 4px 7px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
+.pick-row.local-player .champion-portrait {
+  border-color: rgba(36, 182, 217, 0.86);
 }
 
 .pick-row.active-turn {
@@ -682,6 +706,16 @@ h2 {
   background: linear-gradient(90deg, rgba(212, 175, 55, 0.26), rgba(26, 35, 48, 0.84));
   border-color: rgba(245, 214, 131, 0.88);
   box-shadow: inset 0 0 0 1px rgba(245, 214, 131, 0.22), 0 0 18px rgba(212, 175, 55, 0.2);
+}
+
+.pick-row.local-active-turn::after {
+  background: rgba(212, 175, 55, 0.22);
+  border-color: rgba(245, 214, 131, 0.76);
+  color: #f9e5a8;
+}
+
+.pick-row.local-active-turn .champion-portrait {
+  border-color: rgba(245, 214, 131, 0.96);
 }
 
 .champion-portrait {
