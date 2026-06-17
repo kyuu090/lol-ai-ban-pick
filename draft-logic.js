@@ -38,20 +38,25 @@
   }
 
   function positionLabel(position) {
-    return position ? POSITION_LABELS[position.toLowerCase()] || position.toUpperCase() : '譛ｪ遒ｺ螳・';
+    return position ? POSITION_LABELS[position.toLowerCase()] || position.toUpperCase() : '未確定';
   }
 
   function getPendingLabel(member, championLabel) {
     if (member?.championPickIntent) {
-      return `${championLabel(member.championPickIntent)} 繧剃ｺ亥ｮ啻`;
+      return `${championLabel(member.championPickIntent)} を予定`;
     }
     return 'PICKING NEXT';
   }
 
   function normalizeChampionIds(value) {
     return Array.isArray(value)
-      ? value.map(Number).filter((championId) => Number.isInteger(championId) && championId > 0)
+      ? value.map(normalizeChampionId).filter((championId) => championId !== null)
       : [];
+  }
+
+  function normalizeChampionId(value) {
+    const championId = Number(value);
+    return Number.isInteger(championId) && championId > 0 ? championId : null;
   }
 
   function uniqueChampionIds(championIds) {
@@ -84,9 +89,10 @@
     const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
 
     actions
-      .filter((action) => action?.type === 'ban' && Number(action.championId) > 0)
+      .filter((action) => action?.type === 'ban')
       .forEach((action) => {
-        const championId = Number(action.championId);
+        const championId = normalizeChampionId(action.championId);
+        if (championId === null) return;
 
         if (allyCellIds.has(action.actorCellId)) {
           allyBans.push(championId);
@@ -142,6 +148,7 @@
     getSummonerName,
     positionLabel,
     getPendingLabel,
+    normalizeChampionId,
     normalizeChampionIds,
     uniqueChampionIds,
     createDefaultChampionPool,

@@ -4,7 +4,7 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
-const { createAuthHeader, createChampionsById } = require('./lcu-logic');
+const { createAuthHeader, createChampionsById, parseLockfile } = require('./lcu-logic');
 const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
 
@@ -160,11 +160,7 @@ async function readLockfile() {
     throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
   }
 
-  const [processName, pid, port, password, protocol] = raw.trim().split(':');
-
-  if (!port || !password || !protocol) {
-    throw new Error('lockfileの形式を読み取れませんでした');
-  }
+  const { processName, pid, port, password, protocol } = parseLockfile(raw);
 
   log.debug('LCU lockfile parsed', { processName, pid, port, protocol });
   return { processName, pid, port, password, protocol };

@@ -61,11 +61,13 @@ const {
   getActiveAction,
   getCoachPanelState,
   getPhase,
+  getPendingLabel,
   getSummonerName,
   normalizeChampionPool,
+  positionLabel,
   getTimerTimeLeftMs
 } = window.DraftLogic;
-const { CHAMPION_POOL_LANES, POSITION_LABELS } = window.DraftLogic;
+const { CHAMPION_POOL_LANES } = window.DraftLogic;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -182,10 +184,6 @@ function processChampionIconQueue() {
         processChampionIconQueue();
       });
   }
-}
-
-function positionLabel(position) {
-  return position ? POSITION_LABELS[position.toLowerCase()] || position.toUpperCase() : '未確定';
 }
 
 function renderState(state) {
@@ -434,7 +432,7 @@ function renderTeam(container, team, side, turnState = {}) {
     meta.className = 'pick-meta';
 
     const champion = document.createElement('strong');
-    champion.textContent = selected ? championLabel(member.championId) : getPendingLabel(member);
+    champion.textContent = selected ? championLabel(member.championId) : getPendingLabel(member, championLabel);
 
     const detail = document.createElement('span');
     detail.textContent = `${positionLabel(member.assignedPosition)} / Summoner ${index + 1}`;
@@ -443,13 +441,6 @@ function renderTeam(container, team, side, turnState = {}) {
     row.append(portrait, meta);
     return row;
   }));
-}
-
-function getPendingLabel(member) {
-  if (member?.championPickIntent) {
-    return `${championLabel(member.championPickIntent)} を予定`;
-  }
-  return 'PICKING NEXT';
 }
 
 function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelect)) {

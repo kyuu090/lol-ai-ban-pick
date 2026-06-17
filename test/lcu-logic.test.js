@@ -17,7 +17,7 @@ test('parseLockfile extracts LCU connection fields', () => {
 });
 
 test('parseLockfile rejects malformed lockfile content', () => {
-  assert.throws(() => parseLockfile('LeagueClientUx:1234'), /lockfile/);
+  assert.throws(() => parseLockfile('LeagueClientUx:1234'), /lockfileの形式/);
 });
 
 test('createAuthHeader builds Riot basic auth header', () => {

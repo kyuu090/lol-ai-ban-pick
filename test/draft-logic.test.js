@@ -4,8 +4,10 @@ const {
   collectBans,
   getActiveAction,
   getCoachPanelState,
+  getPendingLabel,
   getSummonerName,
   getTimerTimeLeftMs,
+  normalizeChampionId,
   normalizeChampionPool,
   normalizeChampionIds,
   positionLabel
@@ -25,6 +27,8 @@ test('collectBans merges champ-select bans and ban actions by team without dupli
         { type: 'ban', actorCellId: 6, championId: 24 },
         { type: 'pick', actorCellId: 2, championId: 11 },
         { type: 'ban', actorCellId: 999, championId: 55 },
+        { type: 'ban', actorCellId: 7, championId: 12.5 },
+        { type: 'ban', actorCellId: 7, championId: Infinity },
         { type: 'ban', actorCellId: 7, championId: 0 }
       ]
     ]
@@ -76,6 +80,9 @@ test('getCoachPanelState distinguishes logged out, champ select, and in-game sta
 });
 
 test('small normalization helpers handle LCU edge cases', () => {
+  assert.equal(normalizeChampionId('1'), 1);
+  assert.equal(normalizeChampionId(12.5), null);
+  assert.equal(normalizeChampionId(Infinity), null);
   assert.deepEqual(normalizeChampionIds(['1', 2, 0, -5, 'x', Infinity, 12.5]), [1, 2]);
   assert.equal(getTimerTimeLeftMs({ adjustedTimeLeftInPhase: 1500, timeLeftInPhase: 9000 }), 1500);
   assert.equal(getTimerTimeLeftMs({ timeLeftInPhase: 9000 }), 9000);
@@ -84,6 +91,9 @@ test('small normalization helpers handle LCU edge cases', () => {
   assert.equal(getSummonerName({ error: 'not logged in' }), '');
   assert.equal(positionLabel('jungle'), 'JG');
   assert.equal(positionLabel('fill'), 'FILL');
+  assert.equal(positionLabel(null), '未確定');
+  assert.equal(getPendingLabel({}, () => 'Unused'), 'PICKING NEXT');
+  assert.equal(getPendingLabel({ championPickIntent: 103 }, (championId) => `Champion ${championId}`), 'Champion 103 を予定');
 });
 
 test('normalizeChampionPool keeps one positive champion id list per lane', () => {

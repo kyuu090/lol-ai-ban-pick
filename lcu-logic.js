@@ -2,7 +2,7 @@ function parseLockfile(raw) {
   const [processName, pid, port, password, protocol] = String(raw).trim().split(':');
 
   if (!port || !password || !protocol) {
-    throw new Error('lockfile縺ｮ蠖｢蠑上ｒ隱ｭ縺ｿ蜿悶ｌ縺ｾ縺帙ｓ縺ｧ縺励◆');
+    throw new Error('lockfileの形式を読み取れませんでした');
   }
 
   return { processName, pid, port, password, protocol };
