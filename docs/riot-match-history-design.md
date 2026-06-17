@@ -1,0 +1,581 @@
+# Riot Match History Design
+
+## 目的
+
+この文書は、Riot API を使って自分の試合履歴を取得し、ChampionPool、非AIモード、AIモードに利用するための設計方針をまとめる。
+
+LCU match history は API キー不要で便利だが、ローカル調査ではページングやキャッシュ挙動が不安定だった。そのため、自己戦績取得の本線は Riot API Match-V5 とする。
+
+主な目的:
+
+- 自分の直近90試合を取得する
+- match detail をローカルキャッシュする
+- 自分が使った champion、勝敗、KDA、味方 champion、敵 champion を正規化する
+- ChampionPool と照合し、得意 champion の実績を表示する
+- 非AIモードの推薦スコアに利用する
+- AIモードへ渡す小さな構造化コンテキストを作る
+
+## 前提
+
+- Riot API token が必要
+- Settings で Riot API token と platform region を保存する
+- token 本文は Renderer、Debug state、ログに出さない
+- Match-V5 は regional routing value を使う
+- 日本ユーザーでは基本的に `ASIA` routing を使う
+- 429 が返った場合は `Retry-After` ヘッダを優先して待つ
+- 取得済み match detail はキャッシュし、再取得しない
+
+## Rate Limit
+
+利用想定の rate limit:
+
+```text
+20 requests / 1 second
+100 requests / 2 minutes
+```
+
+制限は routing value ごとに適用される。
+
+例:
+
+```text
+asia
+jp1
+americas
+euw1
+```
+
+今回の自己戦績取得では、主に `ASIA` に request が集まる。
+
+## 取得件数
+
+1回の取得対象は **90試合** とする。
+
+想定 request 数:
+
+```text
+Riot ID -> PUUID: 1 request
+match ids取得: 1 request
+match detail取得: 最大90 requests
+
+合計: 最大92 requests
+```
+
+`100 requests / 2 minutes` に対して 8 requests の余白を残す。
+
+キャッシュ済み match detail は再取得しないため、2回目以降の実 request 数は少なくなる。
+
+例:
+
+```text
+match ids: 90取得
+未キャッシュ detail: 12件
+合計: 14 requests
+```
+
+## 統計対象フィルタ
+
+統計に使う試合は **5v5 Summoner's Rift** のみに絞る。
+
+Riot API から取得・キャッシュする match detail は90件分を対象にしてよいが、ChampionPool表示、非AI推薦、AI context に使う集計では次の条件を満たす試合だけを採用する。
+
+```text
+mapId === 11
+gameMode === "CLASSIC"
+queueId is allowed
+participant count is 10
+```
+
+初期対象 queue group:
+
+```text
+ranked_solo: 420
+ranked_flex: 440
+normal_draft: 400
+normal_blind: 430
+normal_quickplay: 490
+```
+
+初期除外 queue / mode の例:
+
+```text
+450: ARAM
+1700/1710/1750: Arena
+Practice Tool
+Custom / Tutorial / Event modes
+```
+
+queue ID は Riot 側で変わる可能性があるため、実装時には設定テーブルとして持ち、必要に応じて更新できるようにする。
+
+### Ranked と Normal の分離
+
+Ranked と Normal は同じ champion 実績として混ぜない。
+
+集計では `queueType` と `queueGroup` を持たせる。
+
+```text
+queueType: ranked | normal
+queueGroup: ranked_solo | ranked_flex | normal_draft | normal_blind | normal_quickplay
+```
+
+ChampionPool表示では、初期は両方を見せてもよいが、推薦スコアでは現在のキューに近い `queueGroup` を優先する。
+
+例:
+
+```text
+現在のqueueが Ranked Solo/Duo:
+  ranked_solo の自己戦績を優先
+  ranked_flex / normal 系は参考値として弱く扱う
+
+現在のqueueが Normal Draft:
+  normal_draft の自己戦績を優先
+  normal_blind / normal_quickplay / ranked 系は参考値として扱う
+```
+
+現在の champ select から queue が判定できない場合は、全 5v5 SR 対象をまとめた `all_sr_5v5` を fallback として使う。ただし、表示上は Ranked と Normal の件数・勝率を分けて見せる。
+
+## Routing
+
+Settings には platform routing value を保存する。
+
+```text
+JP1
+NA1
+KR
+EUW1
+```
+
+Match-V5 では regional routing value を使うため、platform region から自動導出する。
+
+例:
+
+```text
+JP1 -> ASIA
+KR -> ASIA
+NA1 -> AMERICAS
+EUW1 -> EUROPE
+SG2 -> SEA
+```
+
+`riot-api.js` の `createRiotApiHosts` を使って host を作る。
+
+## API Flow
+
+```text
+1. Settings の Riot API token を確認
+2. Riot ID / Tagline を取得
+3. Account-V1 で PUUID を取得
+4. Match-V5 で match id 一覧を取得
+5. キャッシュ済み matchId を除外
+6. 未取得 match detail を rate limit 制御下で取得
+7. raw match cache に保存
+8. match detail を正規化
+9. champion ごとの自己戦績を集計
+10. UI に反映
+```
+
+## Endpoint
+
+Riot ID から PUUID:
+
+```text
+GET /riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}
+```
+
+match id 一覧:
+
+```text
+GET /lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=90
+```
+
+match detail:
+
+```text
+GET /lol/match/v5/matches/{matchId}
+```
+
+## Riot ID
+
+初期実装では、LCU current summoner から `gameName` と `tagLine` を取得できる場合はそれを使う。
+
+取得できない場合や手動で別アカウントを指定したい場合は、将来 Settings または Debug に Riot ID 入力欄を追加する。
+
+LCU current summoner は補助入力であり、試合履歴の本体取得には Riot API を使う。
+
+## Rate Limit 制御
+
+初期実装では、速度と安全性のバランスとして batch 制御を使う。
+
+```text
+matchesPerRun: 90
+detailConcurrency: 5
+batchDelayMs: 350
+maxRequestsPerSecond: 20
+maxRequestsPerTwoMinutes: 100
+reserveRequestsPerTwoMinutes: 8
+```
+
+detail 取得:
+
+```text
+5件並列で投げる
+350ms待つ
+次の5件を投げる
+```
+
+概算:
+
+```text
+5 requests / 350ms = 約14.3 requests / second
+```
+
+`20 requests / 1 second` にかからない速度で、90件を数秒から十数秒程度で取得する。
+
+`100 requests / 2 minutes` については、1回の取得で最大92 requestに抑えることで余白を残す。
+
+## 429 Handling
+
+429 が返った場合:
+
+```text
+1. Retry-After ヘッダがあれば、その秒数を待つ
+2. Retry-After がなければ、2分windowを疑って30〜60秒待つ
+3. 連続429では指数バックオフする
+```
+
+リトライ中は `matchHistoryStatus.phase = "retrying"` とする。
+
+表示例:
+
+```text
+Riot API制限のため再試行します 17秒後
+```
+
+429 は最終失敗ではなく、基本的には待機して継続する。
+
+ただし、最大リトライを超えた場合は `error` として扱う。
+
+## 保存ファイル
+
+保存先は Electron の `app.getPath('userData')` 配下とする。
+
+```text
+riot-match-cache.json
+match-history.json
+```
+
+`riot-match-cache.json` は raw に近い Riot API response を match id 単位で保存する。
+
+```js
+{
+  version: 1,
+  source: "riot-api",
+  updatedAt: "2026-06-17T...",
+  matchesById: {
+    "JP1_1234567890": {
+      metadata: {},
+      info: {}
+    }
+  }
+}
+```
+
+`match-history.json` はアプリが通常利用する正規化済みデータ。
+
+```js
+{
+  version: 1,
+  source: "riot-api",
+  updatedAt: "2026-06-17T...",
+  matches: []
+}
+```
+
+## データフロー
+
+```text
+Riot API Match-V5
+  -> Riot Match Cache
+  -> Normalized Match Records
+  -> Player Champion Stats
+  -> Draft Recommendation Inputs
+  -> 非AIモード / AIモード
+```
+
+## 正規化済み Match Record
+
+初期形:
+
+```js
+{
+  matchId: "JP1_1234567890",
+  gameCreation: 1710000000000,
+  mapId: 11,
+  queueId: 420,
+  queueType: "ranked",
+  queueGroup: "ranked_solo",
+  gameMode: "CLASSIC",
+  gameDuration: 1800,
+  gameVersion: "16.12.1",
+
+  self: {
+    puuid: "...",
+    championId: 103,
+    championName: "Ahri",
+    teamId: 100,
+    position: "MIDDLE",
+    lane: "MIDDLE",
+    win: true,
+    kills: 8,
+    deaths: 2,
+    assists: 9,
+    kda: 8.5
+  },
+
+  allies: [
+    { championId: 122, championName: "Darius", position: "TOP" },
+    { championId: 64, championName: "Lee Sin", position: "JUNGLE" },
+    { championId: 103, championName: "Ahri", position: "MIDDLE" },
+    { championId: 202, championName: "Jhin", position: "BOTTOM" },
+    { championId: 412, championName: "Thresh", position: "UTILITY" }
+  ],
+
+  enemies: [
+    { championId: 24, championName: "Jax", position: "TOP" },
+    { championId: 121, championName: "Kha'Zix", position: "JUNGLE" },
+    { championId: 134, championName: "Syndra", position: "MIDDLE" },
+    { championId: 145, championName: "Kai'Sa", position: "BOTTOM" },
+    { championId: 111, championName: "Nautilus", position: "UTILITY" }
+  ]
+}
+```
+
+## 自分の Participant 特定
+
+Match-V5 の `metadata.participants` と `info.participants` を使う。
+
+基本は `info.participants[].puuid === targetPuuid` で自分を特定する。
+
+自分が見つかったら:
+
+```text
+self.teamId と同じ participant -> allies
+self.teamId と違う participant -> enemies
+```
+
+## Champion Stats
+
+正規化済み match records から champion ごとに集計する。
+
+```js
+{
+  championId: 103,
+  championName: "Ahri",
+  queueType: "ranked",
+  queueGroup: "ranked_solo",
+  games: 18,
+  wins: 11,
+  losses: 7,
+  winRate: 0.611,
+  avgKills: 6.2,
+  avgDeaths: 3.8,
+  avgAssists: 7.4,
+  avgKda: 3.58,
+  recentGames: 5,
+  recentWins: 3,
+  recentWinRate: 0.6,
+  lastPlayedAt: 1710000000000,
+  positions: {
+    MIDDLE: 17,
+    UTILITY: 1
+  }
+}
+```
+
+KDA:
+
+```text
+kda = deaths === 0 ? kills + assists : (kills + assists) / deaths
+```
+
+## ChampionPool との照合
+
+ChampionPool はユーザーが使える champion の主観的制約として扱う。
+
+表示・推薦では次を判定する。
+
+- ChampionPool 内で使用実績がある
+- ChampionPool 内だが最近使っていない
+- ChampionPool 内で勝率が高い
+- ChampionPool 外だが実際にはよく使っている
+- サンプルが少ないため信頼度が低い
+
+## 非AIモード
+
+非AIモードは、正規化済みデータと集計値を使って deterministic に表示・推薦する。
+
+候補条件:
+
+```text
+champion_id is in ChampionPool[currentRole]
+champion_id is not picked
+champion_id is not banned
+```
+
+初期スコア:
+
+```text
+score =
+  win_rate_score
+  + games_confidence
+  + recent_win_rate_score
+  + kda_score
+  - inactivity_penalty
+```
+
+表示例:
+
+```text
+Ahri
+18戦 61% / 平均KDA 3.6 / 直近5戦 3勝2敗
+```
+
+## AIモード
+
+AIモードは raw match detail を直接渡さない。
+
+アプリ側で候補を絞り、集計済みの小さな context だけを渡す。
+
+```js
+{
+  currentRole: "MIDDLE",
+  championPoolCandidates: [
+    {
+      championId: 103,
+      name: "Ahri",
+      games: 18,
+      winRate: 0.611,
+      avgKda: 3.58,
+      recentWinRate: 0.6,
+      score: 82
+    }
+  ],
+  currentDraft: {
+    allyChampionIds: [122, 64],
+    enemyChampionIds: [134],
+    bannedChampionIds: [99, 55]
+  }
+}
+```
+
+AIモードの初期役割は、推薦そのものではなく説明役とする。
+
+## 取得ステータスと通知
+
+試合履歴の取得、正規化、集計中は、画面上部にかぶる一時的なステータス通知を表示する。
+
+通知はモーダルではない。ユーザー操作をブロックせず、Coach / ChampionPool / Settings / Debug のどの画面でも同じ位置に表示する。
+
+`appState` に `matchHistoryStatus` を持たせる想定。
+
+```js
+{
+  phase: "idle",
+  source: "manual",
+  requestedMatches: 90,
+  fetchedMatches: 0,
+  normalizedMatches: 0,
+  updatedMatches: 0,
+  failedRequests: 0,
+  retryAttempt: 0,
+  nextRetryAt: null,
+  message: "",
+  error: null,
+  startedAt: null,
+  updatedAt: null
+}
+```
+
+`source`:
+
+```text
+manual
+auto
+```
+
+`phase`:
+
+```text
+idle
+collecting
+normalizing
+aggregating
+completed
+partial
+retrying
+error
+```
+
+表示例:
+
+```text
+試合データ収集中... 25/90 試合
+Riot API制限のため再試行します 17秒後
+試合データ収集完了 84試合を更新しました
+一部の試合データを収集しました 72試合を更新 / 3件失敗
+試合データ収集に失敗しました Riot APIトークンを確認してください
+```
+
+自動クローズ:
+
+```text
+completed: 3秒後に自動で閉じる
+partial: 5秒後に自動で閉じる
+error: 5秒後に自動で閉じる
+collecting / normalizing / aggregating: 処理中は表示し続ける
+retrying: 次の状態へ遷移するまで表示し続ける
+```
+
+完了通知では、取得件数ではなく更新件数を表示する。
+
+```text
+updatedMatches
+```
+
+## 二重起動防止
+
+手動取得中は、同じ取得ボタンを押せない状態にする。
+
+初期実装では既存処理のキャンセルや再開始は行わない。
+
+将来自動更新を追加する場合も、手動取得と自動取得が同時に走らないようにする。
+
+## 初期実装順
+
+1. `riot-api.js` の request/retry 基盤を使う
+2. Riot ID / tagLine から PUUID を取得する
+3. match id を90件取得する
+4. `riot-match-cache.json` を読み込む
+5. 未キャッシュ match detail だけを抽出する
+6. 5並列 / 350ms batch delay で detail を取得する
+7. 429 では `Retry-After` を優先して待つ
+8. raw cache を更新する
+9. 正規化して `match-history.json` に保存する
+10. champion ごとの集計関数を作る
+11. ChampionPool 表示に戦績を追加する
+12. Coach の ChampSelect に非AI候補ランキングを追加する
+13. AIモード用 context builder を追加する
+
+## 注意点
+
+- Riot API token をログに出さない
+- Riot API token を Renderer や Debug state に返さない
+- 取得済み match detail は再取得しない
+- 一度の取得対象は90試合にする
+- 1回の想定最大request数は92件に抑える
+- 統計に使う試合は5v5 Summoner's Riftに限定する
+- Ranked と Normal は別の `queueType` として集計する
+- queueId は保持し、`queueGroup` で Ranked Solo/Duo、Ranked Flex、Normal Draft、Normal Blind、Quickplay などを分ける
+- 429では `Retry-After` を優先する
+- 1試合単位の正規化失敗は全体失敗にせず `partial` として扱う
+- 自動ピック、自動BAN、自動ドッジには使わない

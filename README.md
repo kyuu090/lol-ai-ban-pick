@@ -62,9 +62,13 @@ settings.json
 champion-pool.json
 ```
 
-`settings.json` にはLoLインストールディレクトリに加えて、将来のRiot API連携用の開発者トークンとRegionを保存できます。トークン本文はDebug画面のstate表示には出しません。
+`settings.json` にはLoLインストールディレクトリに加えて、Riot API連携用の開発者トークンとRegionを保存できます。トークン本文はDebug画面のstate表示には出しません。
 
-当面の試合履歴取得はRiot APIではなくLCU match historyを優先します。Riot APIのRegionは `JP1` などのplatform routing valueとして保存し、将来Match-V5などregional routingを使うAPIでは、保存したRegionから `ASIA` / `AMERICAS` / `EUROPE` / `SEA` を導出します。
+試合履歴と自己戦績はRiot API Match-V5を優先して取得します。Regionは `JP1` などのplatform routing valueとして保存し、Match-V5などregional routingを使うAPIでは、保存したRegionから `ASIA` / `AMERICAS` / `EUROPE` / `SEA` を導出します。
+
+Riot APIによる自己戦績取得では、1回の取得対象を90試合にします。想定最大request数は Riot ID / match ids / match details を合わせて92件程度に抑え、`100 requests / 2 minutes` に余白を残します。取得済みmatch detailはローカルキャッシュし、再取得しません。
+
+統計に使う試合は5v5 Summoner's RiftのRanked / Normal系queueに絞り、Ranked と Normal の自己戦績は分けて扱います。
 
 ## LCU lockfile
 
