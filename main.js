@@ -6,6 +6,7 @@ const https = require('node:https');
 const WebSocket = require('ws');
 const { createAuthHeader, createChampionsById } = require('./lcu-logic');
 const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
+const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
@@ -28,6 +29,8 @@ let championPool = createDefaultChampionPool();
 let appState = createInitialState();
 let championIconUnavailableUntil = 0;
 let championIconUnavailableLogged = false;
+
+configureLogger();
 
 function createDefaultSettings() {
   return {
@@ -67,8 +70,10 @@ async function loadSettings() {
       ...createDefaultSettings(),
       ...JSON.parse(raw)
     };
+    log.debug('Settings loaded', { path: getSettingsPath(), settings });
   } catch {
     settings = createDefaultSettings();
+    log.debug('Settings file not found or invalid; using defaults', { path: getSettingsPath(), settings });
   }
 
   updateState({ settings });
@@ -79,8 +84,10 @@ async function loadChampionPool() {
   try {
     const raw = await fs.readFile(getChampionPoolPath(), 'utf8');
     championPool = normalizeChampionPool(JSON.parse(raw));
+    log.debug('Champion pool loaded', { path: getChampionPoolPath(), championPool });
   } catch {
     championPool = createDefaultChampionPool();
+    log.debug('Champion pool file not found or invalid; using empty pool', { path: getChampionPoolPath() });
   }
 
   updateState({ championPool });
@@ -92,6 +99,7 @@ async function saveChampionPool(_event, nextChampionPool) {
 
   await fs.mkdir(path.dirname(getChampionPoolPath()), { recursive: true });
   await fs.writeFile(getChampionPoolPath(), JSON.stringify(championPool, null, 2), 'utf8');
+  log.debug('Champion pool saved', { path: getChampionPoolPath(), championPool });
   updateState({ championPool });
   return championPool;
 }
@@ -104,11 +112,13 @@ async function saveSettings(nextSettings) {
 
   await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
   await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
+  log.debug('Settings saved', { path: getSettingsPath(), settings });
   updateState({ settings });
   return settings;
 }
 
 function createWindow() {
+  log.debug('Creating main window');
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -142,6 +152,7 @@ function updateState(patch) {
 async function readLockfile() {
   let raw;
   const lockfilePath = path.join(settings.lolInstallDir, 'lockfile');
+  log.debug('Reading LCU lockfile', { lockfilePath });
 
   try {
     raw = await fs.readFile(lockfilePath, 'utf8');
@@ -155,6 +166,7 @@ async function readLockfile() {
     throw new Error('lockfileの形式を読み取れませんでした');
   }
 
+  log.debug('LCU lockfile parsed', { processName, pid, port, protocol });
   return { processName, pid, port, password, protocol };
 }
 
@@ -185,6 +197,7 @@ async function updateLolInstallDir(_event, lolInstallDir) {
 }
 
 async function reconnectWithCurrentSettings() {
+  log.debug('Reconnecting with current settings');
   closeWebSocket();
   lcuConnection = null;
   await refreshLcuState();
@@ -195,10 +208,17 @@ async function lcuFetch(endpoint) {
     throw new Error('LCU接続情報がありません');
   }
 
+  const startedAt = Date.now();
   const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
+  log.debug('LCU request started', { endpoint, port: lcuConnection.port });
   const response = await requestLcuJson(url, {
     Authorization: createAuthHeader(lcuConnection.password),
     Accept: 'application/json'
+  });
+  log.debug('LCU request finished', {
+    endpoint,
+    statusCode: response.statusCode,
+    durationMs: Date.now() - startedAt
   });
 
   if (response.statusCode === 404) return null;
@@ -215,10 +235,16 @@ async function lcuFetchBuffer(endpoint) {
     throw new Error('LCU謗･邯壽ュ蝣ｱ縺後≠繧翫∪縺帙ｓ');
   }
 
+  const startedAt = Date.now();
   const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
   const response = await requestLcu(url, {
     Authorization: createAuthHeader(lcuConnection.password),
     Accept: '*/*'
+  });
+  log.debug('LCU asset request finished', {
+    endpoint,
+    statusCode: response.statusCode,
+    durationMs: Date.now() - startedAt
   });
 
   if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -285,10 +311,10 @@ async function getChampionIcon(_event, championId) {
 
       if (!championIconUnavailableLogged) {
         championIconUnavailableLogged = true;
-        console.warn(`Champion icon fetch is temporarily unavailable; suppressing repeated icon errors. First failed championId=${id}`, error);
+        log.warn(`Champion icon fetch is temporarily unavailable; suppressing repeated icon errors. First failed championId=${id}`, serializeForLog(error));
       }
     } else {
-      console.warn(`Failed to fetch champion icon for championId=${id}`, error);
+      log.warn(`Failed to fetch champion icon for championId=${id}`, serializeForLog(error));
     }
 
     return null;
@@ -305,6 +331,7 @@ function isTransientIconFetchError(error) {
 }
 
 async function refreshLcuState() {
+  log.debug('Refreshing LCU state');
   try {
     lcuConnection = await readLockfile();
     clearRetryTimer();
@@ -324,12 +351,21 @@ async function refreshLcuState() {
       throw new Error(`LCU API request failed: ${summoner.error}`);
     }
 
+    const championsById = createChampionsById(championSummary);
+    log.debug('LCU state refreshed', {
+      hasLobby: Boolean(lobby && !lobby.error),
+      hasChampSelect: Boolean(champSelect && !champSelect.error),
+      hasSummoner: Boolean(summoner && !summoner.error),
+      gameflowPhase,
+      championCount: Object.keys(championsById).length
+    });
+
     updateState({
       lobby,
       champSelect,
       summoner,
       gameflowPhase,
-      championsById: createChampionsById(championSummary),
+      championsById,
       lcuStatus: 'connected',
       error: null
     });
@@ -337,6 +373,7 @@ async function refreshLcuState() {
     connectWebSocket();
     return appState;
   } catch (error) {
+    log.warn('Failed to refresh LCU state', serializeForLog(error));
     closeWebSocket();
     lcuConnection = null;
     updateState({
@@ -367,6 +404,7 @@ function cleanupWebSocket() {
 
 function closeWebSocket() {
   if (webSocket) {
+    log.debug('Closing LCU WebSocket');
     webSocket.removeAllListeners();
     webSocket.close();
     webSocket = null;
@@ -382,6 +420,7 @@ function clearRetryTimer() {
 
 function scheduleRetry() {
   if (retryTimer) return;
+  log.debug('Scheduling lockfile retry', { delayMs: LOCKFILE_RETRY_MS });
 
   retryTimer = setTimeout(async () => {
     retryTimer = null;
@@ -391,6 +430,7 @@ function scheduleRetry() {
 
 function scheduleReconnect() {
   if (reconnectTimer) return;
+  log.debug('Scheduling WebSocket reconnect', { delayMs: WEBSOCKET_RECONNECT_MS });
 
   reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
@@ -407,6 +447,7 @@ function connectWebSocket() {
   }
 
   const wsUrl = `wss://riot:${encodeURIComponent(lcuConnection.password)}@127.0.0.1:${lcuConnection.port}/`;
+  log.debug('Connecting LCU WebSocket', { port: lcuConnection.port });
 
   webSocket = new WebSocket(wsUrl, 'wamp', {
     rejectUnauthorized: false
@@ -415,6 +456,7 @@ function connectWebSocket() {
   updateState({ websocketStatus: 'connecting' });
 
   webSocket.on('open', () => {
+    log.debug('LCU WebSocket connected');
     updateState({ websocketStatus: 'connected', error: null });
 
     // WAMP subscribe format used by the League Client Update WebSocket.
@@ -434,11 +476,16 @@ function connectWebSocket() {
     updateState({ lastEvent: event });
 
     if (Array.isArray(event) && event[2]?.uri) {
+      log.debug('LCU WebSocket event received', {
+        uri: event[2].uri,
+        eventType: event[2].eventType
+      });
       await applyWebSocketEvent(event[2]);
     }
   });
 
   webSocket.on('close', () => {
+    log.debug('LCU WebSocket closed');
     lcuConnection = null;
     updateState({
       lcuStatus: 'disconnected',
@@ -448,6 +495,7 @@ function connectWebSocket() {
   });
 
   webSocket.on('error', (error) => {
+    log.warn('LCU WebSocket error', serializeForLog(error));
     updateState({
       websocketStatus: 'error',
       error: `WebSocket error: ${error.message}`
@@ -457,6 +505,7 @@ function connectWebSocket() {
 
 async function applyWebSocketEvent(event) {
   const { uri, data } = event;
+  log.debug('Applying LCU WebSocket event', { uri });
 
   if (uri === LCU_ENDPOINTS.lobby) {
     updateState({ lobby: data });
@@ -473,6 +522,7 @@ async function applyWebSocketEvent(event) {
 }
 
 app.whenReady().then(async () => {
+  log.info('App ready');
   await loadSettings();
   await loadChampionPool();
 
@@ -484,6 +534,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
+  ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();
   await refreshLcuState();

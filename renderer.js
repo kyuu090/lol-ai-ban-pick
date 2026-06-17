@@ -71,6 +71,14 @@ function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
 }
 
+function logDebug(message, details) {
+  window.lcuApi?.log?.('debug', message, details);
+}
+
+function logWarn(message, details) {
+  window.lcuApi?.log?.('warn', message, details);
+}
+
 function formatDate(value) {
   if (!value) return '-';
   return new Intl.DateTimeFormat('ja-JP', {
@@ -511,6 +519,7 @@ function renderDebug(state) {
 
 function setActiveView(viewName) {
   activeView = viewName;
+  logDebug('Active view changed', { viewName });
   elements.coachView.hidden = activeView !== 'coach';
   elements.championPoolView.hidden = activeView !== 'championPool';
   elements.debugView.hidden = activeView !== 'debug';
@@ -531,6 +540,7 @@ function addChampionToPool(nextChampionId) {
 
   championPool[lane.id] = [...new Set([...(championPool[lane.id] || []), championId])];
   championPoolDirty = true;
+  logDebug('Champion added to pool', { lane: lane.id, championId });
   elements.championPoolMessage.textContent = '';
   renderChampionPool();
 }
@@ -540,6 +550,7 @@ function removeChampionFromPool(championId) {
   const lane = getActiveChampionPoolLane();
   championPool[lane.id] = (championPool[lane.id] || []).filter((id) => id !== Number(championId));
   championPoolDirty = true;
+  logDebug('Champion removed from pool', { lane: lane.id, championId: Number(championId) });
   elements.championPoolMessage.textContent = '';
   renderChampionPool();
 }
@@ -552,8 +563,10 @@ async function saveChampionPool() {
     championPool = await window.lcuApi.saveChampionPool(championPool);
     championPoolDirty = false;
     renderChampionPool();
+    logDebug('Champion pool save completed', { championPool });
     elements.championPoolMessage.textContent = 'チャンピオンプールを保存しました。';
   } catch (error) {
+    logWarn('Champion pool save failed', { message: error.message, stack: error.stack });
     elements.championPoolMessage.textContent = `保存できませんでした: ${error.message}`;
   } finally {
     elements.saveChampionPoolButton.disabled = false;
@@ -567,8 +580,10 @@ async function chooseLolInstallDir() {
   try {
     const settings = await window.lcuApi.chooseLolInstallDir();
     elements.lolInstallDirInput.value = settings.lolInstallDir;
+    logDebug('LoL install directory selected', { lolInstallDir: settings.lolInstallDir });
     elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
   } catch (error) {
+    logWarn('LoL install directory selection failed', { message: error.message, stack: error.stack });
     elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
   } finally {
     elements.chooseLolDirButton.disabled = false;
@@ -583,8 +598,10 @@ async function saveLolInstallDir() {
   try {
     const settings = await window.lcuApi.updateLolInstallDir(lolInstallDir);
     elements.lolInstallDirInput.value = settings.lolInstallDir;
+    logDebug('LoL install directory saved', { lolInstallDir: settings.lolInstallDir });
     elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
   } catch (error) {
+    logWarn('LoL install directory save failed', { message: error.message, stack: error.stack });
     elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
   } finally {
     elements.saveLolDirButton.disabled = false;
@@ -596,8 +613,10 @@ async function refresh() {
   elements.refreshButton.textContent = '取得中...';
 
   try {
+    logDebug('Manual LCU refresh requested');
     const state = await window.lcuApi.refresh();
     renderState(state);
+    logDebug('Manual LCU refresh completed', { lcuStatus: state.lcuStatus, websocketStatus: state.websocketStatus });
   } finally {
     elements.refreshButton.disabled = false;
     elements.refreshButton.textContent = '手動再取得';

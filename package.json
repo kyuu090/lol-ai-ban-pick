@@ -5,10 +5,12 @@
   "main": "main.js",
   "private": true,
   "scripts": {
+    "dev": "node scripts/run-dev.js",
     "start": "electron .",
     "test": "node --test"
   },
   "dependencies": {
+    "electron-log": "^5.4.4",
     "ws": "^8.18.0"
   },
   "devDependencies": {
