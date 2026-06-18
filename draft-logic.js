@@ -214,7 +214,7 @@
     });
   }
 
-  function getCoachPanelState(state) {
+  function getDraftPanelState(state) {
     const phase = getPhase(state);
     const champSelect = hasUsableData(state?.champSelect) ? state.champSelect : null;
     const loggedIn = state?.lcuStatus === 'connected' && hasUsableData(state?.summoner);
@@ -253,6 +253,6 @@
     getPlannedPickThreatStats,
     getBestIntoOpponentStats,
     sortPickPoolCandidates,
-    getCoachPanelState
+    getDraftPanelState
   };
 });

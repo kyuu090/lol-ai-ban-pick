@@ -8,8 +8,8 @@ const elements = {
   matchDataRange: document.querySelector('#matchDataRange'),
   matchDataProgress: document.querySelector('#matchDataProgress'),
   tabButtons: document.querySelectorAll('.tab-button'),
-  coachTabButton: document.querySelector('#coachTabButton'),
-  coachView: document.querySelector('#coachView'),
+  draftTabButton: document.querySelector('#draftTabButton'),
+  draftView: document.querySelector('#draftView'),
   championPoolView: document.querySelector('#championPoolView'),
   countersView: document.querySelector('#countersView'),
   strengthsView: document.querySelector('#strengthsView'),
@@ -72,7 +72,7 @@ const elements = {
   stateJson: document.querySelector('#stateJson')
 };
 
-let activeView = 'coach';
+let activeView = 'draft';
 let activeChampionPoolLane = 'top';
 let activeCounterLane = 'top';
 let activeStrengthLane = 'top';
@@ -102,7 +102,7 @@ const {
   collectBans,
   getActiveAction,
   getBestIntoOpponentStats,
-  getCoachPanelState,
+  getDraftPanelState,
   getPhase,
   getPendingLabel,
   getPlannedPickThreatStats,
@@ -340,7 +340,7 @@ function processChampionIconQueue() {
 
 function renderState(state) {
   lastRenderedState = state;
-  syncCoachAutoFocus(state);
+  syncDraftAutoFocus(state);
   championsById = state.championsById || {};
   matchHistoryChampionStats = Array.isArray(state.matchHistoryChampionStats) ? state.matchHistoryChampionStats : [];
   matchHistoryEnemyChampionStats = Array.isArray(state.matchHistoryEnemyChampionStats) ? state.matchHistoryEnemyChampionStats : [];
@@ -356,16 +356,16 @@ function renderState(state) {
   renderChampionPool();
   renderCounters();
   renderStrengths();
-  renderCoach(state);
+  renderDraft(state);
   renderDebug(state);
 }
 
-function syncCoachAutoFocus(state) {
-  const { inChampSelect } = getCoachPanelState(state);
-  elements.coachTabButton.classList.toggle('draft-live', inChampSelect);
+function syncDraftAutoFocus(state) {
+  const { inChampSelect } = getDraftPanelState(state);
+  elements.draftTabButton.classList.toggle('draft-live', inChampSelect);
 
-  if (inChampSelect && !wasInChampSelect && activeView !== 'coach') {
-    setActiveView('coach');
+  if (inChampSelect && !wasInChampSelect && activeView !== 'draft') {
+    setActiveView('draft');
   }
 
   wasInChampSelect = inChampSelect;
@@ -851,10 +851,10 @@ function renderStatus(state) {
   elements.errorMessage.textContent = state.error ?? '';
 }
 
-function renderCoach(state) {
-  const { champSelect, loggedIn, inGame, inChampSelect } = getCoachPanelState(state);
+function renderDraft(state) {
+  const { champSelect, loggedIn, inGame, inChampSelect } = getDraftPanelState(state);
 
-  showOnlyCoachPanel(loggedIn, inChampSelect, inGame);
+  showOnlyDraftPanel(loggedIn, inChampSelect, inGame);
 
   if (!inChampSelect) {
     elements.champSelectView.classList.remove('local-turn');
@@ -870,7 +870,7 @@ function renderCoach(state) {
   }
 }
 
-function showOnlyCoachPanel(loggedIn, inChampSelect, inGame) {
+function showOnlyDraftPanel(loggedIn, inChampSelect, inGame) {
   elements.loggedOutView.hidden = loggedIn;
   elements.loggedInView.hidden = !loggedIn || inChampSelect || inGame;
   elements.champSelectView.hidden = !loggedIn || !inChampSelect || inGame;
@@ -1007,7 +1007,7 @@ function toggleMarkedLaneOpponent(cellId) {
   markedLaneOpponentCellId = markedLaneOpponentCellId === normalizedCellId ? null : normalizedCellId;
   logDebug('Lane opponent marker changed', { markedLaneOpponentCellId });
   if (lastRenderedState) {
-    renderCoach(lastRenderedState);
+    renderDraft(lastRenderedState);
   }
 }
 
@@ -1419,7 +1419,7 @@ function renderDebug(state) {
 function setActiveView(viewName) {
   activeView = viewName;
   logDebug('Active view changed', { viewName });
-  elements.coachView.hidden = activeView !== 'coach';
+  elements.draftView.hidden = activeView !== 'draft';
   elements.championPoolView.hidden = activeView !== 'championPool';
   elements.countersView.hidden = activeView !== 'counters';
   elements.strengthsView.hidden = activeView !== 'strengths';

@@ -5,7 +5,7 @@ const {
   collectUnavailableChampionReasons,
   getBestIntoOpponentStats,
   getActiveAction,
-  getCoachPanelState,
+  getDraftPanelState,
   getPendingLabel,
   getPlannedPickChampionId,
   getPlannedPickThreatStats,
@@ -56,8 +56,8 @@ test('getActiveAction prefers in-progress action before pending actions', () => 
   assert.equal(getActiveAction({ actions: [[{ completed: true }]] }), null);
 });
 
-test('getCoachPanelState distinguishes logged out, champ select, and in-game states', () => {
-  assert.deepEqual(getCoachPanelState({ lcuStatus: 'disconnected' }), {
+test('getDraftPanelState distinguishes logged out, champ select, and in-game states', () => {
+  assert.deepEqual(getDraftPanelState({ lcuStatus: 'disconnected' }), {
     phase: null,
     champSelect: null,
     loggedIn: false,
@@ -65,7 +65,7 @@ test('getCoachPanelState distinguishes logged out, champ select, and in-game sta
     inChampSelect: false
   });
 
-  assert.deepEqual(getCoachPanelState({
+  assert.deepEqual(getDraftPanelState({
     lcuStatus: 'connected',
     summoner: { gameName: 'Tester' },
     gameflowPhase: 'ChampSelect',
@@ -78,7 +78,7 @@ test('getCoachPanelState distinguishes logged out, champ select, and in-game sta
     inChampSelect: true
   });
 
-  assert.equal(getCoachPanelState({
+  assert.equal(getDraftPanelState({
     lcuStatus: 'connected',
     summoner: { gameName: 'Tester' },
     gameflowPhase: 'InProgress',

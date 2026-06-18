@@ -323,7 +323,7 @@ ChampionPool画面を実装済み。
 
 できること:
 
-- CoachタブとSettingsタブの間に `ChampionPool` タブを表示する
+- DraftタブとSettingsタブの間に `ChampionPool` タブを表示する
 - レーン別に `TOP / JG / MID / BOT / SUP` のタブを持つ
 - 選択中レーンの登録済みチャンピオンを上部に表示する
 - チャンピオン画像と名前のギャラリーからクリックで得意チャンピオンを追加する
@@ -522,10 +522,10 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 画面切り替えタブは以下の順番。
 
 ```text
-Coach / ChampionPool / Settings / Debug
+Draft / ChampionPool / Counters / Strengths / Settings / Debug
 ```
 
-### Coach
+### Draft
 
 ユーザー向け画面。
 
