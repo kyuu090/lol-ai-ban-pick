@@ -623,6 +623,13 @@ function scheduleAutoRiotMatchHistory(reason, delayMs) {
   }, delayMs);
 }
 
+function scheduleStartupRiotMatchHistoryIfReady(reason) {
+  if (startupMatchHistoryScheduled || !canAutoCollectRiotMatchHistory()) return;
+
+  startupMatchHistoryScheduled = true;
+  scheduleAutoRiotMatchHistory(reason, AUTO_MATCH_HISTORY_STARTUP_DELAY_MS);
+}
+
 async function collectRiotMatchHistory(_event, options = {}) {
   if (matchHistoryInProgress) {
     throw new Error('試合データを取得中です');
@@ -888,11 +895,13 @@ async function updateRiotApiToken(_event, riotApiToken) {
   }
 
   await saveSettings({ riotApiToken: riotApiToken.trim() });
+  scheduleStartupRiotMatchHistoryIfReady('riot-token-saved');
   return createPublicSettings(settings);
 }
 
 async function updateRiotPlatformRegion(_event, riotPlatformRegion) {
   await saveSettings({ riotPlatformRegion: normalizeRiotPlatformRegion(riotPlatformRegion) });
+  scheduleStartupRiotMatchHistoryIfReady('riot-region-saved');
   return createPublicSettings(settings);
 }
 
@@ -1072,10 +1081,7 @@ async function refreshLcuState() {
     await syncMatchHistoryForSummoner(summoner, 'lcu-refresh');
 
     connectWebSocket();
-    if (!startupMatchHistoryScheduled && canAutoCollectRiotMatchHistory()) {
-      startupMatchHistoryScheduled = true;
-      scheduleAutoRiotMatchHistory('startup', AUTO_MATCH_HISTORY_STARTUP_DELAY_MS);
-    }
+    scheduleStartupRiotMatchHistoryIfReady('startup');
     return appState;
   } catch (error) {
     log.warn('Failed to refresh LCU state', serializeForLog(error));
@@ -1226,6 +1232,7 @@ async function applyWebSocketEvent(event) {
   } else if (uri === LCU_ENDPOINTS.summoner) {
     updateState({ summoner: data });
     await syncMatchHistoryForSummoner(data, 'summoner-event');
+    scheduleStartupRiotMatchHistoryIfReady('summoner-login');
   } else if (uri === LCU_ENDPOINTS.gameflowPhase) {
     const previousPhase = appState.gameflowPhase;
     updateState({
