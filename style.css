@@ -425,7 +425,8 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.counters-grid {
+.counters-grid,
+.strengths-grid {
   grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.15fr);
 }
 
@@ -484,20 +485,21 @@ h2 {
   padding: 9px 10px;
 }
 
-.weak-lane-matchup-item {
+.weak-lane-matchup-item,
+.strong-lane-matchup-item {
   align-items: start;
   grid-template-columns: minmax(176px, 0.8fr) minmax(240px, 1.2fr);
 }
 
-.weak-champion-main {
+.weak-champion-main,
+.strong-champion-main {
   display: grid;
   gap: 7px;
   min-width: 0;
 }
 
 .weak-champion-name,
-.strong-champion-name,
-.strong-matchup-name {
+.strong-champion-name {
   min-width: 0;
 }
 
@@ -569,24 +571,6 @@ h2 {
   color: #d9e4f2;
   font-size: 10px;
   line-height: 1;
-}
-
-.strong-matchup-name {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.strong-matchup-name small {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.strong-self-pick {
-  color: #f1ddb0;
 }
 
 .pool-editor {
@@ -1623,7 +1607,8 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .weak-lane-matchup-item {
+  .weak-lane-matchup-item,
+  .strong-lane-matchup-item {
     grid-template-columns: 1fr;
   }
 

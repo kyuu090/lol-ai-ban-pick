@@ -749,7 +749,7 @@ function createWeakChampionItem(stats, options = {}) {
   item.append(main);
 
   if (options.includeSelfPicks) {
-    const selfPickSummary = createWeakLaneSelfPickSummary(stats, options.position);
+    const selfPickSummary = createLaneSelfPickSummary(stats, options.position, { splitByWinRate: true });
     if (selfPickSummary) {
       item.append(selfPickSummary);
     }
@@ -757,8 +757,8 @@ function createWeakChampionItem(stats, options = {}) {
   return item;
 }
 
-function createWeakLaneSelfPickSummary(opponentStats, position) {
-  const opponentChampionId = Number(opponentStats?.championId) || 0;
+function createLaneSelfPickSummary(opponentStats, position, options = {}) {
+  const opponentChampionId = Number(opponentStats?.opponentChampionId || opponentStats?.championId) || 0;
   const normalizedPosition = String(position || opponentStats?.position || '').toUpperCase();
   if (!opponentChampionId || !normalizedPosition) return null;
 
@@ -769,12 +769,14 @@ function createWeakLaneSelfPickSummary(opponentStats, position) {
   ));
   if (!matchupStats.length) return null;
 
+  const wonFirst = options.order === 'won-first';
+  const splitByWinRate = options.splitByWinRate === true || wonFirst;
   const lostWith = matchupStats
-    .filter((stats) => Number(stats.losses ?? Math.max(0, Number(stats.games || 0) - Number(stats.wins || 0))) > 0)
+    .filter((stats) => splitByWinRate ? Number(stats.winRate || 0) < 0.5 : getLosses(stats) > 0)
     .sort(compareWeakSelfPickStats)
     .slice(0, 2);
   const wonWith = matchupStats
-    .filter((stats) => Number(stats.wins || 0) > 0)
+    .filter((stats) => splitByWinRate ? Number(stats.winRate || 0) >= 0.5 : Number(stats.wins || 0) > 0)
     .sort(compareStrongSelfPickStats)
     .slice(0, 2);
 
@@ -783,10 +785,13 @@ function createWeakLaneSelfPickSummary(opponentStats, position) {
   const summary = document.createElement('div');
   summary.className = 'weak-self-pick-summary';
 
+  if (wonFirst && wonWith.length) {
+    summary.append(createWeakSelfPickRow('○', wonWith, 'won'));
+  }
   if (lostWith.length) {
     summary.append(createWeakSelfPickRow('×', lostWith, 'lost'));
   }
-  if (wonWith.length) {
+  if (!wonFirst && wonWith.length) {
     summary.append(createWeakSelfPickRow('○', wonWith, 'won'));
   }
 
@@ -940,24 +945,23 @@ function createStrongChampionItem(stats) {
 
 function createStrongLaneMatchupItem(stats) {
   const item = document.createElement('li');
-  item.className = 'strong-champion-item strong-matchup-item';
+  item.className = 'strong-champion-item strong-matchup-item strong-lane-matchup-item';
+
+  const main = document.createElement('div');
+  main.className = 'strong-champion-main';
 
   const matchup = document.createElement('span');
-  matchup.className = 'strong-matchup-name';
-  const opponentLabel = document.createElement('small');
-  opponentLabel.textContent = '対面';
-  const selfPickLabel = document.createElement('small');
-  selfPickLabel.textContent = '最多勝利';
-  matchup.append(
-    opponentLabel,
-    createInlineChampionName(stats.opponentChampionId),
-    selfPickLabel,
-    createInlineChampionName(stats.championId, 'inline-champion-name strong-self-pick')
-  );
+  matchup.className = 'strong-champion-name';
+  matchup.append(createInlineChampionName(stats.opponentChampionId));
 
   const detail = createWinRateStatsElement(stats, { includeKda: true });
+  main.append(matchup, detail);
 
-  item.append(matchup, detail);
+  const selfPickSummary = createLaneSelfPickSummary(stats, stats.position, { order: 'won-first' });
+  item.append(main);
+  if (selfPickSummary) {
+    item.append(selfPickSummary);
+  }
   return item;
 }
 
@@ -1242,7 +1246,10 @@ function createBanInsightSampleControl(champSelect, localMember) {
 
 function createPlannedPickBanThreatSection(champSelect, localMember, position, minGames) {
   const { plannedChampionId, statsList } = getPlannedPickThreatStats({
-    stats: matchHistorySelfVsLaneOpponentStats.filter((stats) => Number(stats.games || 0) >= minGames),
+    stats: matchHistorySelfVsLaneOpponentStats.filter((stats) => (
+      Number(stats.games || 0) >= minGames &&
+      Number(stats.winRate || 0) < 0.5
+    )),
     champSelect,
     localMember,
     limit: BAN_INSIGHT_LIMIT
@@ -1263,7 +1270,7 @@ function createPlannedPickBanThreatSection(champSelect, localMember, position, m
   if (!statsList.length) {
     const empty = document.createElement('p');
     empty.className = 'ban-insight-empty';
-    empty.textContent = 'No same-role matchup history';
+    empty.textContent = 'No losing same-role matchup history';
     section.append(empty);
     return section;
   }
