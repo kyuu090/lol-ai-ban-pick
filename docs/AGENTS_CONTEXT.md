@@ -579,7 +579,8 @@ BAN表示:
 実装済みのバンピック中インサイト:
 
 - 自分のBANフェーズでは `YOUR BAN` とBAN候補インサイトを中央に表示する
-- BAN候補は、相手にいた時に勝率が悪いchampion、同レーン対面として勝率が悪いchampion、サンプル5試合以上のランキングを表示する
+- BAN候補インサイトは、中央パネル内の `Sample` フィルタで `0 / 3 / 5 / 10 / 20+ games` から最小サンプル数を変更できる。デフォルトは `5+ games`
+- BAN候補インサイトは、`Threats for your ...` がある場合は最優先で表示し、次に同レーン対面で苦手な champion を最大3件表示する。敵チーム全体で苦手な champion は折りたたみ表示にする
 - 自分のBANフェーズ中に自分の予定pickがある場合、`Threats for your {champion} {role}` を先頭に表示する
 - `Threats for your ...` は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` の試合だけを対象にし、相手も同一ロール対面 champion だけを集計する。別ロールや敵チーム全体には fallback しない
 - `Threats for your ...` には W-L / WR / KDA を表示し、少数サンプルには `Low sample` を付ける。対象履歴がない場合は `No same-role matchup history` を表示する

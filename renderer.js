@@ -84,6 +84,7 @@ let activeCounterLane = 'top';
 let activeStrengthLane = 'top';
 let weakChampionMinGames = 5;
 let strongChampionMinGames = 5;
+let banInsightMinGames = 5;
 let championsById = {};
 let championPool = {};
 let matchHistoryChampionStats = [];
@@ -130,6 +131,8 @@ const CHAMPION_POOL_LANE_TO_POSITION = {
 };
 const RELIABLE_SAMPLE_GAMES = 5;
 const PICK_POOL_CANDIDATE_LIMIT = 6;
+const BAN_INSIGHT_LIMIT = 3;
+const BAN_INSIGHT_SAMPLE_OPTIONS = [0, 3, 5, 10, 20];
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -1077,38 +1080,68 @@ function renderBanInsights(visible, champSelect, localMember) {
   if (!panel) return;
 
   const position = String(localMember?.assignedPosition || '').toUpperCase();
-  const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position);
-  const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats).slice(0, 3);
-  const reliableEnemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats.filter((stats) => (
-    Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
-  ))).slice(0, 3);
+  const minGames = getBanInsightMinGames();
+  const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position, minGames);
   const laneStats = sortWorstWinRateStats(matchHistoryLaneOpponentStats.filter((stats) => (
-    String(stats.position || '').toUpperCase() === position
-  ))).slice(0, 3);
-  const reliableLaneStats = sortWorstWinRateStats(matchHistoryLaneOpponentStats.filter((stats) => (
     String(stats.position || '').toUpperCase() === position &&
-    Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
-  ))).slice(0, 3);
+    Number(stats.games || 0) >= minGames
+  ))).slice(0, BAN_INSIGHT_LIMIT);
+  const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats.filter((stats) => (
+    Number(stats.games || 0) >= minGames
+  ))).slice(0, BAN_INSIGHT_LIMIT);
 
   const sections = [
-    createBanInsightSection('Worst enemy picks', enemyStats),
-    createBanInsightSection(`Reliable enemy picks (${RELIABLE_SAMPLE_GAMES}+g)`, reliableEnemyStats),
-    createBanInsightSection(`${positionLabel(position)} lane opponents`, laneStats),
-    createBanInsightSection(`Reliable ${positionLabel(position)} opponents (${RELIABLE_SAMPLE_GAMES}+g)`, reliableLaneStats)
+    createBanInsightSampleControl(champSelect, localMember),
+    createBanInsightSection(`${positionLabel(position)} lane opponents`, laneStats)
   ];
   if (plannedPickThreatSection) {
-    sections.unshift(plannedPickThreatSection);
+    sections.splice(1, 0, plannedPickThreatSection);
   }
+  sections.push(createCollapsedBanInsightSection('Worst enemy picks', enemyStats));
 
   panel.replaceChildren(...sections);
 }
 
-function createPlannedPickBanThreatSection(champSelect, localMember, position) {
+function getBanInsightMinGames() {
+  return BAN_INSIGHT_SAMPLE_OPTIONS.includes(banInsightMinGames) ? banInsightMinGames : 5;
+}
+
+function createBanInsightSampleControl(champSelect, localMember) {
+  const control = document.createElement('div');
+  control.className = 'ban-insight-control';
+
+  const label = document.createElement('label');
+  label.className = 'ban-insight-sample-filter';
+
+  const text = document.createElement('span');
+  text.textContent = 'Sample';
+
+  const select = document.createElement('select');
+  select.setAttribute('aria-label', 'Ban insight sample filter');
+  BAN_INSIGHT_SAMPLE_OPTIONS.forEach((games) => {
+    const option = document.createElement('option');
+    option.value = String(games);
+    option.textContent = `${games}+ games`;
+    select.append(option);
+  });
+  select.value = String(getBanInsightMinGames());
+  select.addEventListener('change', () => {
+    banInsightMinGames = Number(select.value);
+    logDebug('Ban insight sample filter changed', { minGames: banInsightMinGames });
+    renderBanInsights(true, champSelect, localMember);
+  });
+
+  label.append(text, select);
+  control.append(label);
+  return control;
+}
+
+function createPlannedPickBanThreatSection(champSelect, localMember, position, minGames) {
   const { plannedChampionId, statsList } = getPlannedPickThreatStats({
-    stats: matchHistorySelfVsLaneOpponentStats,
+    stats: matchHistorySelfVsLaneOpponentStats.filter((stats) => Number(stats.games || 0) >= minGames),
     champSelect,
     localMember,
-    limit: 3
+    limit: BAN_INSIGHT_LIMIT
   });
   if (!plannedChampionId || !position) return null;
 
@@ -1375,6 +1408,20 @@ function createBanInsightSection(title, statsList) {
   });
   section.append(list);
   return section;
+}
+
+function createCollapsedBanInsightSection(title, statsList) {
+  const details = document.createElement('details');
+  details.className = 'ban-insight-details';
+
+  const summary = document.createElement('summary');
+  summary.textContent = title;
+  details.append(summary);
+
+  const section = createBanInsightSection(title, statsList);
+  section.querySelector('h4')?.remove();
+  details.append(section);
+  return details;
 }
 
 function createBanInsightItem(stats) {
