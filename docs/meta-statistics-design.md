@@ -391,7 +391,7 @@ updated_at
 - AIモードへ渡す説明用contextに使う
 - ChampionPool外だがよく使っている champion を発見する
 
-初期実装では Riot API から一度に90試合を取得対象にする。raw match detail は `app.getPath('userData')/riot-match-cache.json` に保存し、正規化済み match records は `app.getPath('userData')/match-history.json` に保存する。
+現在の実装では Riot API から直近90試合、または今シーズンの全試合を取得対象にできる。raw match detail は `app.getPath('userData')/riot-match-cache/{localPuuid}.json` に保存し、正規化済み match records は `app.getPath('userData')/match-history/{localPuuid}.json` に保存する。ログイン中アカウントのデータだけをロードし、未ログイン状態では試合データをロードしない。
 
 集計に使う試合は5v5 Summoner's Riftに限定する。
 
@@ -413,9 +413,10 @@ ChampSelect中は、自分の行だけ `assignedPosition + championId` の自己
 表示例:
 
 ```text
-JG 4games
-Ave KDA 5.2/4.0/8.1
-3W/1L WR 75%
+Games 4
+W-L 3-1
+WR 75%
+KDA 5.2/4.0/8.1
 ```
 
 ## 推薦スコアの考え方
@@ -756,9 +757,9 @@ min_reliable_games = 300
 ## MVP の現実的な順序
 
 1. ChampionPoolを登録できるUIとローカル保存を用意する
-2. Riot API Match-V5 から自分の直近90試合を取得する
-3. raw match detail を `riot-match-cache.json` に保存する
-4. match history を正規化して `match-history.json` に保存する
+2. Riot API Match-V5 から自分の直近90試合、または今シーズンの試合を取得する
+3. raw match detail を `riot-match-cache/{localPuuid}.json` に保存する
+4. match history を正規化して `match-history/{localPuuid}.json` に保存する
 5. 5v5 Summoner's RiftのRanked / Normal系queueに絞り込む
 6. champion ごとの自己戦績 `user_champion_stats` を `queue_type` / `queue_group` 別に集計する
 7. ChampionPoolに自己戦績を表示する

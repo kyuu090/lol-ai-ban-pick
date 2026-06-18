@@ -127,14 +127,14 @@ fallback / 調査で保存する場合:
 
 ```text
 lcu-match-history-raw.json
-match-history.json
+lcu-match-history-normalized.json
 ```
 
 本線の Riot API では次を使う。
 
 ```text
-riot-match-cache.json
-match-history.json
+riot-match-cache/{localPuuid}.json
+match-history/{localPuuid}.json
 ```
 
 ## 注意点
