@@ -184,7 +184,11 @@ season: 今シーズン開始日時以降の全試合
 
 取得済み match detail はアカウント別にローカルキャッシュし、再取得しません。統計に使う試合は 5v5 Summoner's Rift の Ranked / Normal 系 queue に絞り、Ranked と Normal の自己戦績は分けて扱います。
 
+season 手動取得では、match id 一覧を取得したあと、未取得 detail 数から概算所要時間を出して確認モーダルを表示します。取得済み正規化 match 数が 1〜90 件の場合は、ヘッダーに season 全取得でサンプル数を増やせる可能性がある旨の導線を表示します。
+
 Riot API の RateLimit にかかった場合は `Retry-After` に従って待機します。RateLimit 待機に入るタイミングで、すでに取得済みの detail を正規化・集計・保存・UI 反映します。
+
+起動時だけでなく、アプリ起動後に LoL へログインした場合や Riot API token / region を保存した場合にも、条件を満たせば recent の自動取得を予約します。Riot API 認証失敗時は Settings タブで token を確認するよう進捗行に表示します。
 
 LCU match history はページングやキャッシュ挙動が不安定だったため、推薦・自己戦績の本線には使いません。使う場合は fallback / 調査用に限定します。
 
