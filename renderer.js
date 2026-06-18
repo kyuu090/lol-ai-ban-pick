@@ -10,9 +10,11 @@ const elements = {
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
+  countersView: document.querySelector('#countersView'),
   debugView: document.querySelector('#debugView'),
   settingsView: document.querySelector('#settingsView'),
   laneTabs: document.querySelector('#laneTabs'),
+  counterLaneTabs: document.querySelector('#counterLaneTabs'),
   championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
   championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
   championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
@@ -20,6 +22,12 @@ const elements = {
   championPoolListTitle: document.querySelector('#championPoolListTitle'),
   championPoolList: document.querySelector('#championPoolList'),
   championPoolEmpty: document.querySelector('#championPoolEmpty'),
+  weakChampionSampleSelect: document.querySelector('#weakChampionSampleSelect'),
+  weakEnemyChampionList: document.querySelector('#weakEnemyChampionList'),
+  weakEnemyChampionEmpty: document.querySelector('#weakEnemyChampionEmpty'),
+  weakLaneChampionTitle: document.querySelector('#weakLaneChampionTitle'),
+  weakLaneChampionList: document.querySelector('#weakLaneChampionList'),
+  weakLaneChampionEmpty: document.querySelector('#weakLaneChampionEmpty'),
   championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   riotApiTokenInput: document.querySelector('#riotApiTokenInput'),
@@ -57,6 +65,8 @@ const elements = {
 
 let activeView = 'coach';
 let activeChampionPoolLane = 'top';
+let activeCounterLane = 'top';
+let weakChampionMinGames = 5;
 let championsById = {};
 let championPool = {};
 let matchHistoryChampionStats = [];
@@ -220,6 +230,11 @@ function createChampionStatsElement(stats, className = 'pool-champion-stats') {
   return container;
 }
 
+function getWeakChampionMinGames() {
+  const selectedGames = Number(elements.weakChampionSampleSelect?.value);
+  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : weakChampionMinGames;
+}
+
 function loadChampionIcon(img, championId) {
   const id = Number(championId);
   if (!id || !window.lcuApi?.getChampionIcon) return;
@@ -320,6 +335,7 @@ function renderState(state) {
   renderMatchDataSummary(state.matchHistorySummary);
   renderSettings(state.settings);
   renderChampionPool();
+  renderCounters();
   renderCoach(state);
   renderDebug(state);
 }
@@ -489,6 +505,30 @@ function renderLaneTabs() {
   elements.laneTabs.replaceChildren(...buttons);
 }
 
+function renderCounterLaneTabs() {
+  if (elements.counterLaneTabs.childElementCount > 0) {
+    elements.counterLaneTabs.querySelectorAll('button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lane === activeCounterLane);
+    });
+    return;
+  }
+
+  const buttons = CHAMPION_POOL_LANES.map((lane) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.lane = lane.id;
+    button.textContent = lane.label;
+    button.className = `lane-tab${lane.id === activeCounterLane ? ' active' : ''}`;
+    button.addEventListener('click', () => {
+      activeCounterLane = lane.id;
+      renderCounters();
+    });
+    return button;
+  });
+
+  elements.counterLaneTabs.replaceChildren(...buttons);
+}
+
 function renderChampionPicker(championIds) {
   const options = getChampionOptions();
   const searchText = normalizeSearchText(elements.championPoolSearchInput.value);
@@ -581,6 +621,60 @@ function renderChampionPool() {
     item.append(portrait, meta, removeButton);
     return item;
   }));
+}
+
+function renderCounters() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activeCounterLane) || CHAMPION_POOL_LANES[0];
+  renderCounterLaneTabs();
+  renderWeakChampionLists(lane);
+}
+
+function renderWeakChampionLists(lane = getActiveChampionPoolLane()) {
+  const minGames = getWeakChampionMinGames();
+  const position = getChampionPoolLanePosition(lane.id);
+  const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats.filter((stats) => (
+    Number(stats.games || 0) >= minGames &&
+    Number(stats.winRate || 0) < 0.5
+  ))).slice(0, 8);
+  const laneStats = sortWorstWinRateStats(matchHistoryLaneOpponentStats.filter((stats) => (
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames &&
+    Number(stats.winRate || 0) < 0.5
+  ))).slice(0, 8);
+
+  elements.weakLaneChampionTitle.textContent = lane.label;
+  renderWeakChampionList(
+    elements.weakEnemyChampionList,
+    elements.weakEnemyChampionEmpty,
+    enemyStats,
+    '条件に合う試合データがありません。'
+  );
+  renderWeakChampionList(
+    elements.weakLaneChampionList,
+    elements.weakLaneChampionEmpty,
+    laneStats,
+    '条件に合う対面データがありません。'
+  );
+}
+
+function renderWeakChampionList(listElement, emptyElement, statsList, emptyText) {
+  listElement.replaceChildren(...statsList.map(createWeakChampionItem));
+  emptyElement.hidden = statsList.length > 0;
+  emptyElement.textContent = emptyText;
+}
+
+function createWeakChampionItem(stats) {
+  const item = document.createElement('li');
+  item.className = 'weak-champion-item';
+
+  const name = document.createElement('span');
+  name.className = 'weak-champion-name';
+  name.append(createInlineChampionName(stats.championId));
+
+  const detail = createWinRateStatsElement(stats, { includeKda: true });
+
+  item.append(name, detail);
+  return item;
 }
 
 function renderStatus(state) {
@@ -1161,6 +1255,7 @@ function setActiveView(viewName) {
   logDebug('Active view changed', { viewName });
   elements.coachView.hidden = activeView !== 'coach';
   elements.championPoolView.hidden = activeView !== 'championPool';
+  elements.countersView.hidden = activeView !== 'counters';
   elements.debugView.hidden = activeView !== 'debug';
   elements.settingsView.hidden = activeView !== 'settings';
 
@@ -1352,6 +1447,11 @@ elements.saveRiotApiTokenButton.addEventListener('click', saveRiotApiToken);
 elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
+elements.weakChampionSampleSelect.addEventListener('change', () => {
+  weakChampionMinGames = getWeakChampionMinGames();
+  logDebug('Weak champion sample filter changed', { minGames: weakChampionMinGames });
+  renderCounters();
+});
 
 setActiveView(activeView);
 window.lcuApi.getState().then(renderState);

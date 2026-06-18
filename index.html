@@ -28,6 +28,7 @@
           <nav class="view-tabs" aria-label="view switcher">
             <button class="tab-button active" id="coachTabButton" type="button" data-view="coach">Coach</button>
             <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool">ChampionPool</button>
+            <button class="tab-button" id="countersTabButton" type="button" data-view="counters">Counters</button>
             <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
@@ -173,6 +174,44 @@
           </section>
 
           <p id="championPoolMessage" class="settings-message" role="status"></p>
+        </section>
+      </section>
+
+      <section id="countersView" class="view-panel" hidden>
+        <section class="counters-panel">
+          <div class="counters-header">
+            <div>
+              <p class="eyebrow">Counters</p>
+              <h2>苦手チャンピオン</h2>
+              <p>自分の試合履歴から、勝率が低い相手を表示します。</p>
+            </div>
+            <label class="sample-filter" for="weakChampionSampleSelect">
+              <span>Sample</span>
+              <select id="weakChampionSampleSelect">
+                <option value="1">1+ games</option>
+                <option value="3">3+ games</option>
+                <option value="5" selected>5+ games</option>
+                <option value="10">10+ games</option>
+                <option value="20">20+ games</option>
+              </select>
+            </label>
+          </div>
+
+          <nav id="counterLaneTabs" class="lane-tabs" aria-label="counter lane switcher"></nav>
+
+          <section class="counters-grid">
+            <section class="weak-champion-section">
+              <h3>相手にいると苦手</h3>
+              <ol id="weakEnemyChampionList" class="weak-champion-list"></ol>
+              <p id="weakEnemyChampionEmpty" class="pool-empty">条件に合う試合データがありません。</p>
+            </section>
+
+            <section class="weak-champion-section">
+              <h3><span id="weakLaneChampionTitle">TOP</span> 対面で苦手</h3>
+              <ol id="weakLaneChampionList" class="weak-champion-list"></ol>
+              <p id="weakLaneChampionEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+            </section>
+          </section>
         </section>
       </section>
 

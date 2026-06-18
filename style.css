@@ -282,7 +282,8 @@ h2 {
 }
 
 .settings-panel,
-.champion-pool-panel {
+.champion-pool-panel,
+.counters-panel {
   background: rgba(17, 24, 33, 0.9);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -293,18 +294,21 @@ h2 {
 }
 
 .settings-panel h2,
-.champion-pool-panel h2 {
+.champion-pool-panel h2,
+.counters-panel h2 {
   font-size: 22px;
   margin-top: 4px;
 }
 
 .settings-panel p:not(.eyebrow),
-.champion-pool-panel p:not(.eyebrow) {
+.champion-pool-panel p:not(.eyebrow),
+.counters-panel p:not(.eyebrow) {
   color: var(--muted);
   margin-top: 8px;
 }
 
-.champion-pool-header {
+.champion-pool-header,
+.counters-header {
   align-items: start;
   display: flex;
   gap: 18px;
@@ -332,9 +336,81 @@ h2 {
   color: var(--text);
 }
 
+.counters-grid {
+  align-items: start;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.weak-champion-section {
+  background: rgba(8, 18, 28, 0.48);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.weak-champion-section h3 {
+  color: #f1ddb0;
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.sample-filter {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.sample-filter span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sample-filter select {
+  min-height: 36px;
+}
+
+.weak-champion-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.weak-champion-item {
+  background: rgba(26, 35, 48, 0.62);
+  border: 1px solid rgba(154, 167, 184, 0.2);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.weak-champion-name {
+  min-width: 0;
+}
+
+.weak-champion-item .compact-stat-chips {
+  gap: 5px;
+}
+
+.weak-champion-item .pick-pool-stat-chip {
+  background: rgba(8, 18, 28, 0.72);
+  border-color: rgba(154, 167, 184, 0.24);
+}
+
 .pool-editor {
   display: grid;
   gap: 22px;
+  min-width: 0;
 }
 
 .selected-pool {
@@ -1302,12 +1378,14 @@ pre {
   .content-grid,
   .draft-header,
   .teams-layout,
+  .counters-grid,
   .path-input-row,
   .token-input-row {
     grid-template-columns: 1fr;
   }
 
-  .champion-pool-header {
+  .champion-pool-header,
+  .counters-header {
     align-items: stretch;
     flex-direction: column;
   }
