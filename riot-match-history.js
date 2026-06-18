@@ -172,11 +172,8 @@ function aggregateChampionStats(matchRecords) {
     .sort((a, b) => (b.games - a.games) || String(a.championName).localeCompare(String(b.championName), 'en'));
 }
 
-function createOpponentStats(championId, championName, position = null) {
+function createOpponentPerformanceStats() {
   return {
-    championId,
-    championName,
-    position,
     games: 0,
     wins: 0,
     losses: 0,
@@ -188,7 +185,16 @@ function createOpponentStats(championId, championName, position = null) {
   };
 }
 
-function addWinLossToOpponentStats(stats, record) {
+function createOpponentStats(championId, championName, position = null) {
+  return {
+    championId,
+    championName,
+    position,
+    ...createOpponentPerformanceStats()
+  };
+}
+
+function addRecordToOpponentStats(stats, record) {
   stats.games += 1;
   stats.wins += record.self.win ? 1 : 0;
   stats.losses = stats.games - stats.wins;
@@ -240,7 +246,7 @@ function aggregateEnemyChampionStats(matchRecords) {
         grouped.set(key, createOpponentStats(championId, enemy.championName || ''));
       }
 
-      addWinLossToOpponentStats(grouped.get(key), record);
+      addRecordToOpponentStats(grouped.get(key), record);
     });
   });
 
@@ -254,14 +260,7 @@ function createSelfVsLaneOpponentStats(record, laneOpponent, position) {
     opponentChampionId: laneOpponent.championId,
     opponentChampionName: laneOpponent.championName,
     position,
-    games: 0,
-    wins: 0,
-    losses: 0,
-    winRate: 0,
-    avgKills: 0,
-    avgDeaths: 0,
-    avgAssists: 0,
-    avgKda: 0
+    ...createOpponentPerformanceStats()
   };
 }
 
@@ -283,7 +282,7 @@ function aggregateSelfChampionVsLaneOpponentStats(matchRecords) {
       grouped.set(key, createSelfVsLaneOpponentStats(record, laneOpponent, selfPosition));
     }
 
-    addWinLossToOpponentStats(grouped.get(key), record);
+    addRecordToOpponentStats(grouped.get(key), record);
   });
 
   return sortBestOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
@@ -306,7 +305,7 @@ function aggregateLaneOpponentStats(matchRecords) {
       grouped.set(key, createOpponentStats(championId, laneOpponent.championName || '', selfPosition));
     }
 
-    addWinLossToOpponentStats(grouped.get(key), record);
+    addRecordToOpponentStats(grouped.get(key), record);
   });
 
   return sortWorstOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));

@@ -112,6 +112,108 @@
     return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
   }
 
+  function normalizePosition(position) {
+    return String(position || '').toUpperCase();
+  }
+
+  function getPlannedPickChampionId(localMember) {
+    const selectedChampionId = Number(localMember?.championId) || 0;
+    if (selectedChampionId > 0) return selectedChampionId;
+
+    const intendedChampionId = Number(localMember?.championPickIntent) || 0;
+    return intendedChampionId > 0 ? intendedChampionId : 0;
+  }
+
+  function collectUnavailableChampionReasons(champSelect, allyTeam = champSelect?.myTeam, enemyTeam = champSelect?.theirTeam) {
+    const allies = Array.isArray(allyTeam) ? allyTeam : [];
+    const enemies = Array.isArray(enemyTeam) ? enemyTeam : [];
+    const { allyBans, enemyBans } = collectBans(champSelect, allies, enemies);
+    const reasons = new Map();
+
+    [...allyBans, ...enemyBans].forEach((championId) => {
+      reasons.set(Number(championId), 'Banned');
+    });
+
+    [...allies, ...enemies].forEach((member) => {
+      const championId = Number(member?.championId) || 0;
+      if (championId > 0 && !reasons.has(championId)) {
+        reasons.set(championId, 'Picked');
+      }
+    });
+
+    return reasons;
+  }
+
+  function compareChampionName(a, b, championIdKey = 'championId') {
+    const aName = a?.championName || a?.opponentChampionName || `Champion ${Number(a?.[championIdKey]) || 0}`;
+    const bName = b?.championName || b?.opponentChampionName || `Champion ${Number(b?.[championIdKey]) || 0}`;
+    return String(aName).localeCompare(String(bName), 'en');
+  }
+
+  function sortWorstWinRateStats(stats, championIdKey = 'championId') {
+    return [...(Array.isArray(stats) ? stats : [])].sort((a, b) => (
+      (Number(a?.winRate || 0) - Number(b?.winRate || 0)) ||
+      (Number(b?.games || 0) - Number(a?.games || 0)) ||
+      compareChampionName(a, b, championIdKey)
+    ));
+  }
+
+  function sortBestWinRateStats(stats, championIdKey = 'championId') {
+    return [...(Array.isArray(stats) ? stats : [])].sort((a, b) => (
+      (Number(b?.winRate || 0) - Number(a?.winRate || 0)) ||
+      (Number(b?.games || 0) - Number(a?.games || 0)) ||
+      compareChampionName(a, b, championIdKey)
+    ));
+  }
+
+  function getPlannedPickThreatStats({ stats, champSelect, localMember, limit = 3 } = {}) {
+    const plannedChampionId = getPlannedPickChampionId(localMember);
+    const position = normalizePosition(localMember?.assignedPosition);
+    if (!plannedChampionId || !position) {
+      return { plannedChampionId, position, statsList: [] };
+    }
+
+    const unavailableReasons = collectUnavailableChampionReasons(champSelect);
+    const statsList = sortWorstWinRateStats((Array.isArray(stats) ? stats : []).filter((entry) => (
+      Number(entry?.championId) === plannedChampionId &&
+      normalizePosition(entry?.position) === position &&
+      !unavailableReasons.has(Number(entry?.opponentChampionId))
+    )), 'opponentChampionId').slice(0, limit);
+
+    return { plannedChampionId, position, statsList };
+  }
+
+  function getBestIntoOpponentStats({ stats, opponentChampionId, position, limit = 5 } = {}) {
+    const opponentId = Number(opponentChampionId) || 0;
+    const normalizedPosition = normalizePosition(position);
+    if (!opponentId || !normalizedPosition) return [];
+
+    return sortBestWinRateStats((Array.isArray(stats) ? stats : []).filter((entry) => (
+      Number(entry?.opponentChampionId) === opponentId &&
+      normalizePosition(entry?.position) === normalizedPosition
+    ))).slice(0, limit);
+  }
+
+  function sortPickPoolCandidates(candidates, reliableSampleGames = 5) {
+    return [...(Array.isArray(candidates) ? candidates : [])].sort((a, b) => {
+      if (a.available !== b.available) return a.available ? -1 : 1;
+
+      const aGames = Number(a.stats?.games || 0);
+      const bGames = Number(b.stats?.games || 0);
+      if (Boolean(aGames) !== Boolean(bGames)) return aGames > 0 ? -1 : 1;
+
+      const aReliable = aGames >= reliableSampleGames;
+      const bReliable = bGames >= reliableSampleGames;
+      if (aReliable !== bReliable) return aReliable ? -1 : 1;
+
+      return (
+        (Number(b.stats?.winRate || 0) - Number(a.stats?.winRate || 0)) ||
+        (bGames - aGames) ||
+        (Number(a.championId) - Number(b.championId))
+      );
+    });
+  }
+
   function getCoachPanelState(state) {
     const phase = getPhase(state);
     const champSelect = hasUsableData(state?.champSelect) ? state.champSelect : null;
@@ -143,6 +245,14 @@
     normalizeChampionPool,
     collectBans,
     getActiveAction,
+    normalizePosition,
+    getPlannedPickChampionId,
+    collectUnavailableChampionReasons,
+    sortWorstWinRateStats,
+    sortBestWinRateStats,
+    getPlannedPickThreatStats,
+    getBestIntoOpponentStats,
+    sortPickPoolCandidates,
     getCoachPanelState
   };
 });

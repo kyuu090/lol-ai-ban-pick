@@ -79,12 +79,17 @@ let matchDataMenuOpen = false;
 const {
   collectBans,
   getActiveAction,
+  getBestIntoOpponentStats,
   getCoachPanelState,
   getPhase,
   getPendingLabel,
+  getPlannedPickThreatStats,
   getSummonerName,
   normalizeChampionPool,
-  positionLabel
+  positionLabel,
+  collectUnavailableChampionReasons,
+  sortPickPoolCandidates,
+  sortWorstWinRateStats
 } = window.DraftLogic;
 const { CHAMPION_POOL_LANES } = window.DraftLogic;
 const CHAMPION_POOL_LANE_TO_POSITION = {
@@ -179,12 +184,17 @@ function formatNumber(value, digits = 1) {
   return Number(value || 0).toFixed(digits);
 }
 
-function sortWorstWinRateStats(stats) {
-  return [...stats].sort((a, b) => (
-    (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
-    (Number(b.games || 0) - Number(a.games || 0)) ||
-    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
-  ));
+function formatAverageKda(stats) {
+  return `${formatNumber(stats?.avgKills)}/${formatNumber(stats?.avgDeaths)}/${formatNumber(stats?.avgAssists)}`;
+}
+
+function appendLowSampleBadge(container, games) {
+  const sampleGames = Number(games || 0);
+  if (sampleGames <= 0 || sampleGames >= RELIABLE_SAMPLE_GAMES) return;
+
+  const sample = document.createElement('em');
+  sample.textContent = 'Low sample';
+  container.append(sample);
 }
 
 function createChampionStatsElement(stats, className = 'pool-champion-stats') {
@@ -202,7 +212,7 @@ function createChampionStatsElement(stats, className = 'pool-champion-stats') {
     ['Games', `${stats.games}`],
     ['W-L', `${wins}-${losses}`],
     ['WR', formatPercent(stats.winRate)],
-    ['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]
+    ['KDA', formatAverageKda(stats)]
   ].forEach(([label, value]) => {
     container.append(createPickPoolStatChip(label, value));
   });
@@ -822,24 +832,14 @@ function renderBanInsights(visible, champSelect, localMember) {
   panel.replaceChildren(...sections);
 }
 
-function getPlannedPickChampionId(localMember) {
-  const selectedChampionId = Number(localMember?.championId) || 0;
-  if (selectedChampionId > 0) return selectedChampionId;
-
-  const intendedChampionId = Number(localMember?.championPickIntent) || 0;
-  return intendedChampionId > 0 ? intendedChampionId : 0;
-}
-
 function createPlannedPickBanThreatSection(champSelect, localMember, position) {
-  const plannedChampionId = getPlannedPickChampionId(localMember);
+  const { plannedChampionId, statsList } = getPlannedPickThreatStats({
+    stats: matchHistorySelfVsLaneOpponentStats,
+    champSelect,
+    localMember,
+    limit: 3
+  });
   if (!plannedChampionId || !position) return null;
-
-  const unavailableReasons = collectUnavailableChampionReasons(champSelect);
-  const statsList = sortWorstPlannedPickThreatStats(matchHistorySelfVsLaneOpponentStats.filter((stats) => (
-    Number(stats.championId) === plannedChampionId &&
-    String(stats.position || '').toUpperCase() === position &&
-    !unavailableReasons.has(Number(stats.opponentChampionId))
-  ))).slice(0, 3);
 
   const section = document.createElement('section');
   section.className = 'ban-insight-section planned-pick-threat-section';
@@ -868,14 +868,6 @@ function createPlannedPickBanThreatSection(champSelect, localMember, position) {
   return section;
 }
 
-function sortWorstPlannedPickThreatStats(stats) {
-  return [...stats].sort((a, b) => (
-    (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
-    (Number(b.games || 0) - Number(a.games || 0)) ||
-    championLabel(a.opponentChampionId).localeCompare(championLabel(b.opponentChampionId), 'en')
-  ));
-}
-
 function createPlannedPickBanThreatItem(stats) {
   const item = document.createElement('li');
 
@@ -886,12 +878,7 @@ function createPlannedPickBanThreatItem(stats) {
   const detail = createWinRateStatsElement(stats, { includeKda: true });
 
   item.append(nameBlock, detail);
-  const games = Number(stats.games || 0);
-  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
-    const sample = document.createElement('em');
-    sample.textContent = 'Low sample';
-    nameBlock.append(sample);
-  }
+  appendLowSampleBadge(nameBlock, stats.games);
 
   return item;
 }
@@ -916,7 +903,7 @@ function renderPickPoolInsights(visible, champSelect, localMember) {
       available: !unavailableReason
     };
   });
-  const sortedCandidates = sortPickPoolCandidates(candidates);
+  const sortedCandidates = sortPickPoolCandidates(candidates, RELIABLE_SAMPLE_GAMES);
   const visibleCandidates = sortedCandidates.slice(0, PICK_POOL_CANDIDATE_LIMIT);
 
   const header = document.createElement('section');
@@ -975,10 +962,12 @@ function createMarkedOpponentInsightElements(champSelect, localMember) {
   const position = String(localMember?.assignedPosition || '').toUpperCase();
   if (!opponentChampionId || !position) return [];
 
-  const statsList = sortBestWinRateStats(matchHistorySelfVsLaneOpponentStats.filter((stats) => (
-    Number(stats.opponentChampionId) === opponentChampionId &&
-    String(stats.position || '').toUpperCase() === position
-  ))).slice(0, 5);
+  const statsList = getBestIntoOpponentStats({
+    stats: matchHistorySelfVsLaneOpponentStats,
+    opponentChampionId,
+    position,
+    limit: 5
+  });
 
   const section = document.createElement('section');
   section.className = 'marked-opponent-insight';
@@ -1022,14 +1011,6 @@ function getMarkedLaneOpponentChampionId(champSelect) {
   return championId > 0 ? championId : null;
 }
 
-function sortBestWinRateStats(stats) {
-  return [...stats].sort((a, b) => (
-    (Number(b.winRate || 0) - Number(a.winRate || 0)) ||
-    (Number(b.games || 0) - Number(a.games || 0)) ||
-    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
-  ));
-}
-
 function createMarkedOpponentPickItem(stats) {
   const item = document.createElement('li');
   item.className = 'pick-pool-candidate marked-opponent-candidate';
@@ -1039,54 +1020,9 @@ function createMarkedOpponentPickItem(stats) {
   const detail = createWinRateStatsElement(stats, { includeGames: false, includeKda: true });
   item.append(name, detail);
 
-  const games = Number(stats.games || 0);
-  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
-    const sample = document.createElement('em');
-    sample.textContent = 'Low sample';
-    item.append(sample);
-  }
+  appendLowSampleBadge(item, stats.games);
 
   return item;
-}
-
-function collectUnavailableChampionReasons(champSelect) {
-  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
-  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
-  const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
-  const reasons = new Map();
-
-  [...allyBans, ...enemyBans].forEach((championId) => {
-    reasons.set(Number(championId), 'Banned');
-  });
-
-  [...allyTeam, ...enemyTeam].forEach((member) => {
-    const championId = Number(member?.championId) || 0;
-    if (championId > 0 && !reasons.has(championId)) {
-      reasons.set(championId, 'Picked');
-    }
-  });
-
-  return reasons;
-}
-
-function sortPickPoolCandidates(candidates) {
-  return [...candidates].sort((a, b) => {
-    if (a.available !== b.available) return a.available ? -1 : 1;
-
-    const aGames = Number(a.stats?.games || 0);
-    const bGames = Number(b.stats?.games || 0);
-    if (Boolean(aGames) !== Boolean(bGames)) return aGames > 0 ? -1 : 1;
-
-    const aReliable = aGames >= RELIABLE_SAMPLE_GAMES;
-    const bReliable = bGames >= RELIABLE_SAMPLE_GAMES;
-    if (aReliable !== bReliable) return aReliable ? -1 : 1;
-
-    return (
-      (Number(b.stats?.winRate || 0) - Number(a.stats?.winRate || 0)) ||
-      (bGames - aGames) ||
-      championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
-    );
-  });
 }
 
 function createPickPoolCandidateItem(candidate, position) {
@@ -1103,10 +1039,8 @@ function createPickPoolCandidateItem(candidate, position) {
     const status = document.createElement('em');
     status.textContent = candidate.unavailableReason;
     item.append(status);
-  } else if (Number(candidate.stats?.games || 0) > 0 && Number(candidate.stats?.games || 0) < RELIABLE_SAMPLE_GAMES) {
-    const sample = document.createElement('em');
-    sample.textContent = 'Low sample';
-    item.append(sample);
+  } else {
+    appendLowSampleBadge(item, candidate.stats?.games);
   }
 
   return item;
@@ -1126,7 +1060,7 @@ function createPickPoolCandidateStatsElement(stats, position) {
   [
     ['W-L', `${wins}-${losses}`],
     ['WR', formatPercent(stats.winRate)],
-    ['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]
+    ['KDA', formatAverageKda(stats)]
   ].forEach(([label, value]) => {
     container.append(createPickPoolStatChip(label, value));
   });
@@ -1182,12 +1116,7 @@ function createBanInsightItem(stats) {
   const detail = createWinRateStatsElement(stats);
 
   item.append(nameBlock, detail);
-  const games = Number(stats.games || 0);
-  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
-    const sample = document.createElement('em');
-    sample.textContent = 'Low sample';
-    nameBlock.append(sample);
-  }
+  appendLowSampleBadge(nameBlock, stats.games);
 
   return item;
 }
@@ -1209,7 +1138,7 @@ function createWinRateStatsElement(stats, options = {}) {
     chips.unshift(['Games', `${games}`]);
   }
   if (includeKda) {
-    chips.push(['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]);
+    chips.push(['KDA', formatAverageKda(stats)]);
   }
 
   chips.forEach(([label, value]) => {
