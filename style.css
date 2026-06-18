@@ -283,7 +283,8 @@ h2 {
 
 .settings-panel,
 .champion-pool-panel,
-.counters-panel {
+.counters-panel,
+.strengths-panel {
   background: rgba(17, 24, 33, 0.9);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -295,20 +296,23 @@ h2 {
 
 .settings-panel h2,
 .champion-pool-panel h2,
-.counters-panel h2 {
+.counters-panel h2,
+.strengths-panel h2 {
   font-size: 22px;
   margin-top: 4px;
 }
 
 .settings-panel p:not(.eyebrow),
 .champion-pool-panel p:not(.eyebrow),
-.counters-panel p:not(.eyebrow) {
+.counters-panel p:not(.eyebrow),
+.strengths-panel p:not(.eyebrow) {
   color: var(--muted);
   margin-top: 8px;
 }
 
 .champion-pool-header,
-.counters-header {
+.counters-header,
+.strengths-header {
   align-items: start;
   display: flex;
   gap: 18px;
@@ -336,14 +340,16 @@ h2 {
   color: var(--text);
 }
 
-.counters-grid {
+.counters-grid,
+.strengths-grid {
   align-items: start;
   display: grid;
   gap: 22px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.weak-champion-section {
+.weak-champion-section,
+.strong-champion-section {
   background: rgba(8, 18, 28, 0.48);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -351,7 +357,8 @@ h2 {
   padding: 16px;
 }
 
-.weak-champion-section h3 {
+.weak-champion-section h3,
+.strong-champion-section h3 {
   color: #f1ddb0;
   font-size: 15px;
   line-height: 1.2;
@@ -376,7 +383,8 @@ h2 {
   min-height: 36px;
 }
 
-.weak-champion-list {
+.weak-champion-list,
+.strong-champion-list {
   display: grid;
   gap: 8px;
   list-style: none;
@@ -384,7 +392,8 @@ h2 {
   padding: 0;
 }
 
-.weak-champion-item {
+.weak-champion-item,
+.strong-champion-item {
   background: rgba(26, 35, 48, 0.62);
   border: 1px solid rgba(154, 167, 184, 0.2);
   border-radius: 8px;
@@ -394,17 +403,39 @@ h2 {
   padding: 10px;
 }
 
-.weak-champion-name {
+.weak-champion-name,
+.strong-champion-name,
+.strong-matchup-name {
   min-width: 0;
 }
 
-.weak-champion-item .compact-stat-chips {
+.weak-champion-item .compact-stat-chips,
+.strong-champion-item .compact-stat-chips {
   gap: 5px;
 }
 
-.weak-champion-item .pick-pool-stat-chip {
+.weak-champion-item .pick-pool-stat-chip,
+.strong-champion-item .pick-pool-stat-chip {
   background: rgba(8, 18, 28, 0.72);
   border-color: rgba(154, 167, 184, 0.24);
+}
+
+.strong-matchup-name {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.strong-matchup-name small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.strong-self-pick {
+  color: #f1ddb0;
 }
 
 .pool-editor {
@@ -1379,13 +1410,15 @@ pre {
   .draft-header,
   .teams-layout,
   .counters-grid,
+  .strengths-grid,
   .path-input-row,
   .token-input-row {
     grid-template-columns: 1fr;
   }
 
   .champion-pool-header,
-  .counters-header {
+  .counters-header,
+  .strengths-header {
     align-items: stretch;
     flex-direction: column;
   }

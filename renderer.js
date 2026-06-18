@@ -11,10 +11,12 @@ const elements = {
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
   countersView: document.querySelector('#countersView'),
+  strengthsView: document.querySelector('#strengthsView'),
   debugView: document.querySelector('#debugView'),
   settingsView: document.querySelector('#settingsView'),
   laneTabs: document.querySelector('#laneTabs'),
   counterLaneTabs: document.querySelector('#counterLaneTabs'),
+  strengthLaneTabs: document.querySelector('#strengthLaneTabs'),
   championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
   championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
   championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
@@ -28,6 +30,12 @@ const elements = {
   weakLaneChampionTitle: document.querySelector('#weakLaneChampionTitle'),
   weakLaneChampionList: document.querySelector('#weakLaneChampionList'),
   weakLaneChampionEmpty: document.querySelector('#weakLaneChampionEmpty'),
+  strongChampionSampleSelect: document.querySelector('#strongChampionSampleSelect'),
+  strongChampionList: document.querySelector('#strongChampionList'),
+  strongChampionEmpty: document.querySelector('#strongChampionEmpty'),
+  strongLaneMatchupTitle: document.querySelector('#strongLaneMatchupTitle'),
+  strongLaneMatchupList: document.querySelector('#strongLaneMatchupList'),
+  strongLaneMatchupEmpty: document.querySelector('#strongLaneMatchupEmpty'),
   championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   riotApiTokenInput: document.querySelector('#riotApiTokenInput'),
@@ -66,7 +74,9 @@ const elements = {
 let activeView = 'coach';
 let activeChampionPoolLane = 'top';
 let activeCounterLane = 'top';
+let activeStrengthLane = 'top';
 let weakChampionMinGames = 5;
+let strongChampionMinGames = 5;
 let championsById = {};
 let championPool = {};
 let matchHistoryChampionStats = [];
@@ -99,6 +109,7 @@ const {
   positionLabel,
   collectUnavailableChampionReasons,
   sortPickPoolCandidates,
+  sortBestWinRateStats,
   sortWorstWinRateStats
 } = window.DraftLogic;
 const { CHAMPION_POOL_LANES } = window.DraftLogic;
@@ -235,6 +246,11 @@ function getWeakChampionMinGames() {
   return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : weakChampionMinGames;
 }
 
+function getStrongChampionMinGames() {
+  const selectedGames = Number(elements.strongChampionSampleSelect?.value);
+  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : strongChampionMinGames;
+}
+
 function loadChampionIcon(img, championId) {
   const id = Number(championId);
   if (!id || !window.lcuApi?.getChampionIcon) return;
@@ -336,6 +352,7 @@ function renderState(state) {
   renderSettings(state.settings);
   renderChampionPool();
   renderCounters();
+  renderStrengths();
   renderCoach(state);
   renderDebug(state);
 }
@@ -529,6 +546,30 @@ function renderCounterLaneTabs() {
   elements.counterLaneTabs.replaceChildren(...buttons);
 }
 
+function renderStrengthLaneTabs() {
+  if (elements.strengthLaneTabs.childElementCount > 0) {
+    elements.strengthLaneTabs.querySelectorAll('button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lane === activeStrengthLane);
+    });
+    return;
+  }
+
+  const buttons = CHAMPION_POOL_LANES.map((lane) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.lane = lane.id;
+    button.textContent = lane.label;
+    button.className = `lane-tab${lane.id === activeStrengthLane ? ' active' : ''}`;
+    button.addEventListener('click', () => {
+      activeStrengthLane = lane.id;
+      renderStrengths();
+    });
+    return button;
+  });
+
+  elements.strengthLaneTabs.replaceChildren(...buttons);
+}
+
 function renderChampionPicker(championIds) {
   const options = getChampionOptions();
   const searchText = normalizeSearchText(elements.championPoolSearchInput.value);
@@ -674,6 +715,117 @@ function createWeakChampionItem(stats) {
   const detail = createWinRateStatsElement(stats, { includeKda: true });
 
   item.append(name, detail);
+  return item;
+}
+
+function renderStrengths() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activeStrengthLane) || CHAMPION_POOL_LANES[0];
+  renderStrengthLaneTabs();
+  renderStrongChampionLists(lane);
+}
+
+function renderStrongChampionLists(lane = getActiveChampionPoolLane()) {
+  const minGames = getStrongChampionMinGames();
+  const position = getChampionPoolLanePosition(lane.id);
+  const championStats = sortBestWinRateStats(matchHistoryChampionStats.filter((stats) => (
+    stats.queueGroup === 'all_sr_5v5' &&
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames &&
+    Number(stats.winRate || 0) > 0.5
+  ))).slice(0, 8);
+  const matchupStats = getStrongLaneMatchupStats(position, minGames).slice(0, 8);
+
+  elements.strongLaneMatchupTitle.textContent = lane.label;
+  renderStrongChampionList(
+    elements.strongChampionList,
+    elements.strongChampionEmpty,
+    championStats,
+    createStrongChampionItem,
+    '条件に合うチャンピオン実績がありません。'
+  );
+  renderStrongChampionList(
+    elements.strongLaneMatchupList,
+    elements.strongLaneMatchupEmpty,
+    matchupStats,
+    createStrongLaneMatchupItem,
+    '条件に合う対面データがありません。'
+  );
+}
+
+function getStrongLaneMatchupStats(position, minGames) {
+  const normalizedPosition = String(position || '').toUpperCase();
+  const bestByOpponent = new Map();
+
+  matchHistorySelfVsLaneOpponentStats
+    .filter((stats) => (
+      String(stats.position || '').toUpperCase() === normalizedPosition &&
+      Number(stats.games || 0) >= minGames &&
+      Number(stats.winRate || 0) > 0.5 &&
+      Number(stats.wins || 0) > 0
+    ))
+    .forEach((stats) => {
+      const opponentChampionId = Number(stats.opponentChampionId) || 0;
+      if (opponentChampionId <= 0) return;
+
+      const current = bestByOpponent.get(opponentChampionId);
+      if (!current || compareStrongMatchupStats(stats, current) < 0) {
+        bestByOpponent.set(opponentChampionId, stats);
+      }
+    });
+
+  return Array.from(bestByOpponent.values()).sort(compareStrongMatchupStats);
+}
+
+function compareStrongMatchupStats(a, b) {
+  return (
+    (Number(b.wins || 0) - Number(a.wins || 0)) ||
+    (Number(b.winRate || 0) - Number(a.winRate || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.opponentChampionId).localeCompare(championLabel(b.opponentChampionId), 'en') ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  );
+}
+
+function renderStrongChampionList(listElement, emptyElement, statsList, createItem, emptyText) {
+  listElement.replaceChildren(...statsList.map(createItem));
+  emptyElement.hidden = statsList.length > 0;
+  emptyElement.textContent = emptyText;
+}
+
+function createStrongChampionItem(stats) {
+  const item = document.createElement('li');
+  item.className = 'strong-champion-item';
+
+  const name = document.createElement('span');
+  name.className = 'strong-champion-name';
+  name.append(createInlineChampionName(stats.championId));
+
+  const detail = createWinRateStatsElement(stats, { includeKda: true });
+
+  item.append(name, detail);
+  return item;
+}
+
+function createStrongLaneMatchupItem(stats) {
+  const item = document.createElement('li');
+  item.className = 'strong-champion-item strong-matchup-item';
+
+  const matchup = document.createElement('span');
+  matchup.className = 'strong-matchup-name';
+  const opponentLabel = document.createElement('small');
+  opponentLabel.textContent = '対面';
+  const selfPickLabel = document.createElement('small');
+  selfPickLabel.textContent = '最多勝利';
+  matchup.append(
+    opponentLabel,
+    createInlineChampionName(stats.opponentChampionId),
+    selfPickLabel,
+    createInlineChampionName(stats.championId, 'inline-champion-name strong-self-pick')
+  );
+
+  const detail = createWinRateStatsElement(stats, { includeKda: true });
+
+  item.append(matchup, detail);
   return item;
 }
 
@@ -1256,6 +1408,7 @@ function setActiveView(viewName) {
   elements.coachView.hidden = activeView !== 'coach';
   elements.championPoolView.hidden = activeView !== 'championPool';
   elements.countersView.hidden = activeView !== 'counters';
+  elements.strengthsView.hidden = activeView !== 'strengths';
   elements.debugView.hidden = activeView !== 'debug';
   elements.settingsView.hidden = activeView !== 'settings';
 
@@ -1451,6 +1604,11 @@ elements.weakChampionSampleSelect.addEventListener('change', () => {
   weakChampionMinGames = getWeakChampionMinGames();
   logDebug('Weak champion sample filter changed', { minGames: weakChampionMinGames });
   renderCounters();
+});
+elements.strongChampionSampleSelect.addEventListener('change', () => {
+  strongChampionMinGames = getStrongChampionMinGames();
+  logDebug('Strong champion sample filter changed', { minGames: strongChampionMinGames });
+  renderStrengths();
 });
 
 setActiveView(activeView);
