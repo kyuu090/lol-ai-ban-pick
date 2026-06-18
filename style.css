@@ -30,6 +30,8 @@ body {
     linear-gradient(135deg, rgba(15, 28, 42, 0.95), rgba(8, 12, 18, 1) 48%, rgba(18, 13, 9, 0.96));
   color: var(--text);
   font-family:
+    "Bahnschrift",
+    "Yu Gothic UI",
     "Segoe UI",
     system-ui,
     sans-serif;
