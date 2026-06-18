@@ -980,6 +980,10 @@ h2 {
   padding-top: 9px;
 }
 
+.planned-pick-threat-section {
+  grid-column: 1 / -1;
+}
+
 .ban-insight-section:first-child,
 .pick-pool-header:first-child {
   border-top: 0;

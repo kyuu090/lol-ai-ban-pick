@@ -746,7 +746,7 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
 
 function renderDraftInsights(type, context = {}) {
   if (type === 'ban') {
-    renderBanInsights(true, context.localMember);
+    renderBanInsights(true, context.champSelect, context.localMember);
   } else if (type === 'pick') {
     renderPickPoolInsights(true, context.champSelect, context.localMember);
   } else if (context.champSelect && context.localMember && getMarkedLaneOpponentChampionId(context.champSelect)) {
@@ -772,11 +772,12 @@ function renderInsightPanel(visible, mode = '') {
   return elements.banInsightPanel;
 }
 
-function renderBanInsights(visible, localMember) {
+function renderBanInsights(visible, champSelect, localMember) {
   const panel = renderInsightPanel(visible, 'ban-mode');
   if (!panel) return;
 
   const position = String(localMember?.assignedPosition || '').toUpperCase();
+  const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position);
   const enemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats).slice(0, 3);
   const reliableEnemyStats = sortWorstWinRateStats(matchHistoryEnemyChampionStats.filter((stats) => (
     Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
@@ -789,12 +790,89 @@ function renderBanInsights(visible, localMember) {
     Number(stats.games || 0) >= RELIABLE_SAMPLE_GAMES
   ))).slice(0, 3);
 
-  panel.replaceChildren(
+  const sections = [
     createBanInsightSection('Worst enemy picks', enemyStats),
     createBanInsightSection(`Reliable enemy picks (${RELIABLE_SAMPLE_GAMES}+g)`, reliableEnemyStats),
     createBanInsightSection(`${positionLabel(position)} lane opponents`, laneStats),
     createBanInsightSection(`Reliable ${positionLabel(position)} opponents (${RELIABLE_SAMPLE_GAMES}+g)`, reliableLaneStats)
-  );
+  ];
+  if (plannedPickThreatSection) {
+    sections.unshift(plannedPickThreatSection);
+  }
+
+  panel.replaceChildren(...sections);
+}
+
+function getPlannedPickChampionId(localMember) {
+  const selectedChampionId = Number(localMember?.championId) || 0;
+  if (selectedChampionId > 0) return selectedChampionId;
+
+  const intendedChampionId = Number(localMember?.championPickIntent) || 0;
+  return intendedChampionId > 0 ? intendedChampionId : 0;
+}
+
+function createPlannedPickBanThreatSection(champSelect, localMember, position) {
+  const plannedChampionId = getPlannedPickChampionId(localMember);
+  if (!plannedChampionId || !position) return null;
+
+  const unavailableReasons = collectUnavailableChampionReasons(champSelect);
+  const statsList = sortWorstPlannedPickThreatStats(matchHistorySelfVsLaneOpponentStats.filter((stats) => (
+    Number(stats.championId) === plannedChampionId &&
+    String(stats.position || '').toUpperCase() === position &&
+    !unavailableReasons.has(Number(stats.opponentChampionId))
+  ))).slice(0, 3);
+
+  const section = document.createElement('section');
+  section.className = 'ban-insight-section planned-pick-threat-section';
+
+  const heading = document.createElement('h4');
+  heading.textContent = `Threats for your ${championLabel(plannedChampionId)} ${positionLabel(position)}`;
+  section.append(heading);
+
+  if (!statsList.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ban-insight-empty';
+    empty.textContent = 'No same-role matchup history';
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement('ol');
+  statsList.forEach((stats) => {
+    list.append(createPlannedPickBanThreatItem(stats));
+  });
+  section.append(list);
+  return section;
+}
+
+function sortWorstPlannedPickThreatStats(stats) {
+  return [...stats].sort((a, b) => (
+    (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.opponentChampionId).localeCompare(championLabel(b.opponentChampionId), 'en')
+  ));
+}
+
+function createPlannedPickBanThreatItem(stats) {
+  const item = document.createElement('li');
+
+  const name = document.createElement('strong');
+  name.textContent = championLabel(stats.opponentChampionId);
+  const nameBlock = document.createElement('span');
+  nameBlock.className = 'ban-insight-name';
+  nameBlock.append(name);
+
+  const detail = createWinRateStatsElement(stats);
+
+  item.append(nameBlock, detail);
+  const games = Number(stats.games || 0);
+  if (games > 0 && games < RELIABLE_SAMPLE_GAMES) {
+    const sample = document.createElement('em');
+    sample.textContent = 'Low sample';
+    nameBlock.append(sample);
+  }
+
+  return item;
 }
 
 function renderPickPoolInsights(visible, champSelect, localMember) {
