@@ -456,6 +456,40 @@ KDA:
 kda = deaths === 0 ? kills + assists : (kills + assists) / deaths
 ```
 
+## 対面別自己実績
+
+正規化済み match records から、自分 champion と同一ロール対面 champion の組み合わせ実績も集計する。
+
+`selfVsLaneOpponentStats` の粒度:
+
+```text
+self.position + self.championId + opponentChampionId
+```
+
+対面 champion は `record.enemies` のうち、`enemy.position === self.position` の champion だけを採用する。敵チーム全体や別ロール champion は混ぜない。
+
+```js
+{
+  championId: 103,
+  championName: "Ahri",
+  opponentChampionId: 134,
+  opponentChampionName: "Syndra",
+  position: "MIDDLE",
+  games: 8,
+  wins: 2,
+  losses: 6,
+  winRate: 0.25,
+  avgKills: 5.2,
+  avgDeaths: 4.1,
+  avgAssists: 7.0,
+  avgKda: 2.98
+}
+```
+
+ChampSelect 中に対面想定プレイヤーをマークした場合は、`opponentChampionId + assignedPosition` でこの集計を絞り込み、勝率の高い自分 champion を `Best into ...` として表示する。表示には W-L / WR / KDA を含める。
+
+BANフェーズ中に自分の予定pickがある場合は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` に該当する `selfVsLaneOpponentStats` だけを使い、勝率の低い同一ロール対面 champion を `Threats for your ...` として表示する。ここでも敵チーム全体や別ロールには fallback しない。
+
 ## ChampionPool との照合
 
 ChampionPool はユーザーが使える champion の主観的制約として扱う。
@@ -482,6 +516,8 @@ KDA 5.2/4.0/8.1
 ChampionPool画面とバンピック中の候補表示では、戦績はチップで表示する。
 
 ChampSelect 中も、自分の行だけ現在の `assignedPosition + championId` のロール別戦績を表示する。味方全員や敵側には、自分の使用戦績を表示しない。
+
+ChampSelect 中の候補名、`Best into ...`、`Threats for your ...` などの champion 名には、LCU champion icon を小さく帯同表示する。画像取得は既存の icon cache / queue を使い、一度に大量取得しない。
 
 表示・推薦では次を判定する。
 

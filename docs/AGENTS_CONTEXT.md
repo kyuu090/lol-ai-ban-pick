@@ -239,6 +239,14 @@ championId + all_sr_5v5 + position
 
 `position === null` は全ロール合算。`TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY` はそのロールだけの実績。
 
+`selfVsLaneOpponentStats` は次の粒度で、自分 champion と同一ロール対面 champion の過去実績を持つ。
+
+```text
+selfPosition + self championId + opponent championId
+```
+
+この集計は、勝敗、勝率、平均 kills / deaths / assists / KDA を持つ。ChampSelect の対面別表示では、敵チーム全体ではなく、自分の `self.position` と同じ `enemy.position` の champion だけを対面として扱う。
+
 統計対象フィルタ:
 
 ```text
@@ -554,10 +562,14 @@ BAN表示:
 
 - 自分のBANフェーズでは `YOUR BAN` とBAN候補インサイトを中央に表示する
 - BAN候補は、相手にいた時に勝率が悪いchampion、同レーン対面として勝率が悪いchampion、サンプル5試合以上のランキングを表示する
+- 自分のBANフェーズ中に自分の予定pickがある場合、`Threats for your {champion} {role}` を先頭に表示する
+- `Threats for your ...` は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` の試合だけを対象にし、相手も同一ロール対面 champion だけを集計する。別ロールや敵チーム全体には fallback しない
+- `Threats for your ...` には W-L / WR / KDA を表示し、少数サンプルには `Low sample` を付ける。対象履歴がない場合は `No same-role matchup history` を表示する
 - 自分のPICKフェーズでは `YOUR PICK` と現在 assignedPosition の ChampionPool 候補を表示する
 - ChampionPool候補はBAN済み/選択済みを unavailable 表示にし、戦績をチップ表示する
 - 対面想定プレイヤーをマークしており、相手championが見えている場合は、その対面championに対して自分が過去に成績の良かったchampionを表示する
-- 対面別の自分champion実績は ChampionPool 外のchampionも含める
+- 対面別の自分champion実績は ChampionPool 外のchampionも含め、W-L / WR / KDA を表示する
+- `Best into ...`、`Threats for your ...`、BAN/PICK候補の champion 名には、小さい champion icon を帯同表示する
 
 ### Settings
 
@@ -673,10 +685,9 @@ npm 11.9.0
 
 ## Next Likely Tasks
 
-- ChampSelect中の自分用 ChampionPool 候補パネルを追加する
-- BAN済み/選択済み champion を候補から除外または disabled 表示にする
-- 候補ごとにロール別自己戦績、Low sample、No games を表示する
 - ChampionPoolと自己戦績を使って、非AIモードの推薦候補ランキングを出す
+- BAN/PICKインサイトの並び順や表示件数を、queueGroup / sample size / recent performance で調整する
+- 対面別表示をAI用の構造化contextへ変換する
 - 非AI推薦結果と味方/敵構成をAI用の構造化データに変換する
 - OpenAI API連携用の安全な設計を追加する
 - Windows向けスタンドアロン配布用に `electron-builder` を追加する

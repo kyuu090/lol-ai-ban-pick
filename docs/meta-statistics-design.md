@@ -434,6 +434,7 @@ KDA 5.2/4.0/8.1
 - 自分のターン中だけ候補パネルを強調
 - ロール別サンプルがない候補への `No games` 表示
 - 少数サンプル候補への `Low sample` 表示
+- champion 名への小さい champion icon 表示
 
 ### 正規化済み match-history から作れる情報
 
@@ -443,21 +444,25 @@ KDA 5.2/4.0/8.1
 - 自分の champion と味方 champion の同時ピック実績
 - 自分の champion と敵 champion の対戦実績
 - 自分が負けがちな敵 champion の注意表示
+- 自分の予定pick championが決まっているBANフェーズで、その champion + assigned role の同一ロール対面だけに絞った苦手 champion 表示
+- 対面想定 champion が見えているPICKフェーズで、その同一ロール対面に対して自分が過去に成績の良かった champion 表示
 
 同時ピック実績や対敵実績は、直近90件ではサンプルが薄くなりやすい。表示する場合は `Low sample` や games 数を必ず添え、推薦スコアでは弱く扱う。
 
-### 次に実装したい候補パネル
+実装済みの対面別表示では、敵チーム全体ではなく同一ロール対面だけを集計対象にする。`self.position === assignedPosition` を満たす試合だけを使い、別ロールやロール不明の試合には fallback しない。表示は W-L / WR / KDA をチップで出す。
 
-最優先の次実装候補は、バンピック中の自分用 ChampionPool 候補パネル。
+### ChampSelect 候補パネル
+
+ChampSelect 中は、自分用の deterministic な候補パネルを表示する。
 
 ```text
 Your MID Pool
-Ahri        MID 12games  WR 58%  Ave KDA 5.1/3.0/7.2
-Syndra      MID 4games   WR 75%  Low sample
+Ahri        W-L 7-5  WR 58%  KDA 5.1/3.0/7.2
+Syndra      W-L 3-1  WR 75%  Low sample
 Orianna     No MID games
 ```
 
-仕様案:
+仕様:
 
 - `champSelect.localPlayerCellId` から自分の assignedPosition を取る
 - assignedPosition を ChampionPool lane に変換し、そのレーンの登録 champion を候補にする
@@ -466,6 +471,9 @@ Orianna     No MID games
 - 候補はロール別自己戦績を優先して並べる
 - ロール別サンプルがない場合は fallback せず `No games`
 - サンプルが少ない場合は勝率を強調しすぎず `Low sample` を表示する
+- 対面想定 champion が見えている場合は、同一ロール対面に絞った `Best into ...` を上部に表示する
+- BANフェーズ中に自分の予定pickがある場合は、同一ロール対面に絞った `Threats for your ...` を上部に表示する
+- champion 名には小さい champion icon を帯同表示する
 
 この候補パネルは、AI 推薦に進む前の deterministic な非AIモードとして扱う。
 
