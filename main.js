@@ -10,6 +10,7 @@ const {
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
   createRiotApiHosts,
+  isRiotApiAuthError,
   normalizeRiotPlatformRegion,
   requestRiotJson
 } = require('./riot-api');
@@ -46,6 +47,7 @@ const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
+const RIOT_API_TOKEN_HELP_MESSAGE = 'Riot API Tokenが正しく設定されているか確認してください。Settingsタブから確認できます。';
 
 let mainWindow;
 let lcuConnection = null;
@@ -626,7 +628,15 @@ async function collectRiotMatchHistory(_event, options = {}) {
     throw new Error('試合データを取得中です');
   }
   if (!settings.riotApiToken) {
-    throw new Error('Riot APIトークンが未設定です');
+    const error = new Error('Riot APIトークンが未設定です');
+    updateMatchHistoryStatus({
+      phase: 'error',
+      source: options.source === 'auto' ? 'auto' : 'manual',
+      mode: options.mode === 'season' ? 'season' : 'recent',
+      message: RIOT_API_TOKEN_HELP_MESSAGE,
+      error: error.message
+    });
+    throw error;
   }
 
   matchHistoryInProgress = true;
@@ -814,9 +824,12 @@ async function collectRiotMatchHistory(_event, options = {}) {
     return summary;
   } catch (error) {
     log.warn('Riot match history collection failed', serializeForLog(error));
+    const message = isRiotApiAuthError(error)
+      ? RIOT_API_TOKEN_HELP_MESSAGE
+      : `試合データ収集に失敗しました ${error.message}`;
     updateMatchHistoryStatus({
       phase: 'error',
-      message: `試合データ収集に失敗しました ${error.message}`,
+      message,
       error: error.message
     });
     throw error;

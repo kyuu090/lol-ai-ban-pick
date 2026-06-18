@@ -2,7 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   getRetryDelayMs,
+  isRiotApiAuthError,
   parseRetryAfterMs,
+  RiotApiError,
   requestRiotJson
 } = require('../riot-api');
 
@@ -35,4 +37,21 @@ test('requestRiotJson notifies before retrying 429', async () => {
   assert.equal(retries.length, 1);
   assert.equal(retries[0].attempt, 1);
   assert.equal(retries[0].delayMs, 3000);
+});
+
+test('requestRiotJson exposes Riot API authentication failures', async () => {
+  await assert.rejects(
+    requestRiotJson({
+      host: 'asia.api.riotgames.com',
+      path: '/test',
+      apiToken: 'RGAPI-bad',
+      requestFn: async () => ({ statusCode: 401, headers: {}, body: '{"status":"Unauthorized"}' })
+    }),
+    (error) => {
+      assert.equal(error instanceof RiotApiError, true);
+      assert.equal(error.statusCode, 401);
+      assert.equal(isRiotApiAuthError(error), true);
+      return true;
+    }
+  );
 });

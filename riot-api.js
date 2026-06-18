@@ -42,6 +42,16 @@ const DEFAULT_RIOT_PLATFORM_REGION = 'JP1';
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 30000;
 
+class RiotApiError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'RiotApiError';
+    this.statusCode = details.statusCode ?? null;
+    this.path = details.path ?? '';
+    this.body = details.body ?? '';
+  }
+}
+
 function normalizeRiotPlatformRegion(value) {
   const region = String(value || '').trim().toUpperCase();
   return RIOT_PLATFORM_REGIONS.includes(region) ? region : DEFAULT_RIOT_PLATFORM_REGION;
@@ -129,7 +139,11 @@ async function requestRiotJson(options) {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw new Error(`Riot API ${path} returned HTTP ${response.statusCode}: ${response.body}`);
+      throw new RiotApiError(`Riot API ${path} returned HTTP ${response.statusCode}: ${response.body}`, {
+        statusCode: response.statusCode,
+        path,
+        body: response.body
+      });
     }
 
     return response.body ? JSON.parse(response.body) : null;
@@ -171,7 +185,12 @@ function requestHttpsJson({ host, path, headers }) {
   });
 }
 
+function isRiotApiAuthError(error) {
+  return Number(error?.statusCode) === 401 || Number(error?.statusCode) === 403;
+}
+
 module.exports = {
+  RiotApiError,
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
   normalizeRiotPlatformRegion,
@@ -179,5 +198,6 @@ module.exports = {
   createRiotApiHosts,
   parseRetryAfterMs,
   getRetryDelayMs,
+  isRiotApiAuthError,
   requestRiotJson
 };
