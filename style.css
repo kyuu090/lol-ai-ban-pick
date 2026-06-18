@@ -425,6 +425,10 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.counters-grid {
+  grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.15fr);
+}
+
 .weak-champion-section,
 .strong-champion-section {
   background: rgba(8, 18, 28, 0.48);
@@ -480,6 +484,17 @@ h2 {
   padding: 9px 10px;
 }
 
+.weak-lane-matchup-item {
+  align-items: start;
+  grid-template-columns: minmax(176px, 0.8fr) minmax(240px, 1.2fr);
+}
+
+.weak-champion-main {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
 .weak-champion-name,
 .strong-champion-name,
 .strong-matchup-name {
@@ -495,6 +510,65 @@ h2 {
 .strong-champion-item .pick-pool-stat-chip {
   background: rgba(8, 18, 28, 0.72);
   border-color: rgba(154, 167, 184, 0.24);
+}
+
+.weak-self-pick-summary {
+  border-left: 1px solid rgba(154, 167, 184, 0.14);
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 10px;
+}
+
+.weak-self-pick-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.weak-self-pick-marker {
+  color: var(--muted);
+  flex: 0 0 14px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weak-self-pick-row.lost .weak-self-pick-marker {
+  color: #ff9a9a;
+}
+
+.weak-self-pick-row.won .weak-self-pick-marker {
+  color: #a9ecfb;
+}
+
+.weak-self-pick-token {
+  align-items: center;
+  background: rgba(8, 18, 28, 0.62);
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 5px;
+  display: inline-flex;
+  gap: 5px;
+  min-height: 22px;
+  min-width: 0;
+  padding: 2px 6px 2px 3px;
+}
+
+.weak-self-pick-name {
+  font-size: 11px;
+  gap: 4px;
+}
+
+.weak-self-pick-name .inline-champion-icon {
+  height: 16px;
+  width: 16px;
+}
+
+.weak-self-pick-token b {
+  color: #d9e4f2;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .strong-matchup-name {
@@ -1547,6 +1621,17 @@ pre {
   .path-input-row,
   .token-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .weak-lane-matchup-item {
+    grid-template-columns: 1fr;
+  }
+
+  .weak-self-pick-summary {
+    border-left: 0;
+    border-top: 1px solid rgba(154, 167, 184, 0.14);
+    padding-left: 0;
+    padding-top: 7px;
   }
 
   .champion-pool-header {

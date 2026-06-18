@@ -722,19 +722,20 @@ function renderWeakChampionLists(lane = getActiveChampionPoolLane()) {
     elements.weakLaneChampionList,
     elements.weakLaneChampionEmpty,
     laneStats,
-    '条件に合う対面データがありません。'
+    '条件に合う対面データがありません。',
+    { includeSelfPicks: true, position }
   );
 }
 
-function renderWeakChampionList(listElement, emptyElement, statsList, emptyText) {
-  listElement.replaceChildren(...statsList.map(createWeakChampionItem));
+function renderWeakChampionList(listElement, emptyElement, statsList, emptyText, options = {}) {
+  listElement.replaceChildren(...statsList.map((stats) => createWeakChampionItem(stats, options)));
   emptyElement.hidden = statsList.length > 0;
   emptyElement.textContent = emptyText;
 }
 
-function createWeakChampionItem(stats) {
+function createWeakChampionItem(stats, options = {}) {
   const item = document.createElement('li');
-  item.className = 'weak-champion-item';
+  item.className = `weak-champion-item${options.includeSelfPicks ? ' weak-lane-matchup-item' : ''}`;
 
   const name = document.createElement('span');
   name.className = 'weak-champion-name';
@@ -742,8 +743,111 @@ function createWeakChampionItem(stats) {
 
   const detail = createWinRateStatsElement(stats, { includeKda: true });
 
-  item.append(name, detail);
+  const main = document.createElement('div');
+  main.className = 'weak-champion-main';
+  main.append(name, detail);
+  item.append(main);
+
+  if (options.includeSelfPicks) {
+    const selfPickSummary = createWeakLaneSelfPickSummary(stats, options.position);
+    if (selfPickSummary) {
+      item.append(selfPickSummary);
+    }
+  }
   return item;
+}
+
+function createWeakLaneSelfPickSummary(opponentStats, position) {
+  const opponentChampionId = Number(opponentStats?.championId) || 0;
+  const normalizedPosition = String(position || opponentStats?.position || '').toUpperCase();
+  if (!opponentChampionId || !normalizedPosition) return null;
+
+  const matchupStats = matchHistorySelfVsLaneOpponentStats.filter((stats) => (
+    Number(stats.opponentChampionId) === opponentChampionId &&
+    String(stats.position || '').toUpperCase() === normalizedPosition &&
+    Number(stats.games || 0) > 0
+  ));
+  if (!matchupStats.length) return null;
+
+  const lostWith = matchupStats
+    .filter((stats) => Number(stats.losses ?? Math.max(0, Number(stats.games || 0) - Number(stats.wins || 0))) > 0)
+    .sort(compareWeakSelfPickStats)
+    .slice(0, 2);
+  const wonWith = matchupStats
+    .filter((stats) => Number(stats.wins || 0) > 0)
+    .sort(compareStrongSelfPickStats)
+    .slice(0, 2);
+
+  if (!lostWith.length && !wonWith.length) return null;
+
+  const summary = document.createElement('div');
+  summary.className = 'weak-self-pick-summary';
+
+  if (lostWith.length) {
+    summary.append(createWeakSelfPickRow('×', lostWith, 'lost'));
+  }
+  if (wonWith.length) {
+    summary.append(createWeakSelfPickRow('○', wonWith, 'won'));
+  }
+
+  return summary;
+}
+
+function compareWeakSelfPickStats(a, b) {
+  return (
+    (getLosses(b) - getLosses(a)) ||
+    (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  );
+}
+
+function compareStrongSelfPickStats(a, b) {
+  return (
+    (Number(b.wins || 0) - Number(a.wins || 0)) ||
+    (Number(b.winRate || 0) - Number(a.winRate || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  );
+}
+
+function getLosses(stats) {
+  return Number.isFinite(stats?.losses)
+    ? Number(stats.losses)
+    : Math.max(0, Number(stats?.games || 0) - Number(stats?.wins || 0));
+}
+
+function createWeakSelfPickRow(symbol, statsList, tone) {
+  const row = document.createElement('div');
+  row.className = `weak-self-pick-row ${tone}`;
+
+  const marker = document.createElement('span');
+  marker.className = 'weak-self-pick-marker';
+  marker.textContent = symbol;
+  row.append(marker);
+
+  statsList.forEach((stats) => {
+    row.append(createWeakSelfPickToken(stats));
+  });
+
+  return row;
+}
+
+function createWeakSelfPickToken(stats) {
+  const token = document.createElement('span');
+  token.className = 'weak-self-pick-token';
+
+  const champion = createInlineChampionName(stats.championId, 'inline-champion-name weak-self-pick-name');
+  const record = document.createElement('b');
+  record.textContent = formatWinLoss(stats);
+
+  token.append(champion, record);
+  return token;
+}
+
+function formatWinLoss(stats) {
+  const wins = Number(stats?.wins || 0);
+  return `${wins}-${getLosses(stats)}`;
 }
 
 function renderStrengths() {
