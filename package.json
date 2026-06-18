@@ -2,18 +2,57 @@
   "name": "lol-ai-draft-coach",
   "version": "0.1.0",
   "description": "Local Electron app for viewing League Client Update API draft state.",
+  "author": "lol-ai-banpick",
   "main": "main.js",
   "private": true,
   "scripts": {
+    "build": "electron-builder --win portable",
+    "build:locked": "npm ci && npm run build",
+    "pack": "electron-builder --dir",
+    "pack:locked": "npm ci && npm run pack",
     "dev": "node scripts/run-dev.js",
     "start": "electron .",
     "test": "node --test"
+  },
+  "build": {
+    "appId": "com.banpick.ai",
+    "productName": "BanPick-ai",
+    "asar": true,
+    "files": [
+      "assets/**/*",
+      "draft-logic.js",
+      "index.html",
+      "lcu-logic.js",
+      "logger.js",
+      "main.js",
+      "match-history-workflow.js",
+      "preload.js",
+      "renderer.js",
+      "riot-api.js",
+      "riot-match-history.js",
+      "style.css",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
   },
   "dependencies": {
     "electron-log": "^5.4.4",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "electron": "^33.4.11"
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
   }
 }

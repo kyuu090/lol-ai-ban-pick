@@ -5,7 +5,7 @@
 ## セットアップ
 
 ```bash
-npm install
+npm ci
 npm start
 ```
 
@@ -24,6 +24,47 @@ npm test
 ```
 
 Node.js 標準の `node:test` で、LCU lockfile のパース、認証ヘッダ生成、チャンピオン一覧の正規化、ドラフト表示用の BAN 集計・ターン判定・表示状態判定、Riot API retry、試合履歴の正規化・集計、match history 更新時の ID 重複排除を確認します。
+
+## Windows ビルド
+
+スタンドアロン実行できる portable exe を作る場合は次を使います。
+
+```bash
+npm ci
+npm run build
+```
+
+生成物:
+
+```text
+dist/LoL AI Draft Coach-0.1.0-portable.exe
+```
+
+依存関係を `package-lock.json` どおりに復元してからビルドする一括コマンド:
+
+```bash
+npm run build:locked
+```
+
+展開済みアプリ一式を確認したい場合は次を使います。
+
+```bash
+npm run pack
+```
+
+生成物:
+
+```text
+dist/win-unpacked/LoL AI Draft Coach.exe
+```
+
+同じく lockfile どおりに復元してから pack する場合:
+
+```bash
+npm run pack:locked
+```
+
+このプロジェクトでは未署名ビルドとして `signAndEditExecutable: false` を使います。署名が必要になった場合は、Windows の symlink 権限または electron-builder の署名用キャッシュ展開に注意してください。
 
 ## 実装概要
 
