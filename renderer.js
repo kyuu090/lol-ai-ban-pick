@@ -12,6 +12,8 @@ const elements = {
   draftTabButton: document.querySelector('#draftTabButton'),
   draftView: document.querySelector('#draftView'),
   championPoolView: document.querySelector('#championPoolView'),
+  statsView: document.querySelector('#statsView'),
+  statsSubtabButtons: document.querySelectorAll('.stats-subtab'),
   countersView: document.querySelector('#countersView'),
   strengthsView: document.querySelector('#strengthsView'),
   debugView: document.querySelector('#debugView'),
@@ -19,6 +21,8 @@ const elements = {
   laneTabs: document.querySelector('#laneTabs'),
   counterLaneTabs: document.querySelector('#counterLaneTabs'),
   strengthLaneTabs: document.querySelector('#strengthLaneTabs'),
+  weakChampionSampleFilter: document.querySelector('#weakChampionSampleFilter'),
+  strongChampionSampleFilter: document.querySelector('#strongChampionSampleFilter'),
   championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
   championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
   championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
@@ -74,6 +78,7 @@ const elements = {
 };
 
 let activeView = 'draft';
+let activeStatsView = 'strengths';
 let activeChampionPoolLane = 'top';
 let activeCounterLane = 'top';
 let activeStrengthLane = 'top';
@@ -1427,13 +1432,31 @@ function setActiveView(viewName) {
   logDebug('Active view changed', { viewName });
   elements.draftView.hidden = activeView !== 'draft';
   elements.championPoolView.hidden = activeView !== 'championPool';
-  elements.countersView.hidden = activeView !== 'counters';
-  elements.strengthsView.hidden = activeView !== 'strengths';
+  elements.statsView.hidden = activeView !== 'stats';
   elements.debugView.hidden = activeView !== 'debug';
   elements.settingsView.hidden = activeView !== 'settings';
 
   elements.tabButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.view === activeView);
+  });
+
+  renderStatsSubtabs();
+}
+
+function setActiveStatsView(viewName) {
+  activeStatsView = viewName === 'counters' ? 'counters' : 'strengths';
+  logDebug('Active stats view changed', { viewName: activeStatsView });
+  renderStatsSubtabs();
+}
+
+function renderStatsSubtabs() {
+  elements.strengthsView.hidden = activeStatsView !== 'strengths';
+  elements.countersView.hidden = activeStatsView !== 'counters';
+  elements.strongChampionSampleFilter.hidden = activeStatsView !== 'strengths';
+  elements.weakChampionSampleFilter.hidden = activeStatsView !== 'counters';
+
+  elements.statsSubtabButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.statsView === activeStatsView);
   });
 }
 
@@ -1615,6 +1638,9 @@ document.addEventListener('click', (event) => {
 });
 elements.tabButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveView(button.dataset.view));
+});
+elements.statsSubtabButtons.forEach((button) => {
+  button.addEventListener('click', () => setActiveStatsView(button.dataset.statsView));
 });
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);

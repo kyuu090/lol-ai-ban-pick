@@ -446,8 +446,8 @@ KDA 5.2/4.0/8.1
 - 自分が負けがちな敵 champion の注意表示
 - 自分の予定pick championが決まっているBANフェーズで、その champion + assigned role の同一ロール対面だけに絞った苦手 champion 表示
 - 対面想定 champion が見えているPICKフェーズで、その同一ロール対面に対して自分が過去に成績の良かった champion 表示
-- Countersタブで、敵チームにいると勝率が50%未満のchampionと、同一ロール対面で勝率が50%未満のchampionをサンプル数フィルタ付きで表示する
-- Strengthsタブで、選択レーンで自分が使って勝率50%超のchampionと、同一ロール対面championごとの最多勝利ピックをサンプル数フィルタ付きで表示する
+- Statsタブ内の Counters サブタブで、敵チームにいると勝率が50%未満のchampionと、同一ロール対面で勝率が50%未満のchampionをサンプル数フィルタ付きで表示する
+- Statsタブ内の Strengths サブタブで、選択レーンで自分が使って勝率50%超のchampionと、同一ロール対面championごとの最多勝利ピックをサンプル数フィルタ付きで表示する
 
 同時ピック実績や対敵実績は、直近90件ではサンプルが薄くなりやすい。表示する場合は `Low sample` や games 数を必ず添え、推薦スコアでは弱く扱う。
 

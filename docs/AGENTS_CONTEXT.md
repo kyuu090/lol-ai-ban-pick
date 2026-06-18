@@ -534,7 +534,7 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 画面切り替えタブは以下の順番。
 
 ```text
-Draft / ChampionPool / Counters / Strengths / Settings / Debug
+Draft / ChampionPool / Stats / Settings / Debug
 ```
 
 ### Draft
@@ -602,22 +602,30 @@ BAN表示:
 - 登録済みチャンピオンのロール別戦績は `Games`, `W-L`, `WR`, `KDA` のチップで表示する
 - 保存ボタンで `champion-pool.json` に保存
 
-### Counters
+### Stats
+
+自己戦績の統計情報を確認する画面。
+
+- ChampionPoolの右に `Stats` タブを表示する
+- Stats内に `Strengths` / `Counters` のサブタブを表示する
+- デフォルトは `Strengths`
+
+#### Counters
 
 苦手チャンピオンを確認する画面。
 
-- ChampionPoolの右に `Counters` タブを表示する
+- `Stats` タブ内の `Counters` サブタブで表示する
 - サンプル数フィルタはデフォルト `5+ games`。`1 / 3 / 5 / 10 / 20+ games` から選べる
 - 「相手にいると苦手」には、敵チームに含まれていた時の自分の勝率が50%未満のchampionだけを表示する
 - 「{lane} 対面で苦手」には、選択レーンと同一ロール対面に来た時の自分の勝率が50%未満のchampionだけを表示する
 - どちらもサンプル数条件を満たすデータだけを対象にし、W-L / WR / KDA を表示する
 - レーン別対面は `laneOpponentStats`、敵チーム全体は `enemyChampionStats` を使う
 
-### Strengths
+#### Strengths
 
 得意チャンピオンを確認する画面。
 
-- Countersの右に `Strengths` タブを表示する
+- `Stats` タブ内の `Strengths` サブタブで表示する
 - サンプル数フィルタはデフォルト `5+ games`。`1 / 3 / 5 / 10 / 20+ games` から選べる
 - 「あなたの得意なピック」には、選択レーンで自分が使った時の勝率が50%超のchampionだけを表示する
 - 「{lane} 対面別の得意ピック」には、同一ロール対面 champion ごとに、自分がどのchampionで最も多く勝利したかを表示する

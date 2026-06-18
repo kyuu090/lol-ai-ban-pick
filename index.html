@@ -29,8 +29,7 @@
           <nav class="view-tabs" aria-label="view switcher">
             <button class="tab-button active" id="draftTabButton" type="button" data-view="draft">Draft</button>
             <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool">ChampionPool</button>
-            <button class="tab-button" id="countersTabButton" type="button" data-view="counters">Counters</button>
-            <button class="tab-button" id="strengthsTabButton" type="button" data-view="strengths">Strengths</button>
+            <button class="tab-button" id="statsTabButton" type="button" data-view="stats">Stats</button>
             <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
@@ -179,15 +178,26 @@
         </section>
       </section>
 
-      <section id="countersView" class="view-panel" hidden>
-        <section class="counters-panel">
-          <div class="counters-header">
-            <div>
-              <p class="eyebrow">Counters</p>
-              <h2>苦手チャンピオン</h2>
-              <p>自分の試合履歴から、勝率が低い相手を表示します。</p>
-            </div>
-            <label class="sample-filter" for="weakChampionSampleSelect">
+      <section id="statsView" class="view-panel" hidden>
+        <section class="stats-panel">
+          <div class="stats-toolbar">
+            <nav class="stats-subtabs" aria-label="stats switcher">
+              <button class="stats-subtab active" id="strengthsSubtabButton" type="button" data-stats-view="strengths">Strengths</button>
+              <button class="stats-subtab" id="countersSubtabButton" type="button" data-stats-view="counters">Counters</button>
+            </nav>
+
+            <label id="strongChampionSampleFilter" class="sample-filter" for="strongChampionSampleSelect">
+              <span>Sample</span>
+              <select id="strongChampionSampleSelect">
+                <option value="1">1+ games</option>
+                <option value="3">3+ games</option>
+                <option value="5" selected>5+ games</option>
+                <option value="10">10+ games</option>
+                <option value="20">20+ games</option>
+              </select>
+            </label>
+
+            <label id="weakChampionSampleFilter" class="sample-filter" for="weakChampionSampleSelect" hidden>
               <span>Sample</span>
               <select id="weakChampionSampleSelect">
                 <option value="1">1+ games</option>
@@ -199,57 +209,39 @@
             </label>
           </div>
 
-          <nav id="counterLaneTabs" class="lane-tabs" aria-label="counter lane switcher"></nav>
+          <section id="strengthsView" class="stats-subview">
+            <nav id="strengthLaneTabs" class="lane-tabs" aria-label="strength lane switcher"></nav>
 
-          <section class="counters-grid">
-            <section class="weak-champion-section">
-              <h3>相手にいると苦手</h3>
-              <ol id="weakEnemyChampionList" class="weak-champion-list"></ol>
-              <p id="weakEnemyChampionEmpty" class="pool-empty">条件に合う試合データがありません。</p>
-            </section>
+            <section class="strengths-grid">
+              <section class="strong-champion-section">
+                <h3>あなたの得意なピック</h3>
+                <ol id="strongChampionList" class="strong-champion-list"></ol>
+                <p id="strongChampionEmpty" class="pool-empty">条件に合うチャンピオン実績がありません。</p>
+              </section>
 
-            <section class="weak-champion-section">
-              <h3><span id="weakLaneChampionTitle">TOP</span> 対面で苦手</h3>
-              <ol id="weakLaneChampionList" class="weak-champion-list"></ol>
-              <p id="weakLaneChampionEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+              <section class="strong-champion-section">
+                <h3><span id="strongLaneMatchupTitle">TOP</span> 対面別の得意ピック</h3>
+                <ol id="strongLaneMatchupList" class="strong-champion-list"></ol>
+                <p id="strongLaneMatchupEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+              </section>
             </section>
           </section>
-        </section>
-      </section>
 
-      <section id="strengthsView" class="view-panel" hidden>
-        <section class="strengths-panel">
-          <div class="strengths-header">
-            <div>
-              <p class="eyebrow">Strengths</p>
-              <h2>得意チャンピオン</h2>
-              <p>自分の試合履歴から、勝てているチャンピオンと対面別の得意ピックを表示します。</p>
-            </div>
-            <label class="sample-filter" for="strongChampionSampleSelect">
-              <span>Sample</span>
-              <select id="strongChampionSampleSelect">
-                <option value="1">1+ games</option>
-                <option value="3">3+ games</option>
-                <option value="5" selected>5+ games</option>
-                <option value="10">10+ games</option>
-                <option value="20">20+ games</option>
-              </select>
-            </label>
-          </div>
+          <section id="countersView" class="stats-subview" hidden>
+            <nav id="counterLaneTabs" class="lane-tabs" aria-label="counter lane switcher"></nav>
 
-          <nav id="strengthLaneTabs" class="lane-tabs" aria-label="strength lane switcher"></nav>
+            <section class="counters-grid">
+              <section class="weak-champion-section">
+                <h3>相手にいると苦手</h3>
+                <ol id="weakEnemyChampionList" class="weak-champion-list"></ol>
+                <p id="weakEnemyChampionEmpty" class="pool-empty">条件に合う試合データがありません。</p>
+              </section>
 
-          <section class="strengths-grid">
-            <section class="strong-champion-section">
-              <h3>あなたの得意なピック</h3>
-              <ol id="strongChampionList" class="strong-champion-list"></ol>
-              <p id="strongChampionEmpty" class="pool-empty">条件に合うチャンピオン実績がありません。</p>
-            </section>
-
-            <section class="strong-champion-section">
-              <h3><span id="strongLaneMatchupTitle">TOP</span> 対面別の得意ピック</h3>
-              <ol id="strongLaneMatchupList" class="strong-champion-list"></ol>
-              <p id="strongLaneMatchupEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+              <section class="weak-champion-section">
+                <h3><span id="weakLaneChampionTitle">TOP</span> 対面で苦手</h3>
+                <ol id="weakLaneChampionList" class="weak-champion-list"></ol>
+                <p id="weakLaneChampionEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+              </section>
             </section>
           </section>
         </section>

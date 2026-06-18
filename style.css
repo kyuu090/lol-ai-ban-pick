@@ -323,40 +323,72 @@ h2 {
 
 .settings-panel,
 .champion-pool-panel,
-.counters-panel,
-.strengths-panel {
+.stats-panel {
   background: rgba(17, 24, 33, 0.9);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 22px;
+  gap: 14px;
+  padding: 18px 22px 22px;
 }
 
 .settings-panel h2,
 .champion-pool-panel h2,
-.counters-panel h2,
-.strengths-panel h2 {
+.stats-panel h2 {
   font-size: 22px;
   margin-top: 4px;
 }
 
 .settings-panel p:not(.eyebrow),
 .champion-pool-panel p:not(.eyebrow),
-.counters-panel p:not(.eyebrow),
-.strengths-panel p:not(.eyebrow) {
+.stats-panel p:not(.eyebrow) {
   color: var(--muted);
   margin-top: 8px;
 }
 
-.champion-pool-header,
-.counters-header,
-.strengths-header {
+.champion-pool-header {
   align-items: start;
   display: flex;
   gap: 18px;
   justify-content: space-between;
+}
+
+.stats-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.stats-subtabs {
+  background: rgba(8, 12, 18, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.stats-subtab {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  min-height: 34px;
+  min-width: 104px;
+  padding: 0 14px;
+}
+
+.stats-subtab.active {
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
+.stats-subview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .lane-tabs {
@@ -1456,11 +1488,23 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .champion-pool-header,
-  .counters-header,
-  .strengths-header {
+  .champion-pool-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .stats-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stats-subtabs {
+    width: 100%;
+  }
+
+  .stats-subtab {
+    flex: 1;
+    min-width: 0;
   }
 
   .enemy h3,
