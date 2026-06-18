@@ -180,7 +180,11 @@ function createOpponentStats(championId, championName, position = null) {
     games: 0,
     wins: 0,
     losses: 0,
-    winRate: 0
+    winRate: 0,
+    avgKills: 0,
+    avgDeaths: 0,
+    avgAssists: 0,
+    avgKda: 0
   };
 }
 
@@ -188,12 +192,20 @@ function addWinLossToOpponentStats(stats, record) {
   stats.games += 1;
   stats.wins += record.self.win ? 1 : 0;
   stats.losses = stats.games - stats.wins;
+  stats.avgKills += record.self.kills;
+  stats.avgDeaths += record.self.deaths;
+  stats.avgAssists += record.self.assists;
+  stats.avgKda += record.self.kda;
 }
 
 function finalizeOpponentStats(stats) {
   return {
     ...stats,
-    winRate: stats.games > 0 ? stats.wins / stats.games : 0
+    winRate: stats.games > 0 ? stats.wins / stats.games : 0,
+    avgKills: stats.games > 0 ? stats.avgKills / stats.games : 0,
+    avgDeaths: stats.games > 0 ? stats.avgDeaths / stats.games : 0,
+    avgAssists: stats.games > 0 ? stats.avgAssists / stats.games : 0,
+    avgKda: stats.games > 0 ? stats.avgKda / stats.games : 0
   };
 }
 
@@ -245,7 +257,11 @@ function createSelfVsLaneOpponentStats(record, laneOpponent, position) {
     games: 0,
     wins: 0,
     losses: 0,
-    winRate: 0
+    winRate: 0,
+    avgKills: 0,
+    avgDeaths: 0,
+    avgAssists: 0,
+    avgKda: 0
   };
 }
 

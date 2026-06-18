@@ -296,6 +296,9 @@ test('aggregateSelfChampionVsLaneOpponentStats ranks own picks into same-lane op
   assert.equal(ahriVsSyndra.games, 2);
   assert.equal(ahriVsSyndra.wins, 1);
   assert.equal(ahriVsSyndra.winRate, 0.5);
+  assert.equal(ahriVsSyndra.avgKills, 8);
+  assert.equal(ahriVsSyndra.avgDeaths, 2);
+  assert.equal(ahriVsSyndra.avgAssists, 9);
   assert.equal(syndraStats[0].championId, 112);
   assert.equal(stats.some((entry) => entry.position === 'MIDDLE' && entry.opponentChampionId === 24), false);
 });

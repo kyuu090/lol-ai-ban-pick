@@ -140,6 +140,25 @@ function championTitle(championId) {
   return champion?.title ? `${champion.name} - ${champion.title}` : championLabel(championId);
 }
 
+function createInlineChampionName(championId, className = 'inline-champion-name') {
+  const id = Number(championId) || 0;
+  const container = document.createElement('span');
+  container.className = className;
+
+  if (id > 0) {
+    const icon = document.createElement('img');
+    icon.alt = '';
+    icon.className = 'inline-champion-icon';
+    loadChampionIcon(icon, id);
+    container.append(icon);
+  }
+
+  const label = document.createElement('span');
+  label.textContent = championLabel(id);
+  container.append(label);
+  return container;
+}
+
 function getChampionRoleDisplayStats(championId, position) {
   const id = Number(championId);
   const normalizedPosition = String(position || '').toUpperCase();
@@ -826,7 +845,11 @@ function createPlannedPickBanThreatSection(champSelect, localMember, position) {
   section.className = 'ban-insight-section planned-pick-threat-section';
 
   const heading = document.createElement('h4');
-  heading.textContent = `Threats for your ${championLabel(plannedChampionId)} ${positionLabel(position)}`;
+  heading.append(
+    'Threats for your ',
+    createInlineChampionName(plannedChampionId, 'inline-champion-name heading-champion-name'),
+    ` ${positionLabel(position)}`
+  );
   section.append(heading);
 
   if (!statsList.length) {
@@ -856,13 +879,11 @@ function sortWorstPlannedPickThreatStats(stats) {
 function createPlannedPickBanThreatItem(stats) {
   const item = document.createElement('li');
 
-  const name = document.createElement('strong');
-  name.textContent = championLabel(stats.opponentChampionId);
   const nameBlock = document.createElement('span');
   nameBlock.className = 'ban-insight-name';
-  nameBlock.append(name);
+  nameBlock.append(createInlineChampionName(stats.opponentChampionId));
 
-  const detail = createWinRateStatsElement(stats);
+  const detail = createWinRateStatsElement(stats, { includeKda: true });
 
   item.append(nameBlock, detail);
   const games = Number(stats.games || 0);
@@ -966,7 +987,7 @@ function createMarkedOpponentInsightElements(champSelect, localMember) {
   header.className = 'pick-pool-header';
 
   const title = document.createElement('h4');
-  title.textContent = `Best into ${championLabel(opponentChampionId)}`;
+  title.append('Best into ', createInlineChampionName(opponentChampionId, 'inline-champion-name heading-champion-name'));
 
   const summary = document.createElement('p');
   summary.textContent = `${positionLabel(position)} history`;
@@ -1013,10 +1034,9 @@ function createMarkedOpponentPickItem(stats) {
   const item = document.createElement('li');
   item.className = 'pick-pool-candidate marked-opponent-candidate';
 
-  const name = document.createElement('strong');
-  name.textContent = championLabel(stats.championId);
+  const name = createInlineChampionName(stats.championId);
 
-  const detail = createWinRateStatsElement(stats, { includeGames: false });
+  const detail = createWinRateStatsElement(stats, { includeGames: false, includeKda: true });
   item.append(name, detail);
 
   const games = Number(stats.games || 0);
@@ -1073,8 +1093,7 @@ function createPickPoolCandidateItem(candidate, position) {
   const item = document.createElement('li');
   item.className = `pick-pool-candidate${candidate.available ? '' : ' unavailable'}`;
 
-  const name = document.createElement('strong');
-  name.textContent = championLabel(candidate.championId);
+  const name = createInlineChampionName(candidate.championId);
 
   const detail = createPickPoolCandidateStatsElement(candidate.stats, position);
 
@@ -1156,11 +1175,9 @@ function createBanInsightSection(title, statsList) {
 function createBanInsightItem(stats) {
   const item = document.createElement('li');
 
-  const name = document.createElement('strong');
-  name.textContent = championLabel(stats.championId);
   const nameBlock = document.createElement('span');
   nameBlock.className = 'ban-insight-name';
-  nameBlock.append(name);
+  nameBlock.append(createInlineChampionName(stats.championId));
 
   const detail = createWinRateStatsElement(stats);
 
@@ -1177,6 +1194,7 @@ function createBanInsightItem(stats) {
 
 function createWinRateStatsElement(stats, options = {}) {
   const includeGames = options.includeGames !== false;
+  const includeKda = options.includeKda === true;
   const container = document.createElement('span');
   container.className = 'compact-stat-chips';
 
@@ -1189,6 +1207,9 @@ function createWinRateStatsElement(stats, options = {}) {
   ];
   if (includeGames) {
     chips.unshift(['Games', `${games}`]);
+  }
+  if (includeKda) {
+    chips.push(['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]);
   }
 
   chips.forEach(([label, value]) => {
