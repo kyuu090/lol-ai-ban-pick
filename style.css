@@ -116,6 +116,22 @@ code {
   font-size: 13px;
 }
 
+.match-data-season-hint {
+  align-self: start;
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.38);
+  color: #f1ddb0;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 26px;
+  padding: 0 9px;
+}
+
+.match-data-season-hint:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.18);
+  border-color: rgba(212, 175, 55, 0.62);
+}
+
 .match-data-progress {
   color: #f1ddb0;
   font-size: 12px;

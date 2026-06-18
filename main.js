@@ -43,6 +43,7 @@ const RIOT_MATCH_DETAIL_CONCURRENCY = 5;
 const RIOT_MATCH_DETAIL_BATCH_DELAY_MS = 350;
 const RIOT_SEASON_MATCH_DETAIL_CONCURRENCY = RIOT_MATCH_DETAIL_CONCURRENCY;
 const RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS = 0;
+const RIOT_ESTIMATED_REQUESTS_PER_TWO_MINUTES = 100;
 const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
@@ -630,6 +631,29 @@ function scheduleStartupRiotMatchHistoryIfReady(reason) {
   scheduleAutoRiotMatchHistory(reason, AUTO_MATCH_HISTORY_STARTUP_DELAY_MS);
 }
 
+function estimateSeasonCollectionMinutes(detailRequestCount) {
+  const requests = Math.max(0, Number(detailRequestCount) || 0);
+  if (requests <= 0) return 0;
+
+  return Math.max(1, Math.ceil((requests / RIOT_ESTIMATED_REQUESTS_PER_TWO_MINUTES) * 2));
+}
+
+async function confirmSeasonMatchHistoryCollection({ totalMatches, missingMatches }) {
+  const estimateMinutes = estimateSeasonCollectionMinutes(missingMatches);
+  const estimateText = estimateMinutes > 0 ? `${estimateMinutes}分程度` : '1分未満';
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: ['取得する', 'キャンセル'],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'シーズン中の全試合データ取得',
+    message: 'シーズン中の全試合データを取得します。',
+    detail: `この処理は試合数によって時間がかかるケースがあります。\nあなたの場合、${estimateText}かかります。\n\n対象試合: ${totalMatches}試合\n未取得試合: ${missingMatches}試合`
+  });
+
+  return result.response === 0;
+}
+
 async function collectRiotMatchHistory(_event, options = {}) {
   if (matchHistoryInProgress) {
     throw new Error('試合データを取得中です');
@@ -716,6 +740,28 @@ async function collectRiotMatchHistory(_event, options = {}) {
       storagePuuid
     });
     const missingMatchIds = collectMissingMatchIds(normalizedMatchIds, matchesById);
+    if (mode === 'season' && source === 'manual') {
+      const confirmed = await confirmSeasonMatchHistoryCollection({
+        totalMatches: normalizedMatchIds.length,
+        missingMatches: missingMatchIds.length
+      });
+      if (!confirmed) {
+        updateMatchHistoryStatus({
+          phase: 'idle',
+          mode,
+          requestedMatches: normalizedMatchIds.length,
+          fetchedMatches: 0,
+          normalizedMatches: 0,
+          updatedMatches: 0,
+          failedRequests: 0,
+          retryAttempt: 0,
+          nextRetryAt: null,
+          message: '',
+          error: null
+        });
+        return { canceled: true, requestedMatches: normalizedMatchIds.length, updatedMatches: 0 };
+      }
+    }
     const detailConcurrency = mode === 'season' ? RIOT_SEASON_MATCH_DETAIL_CONCURRENCY : RIOT_MATCH_DETAIL_CONCURRENCY;
     const detailBatchDelayMs = mode === 'season' ? RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS : RIOT_MATCH_DETAIL_BATCH_DELAY_MS;
     let fetchedMatches = 0;

@@ -6,6 +6,7 @@ const elements = {
   collectSeasonRiotMatchesButton: document.querySelector('#collectSeasonRiotMatchesButton'),
   matchDataCount: document.querySelector('#matchDataCount'),
   matchDataRange: document.querySelector('#matchDataRange'),
+  matchDataSeasonHint: document.querySelector('#matchDataSeasonHint'),
   matchDataProgress: document.querySelector('#matchDataProgress'),
   tabButtons: document.querySelectorAll('.tab-button'),
   draftTabButton: document.querySelector('#draftTabButton'),
@@ -376,6 +377,7 @@ function renderMatchDataSummary(summary) {
   if (matchCount <= 0) {
     elements.matchDataCount.textContent = 'No data';
     elements.matchDataRange.textContent = 'Riot試合取得後に表示します';
+    elements.matchDataSeasonHint.hidden = true;
     return;
   }
 
@@ -385,6 +387,7 @@ function renderMatchDataSummary(summary) {
   elements.matchDataRange.textContent = oldest && newest
     ? `${oldest} - ${newest}`
     : '期間不明';
+  elements.matchDataSeasonHint.hidden = matchCount > 90;
 }
 
 function renderMatchHistoryStatus(status) {
@@ -399,6 +402,7 @@ function renderMatchHistoryStatus(status) {
     elements.collectRiotMatchesButton.disabled = false;
     elements.matchDataMenuButton.disabled = false;
     elements.collectSeasonRiotMatchesButton.disabled = false;
+    elements.matchDataSeasonHint.disabled = false;
     elements.collectRiotMatchesButton.textContent = 'Download recent match';
     renderMatchDataProgress(null);
     dismissedMatchHistoryButtonKey = null;
@@ -414,6 +418,7 @@ function renderMatchHistoryStatus(status) {
     elements.collectRiotMatchesButton.disabled = false;
     elements.matchDataMenuButton.disabled = false;
     elements.collectSeasonRiotMatchesButton.disabled = false;
+    elements.matchDataSeasonHint.disabled = false;
     elements.collectRiotMatchesButton.textContent = 'Download recent match';
     renderMatchDataProgress(null);
     return;
@@ -422,6 +427,7 @@ function renderMatchHistoryStatus(status) {
   elements.collectRiotMatchesButton.disabled = isActive;
   elements.matchDataMenuButton.disabled = isActive;
   elements.collectSeasonRiotMatchesButton.disabled = isActive;
+  elements.matchDataSeasonHint.disabled = isActive;
   elements.collectRiotMatchesButton.textContent = getMatchHistoryButtonText(status);
   renderMatchDataProgress(status);
 
@@ -1581,6 +1587,7 @@ async function collectRiotMatchHistory(mode = 'recent') {
   elements.collectRiotMatchesButton.disabled = true;
   elements.matchDataMenuButton.disabled = true;
   elements.collectSeasonRiotMatchesButton.disabled = true;
+  elements.matchDataSeasonHint.disabled = true;
   elements.collectRiotMatchesButton.textContent = mode === 'season' ? 'Downloading season...' : 'Downloading...';
 
   try {
@@ -1600,6 +1607,7 @@ elements.refreshButton.addEventListener('click', refresh);
 elements.collectRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('recent'));
 elements.matchDataMenuButton.addEventListener('click', toggleMatchDataMenu);
 elements.collectSeasonRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('season'));
+elements.matchDataSeasonHint.addEventListener('click', () => collectRiotMatchHistory('season'));
 document.addEventListener('click', (event) => {
   if (!matchDataMenuOpen) return;
   if (event.target === elements.matchDataMenuButton || elements.matchDataMenu.contains(event.target)) return;
