@@ -8,6 +8,7 @@ const elements = {
   matchDataRange: document.querySelector('#matchDataRange'),
   matchDataProgress: document.querySelector('#matchDataProgress'),
   tabButtons: document.querySelectorAll('.tab-button'),
+  coachTabButton: document.querySelector('#coachTabButton'),
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
   countersView: document.querySelector('#countersView'),
@@ -86,6 +87,7 @@ let matchHistorySelfVsLaneOpponentStats = [];
 let championPoolDirty = false;
 let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
+let wasInChampSelect = false;
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
@@ -338,6 +340,7 @@ function processChampionIconQueue() {
 
 function renderState(state) {
   lastRenderedState = state;
+  syncCoachAutoFocus(state);
   championsById = state.championsById || {};
   matchHistoryChampionStats = Array.isArray(state.matchHistoryChampionStats) ? state.matchHistoryChampionStats : [];
   matchHistoryEnemyChampionStats = Array.isArray(state.matchHistoryEnemyChampionStats) ? state.matchHistoryEnemyChampionStats : [];
@@ -355,6 +358,17 @@ function renderState(state) {
   renderStrengths();
   renderCoach(state);
   renderDebug(state);
+}
+
+function syncCoachAutoFocus(state) {
+  const { inChampSelect } = getCoachPanelState(state);
+  elements.coachTabButton.classList.toggle('draft-live', inChampSelect);
+
+  if (inChampSelect && !wasInChampSelect && activeView !== 'coach') {
+    setActiveView('coach');
+  }
+
+  wasInChampSelect = inChampSelect;
 }
 
 function renderMatchDataSummary(summary) {
