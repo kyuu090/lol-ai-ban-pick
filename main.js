@@ -20,6 +20,10 @@ const {
   aggregateSelfChampionVsLaneOpponentStats,
   normalizeRiotMatches
 } = require('./riot-match-history');
+const {
+  collectMissingMatchIds,
+  createAnalysisMatchIds
+} = require('./match-history-workflow');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
@@ -33,8 +37,11 @@ const LCU_ENDPOINTS = {
 const LOCKFILE_RETRY_MS = 5000;
 const WEBSOCKET_RECONNECT_MS = 3000;
 const RIOT_MATCHES_PER_RUN = 90;
+const RIOT_MATCH_IDS_PAGE_SIZE = 100;
 const RIOT_MATCH_DETAIL_CONCURRENCY = 5;
 const RIOT_MATCH_DETAIL_BATCH_DELAY_MS = 350;
+const RIOT_SEASON_MATCH_DETAIL_CONCURRENCY = RIOT_MATCH_DETAIL_CONCURRENCY;
+const RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS = 0;
 const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
@@ -57,6 +64,8 @@ let championIconUnavailableLogged = false;
 let matchHistoryInProgress = false;
 let startupMatchHistoryScheduled = false;
 let autoMatchHistoryTimer = null;
+let activeMatchHistoryPuuid = null;
+let riotRateLimitCountdownTimer = null;
 
 configureLogger();
 
@@ -99,6 +108,7 @@ function createMatchHistoryStatus(patch = {}) {
   return {
     phase: 'idle',
     source: 'manual',
+    mode: 'recent',
     requestedMatches: RIOT_MATCHES_PER_RUN,
     fetchedMatches: 0,
     normalizedMatches: 0,
@@ -153,12 +163,21 @@ function getChampionPoolPath() {
   return path.join(app.getPath('userData'), 'champion-pool.json');
 }
 
-function getRiotMatchCachePath() {
-  return path.join(app.getPath('userData'), 'riot-match-cache.json');
+function getAccountDataKey(puuid) {
+  return encodeURIComponent(String(puuid || '').trim());
 }
 
-function getMatchHistoryPath() {
-  return path.join(app.getPath('userData'), 'match-history.json');
+function getRiotMatchCachePath(puuid) {
+  return path.join(app.getPath('userData'), 'riot-match-cache', `${getAccountDataKey(puuid)}.json`);
+}
+
+function getMatchHistoryPath(puuid) {
+  return path.join(app.getPath('userData'), 'match-history', `${getAccountDataKey(puuid)}.json`);
+}
+
+function getPuuidFromSummoner(summoner) {
+  const puuid = summoner && !summoner.error ? String(summoner.puuid || '').trim() : '';
+  return puuid || null;
 }
 
 async function loadSettings() {
@@ -192,23 +211,45 @@ async function loadChampionPool() {
   return championPool;
 }
 
-async function loadMatchHistory() {
-  const historyPath = getMatchHistoryPath();
+function resetMatchHistoryData({ puuid = null, reason = 'reset' } = {}) {
+  activeMatchHistoryPuuid = puuid;
+  matchHistoryChampionStats = [];
+  matchHistoryEnemyChampionStats = [];
+  matchHistoryLaneOpponentStats = [];
+  matchHistorySelfVsLaneOpponentStats = [];
+  updateState({
+    matchHistoryChampionStats,
+    matchHistoryEnemyChampionStats,
+    matchHistoryLaneOpponentStats,
+    matchHistorySelfVsLaneOpponentStats,
+    matchHistorySummary: null,
+    matchHistoryStatus: createMatchHistoryStatus({
+      ...appState.matchHistoryStatus,
+      phase: 'idle',
+      message: '',
+      error: null
+    })
+  });
+  log.debug('Match history reset', { puuid, reason });
+}
+
+async function loadMatchHistoryForPuuid(puuid) {
+  if (!puuid) {
+    resetMatchHistoryData({ reason: 'no-puuid' });
+    return null;
+  }
+
+  if (activeMatchHistoryPuuid === puuid && appState.matchHistorySummary) {
+    return appState.matchHistorySummary;
+  }
+
+  activeMatchHistoryPuuid = puuid;
+  const historyPath = getMatchHistoryPath(puuid);
   const history = await readJsonFile(historyPath, null);
 
-  if (!history || history.source !== 'riot-api') {
-    matchHistoryChampionStats = [];
-    matchHistoryEnemyChampionStats = [];
-    matchHistoryLaneOpponentStats = [];
-    matchHistorySelfVsLaneOpponentStats = [];
-    updateState({
-      matchHistoryChampionStats,
-      matchHistoryEnemyChampionStats,
-      matchHistoryLaneOpponentStats,
-      matchHistorySelfVsLaneOpponentStats,
-      matchHistorySummary: null
-    });
-    log.debug('Match history file not found or invalid; using empty stats', { path: historyPath });
+  if (!history || history.source !== 'riot-api' || history.puuid !== puuid) {
+    resetMatchHistoryData({ puuid, reason: 'missing-or-invalid-account-history' });
+    log.debug('Account match history file not found or invalid; using empty stats', { path: historyPath, puuid });
     return null;
   }
 
@@ -238,10 +279,26 @@ async function loadMatchHistory() {
     matchHistoryEnemyChampionStats,
     matchHistoryLaneOpponentStats,
     matchHistorySelfVsLaneOpponentStats,
-    matchHistorySummary: summary
+    matchHistorySummary: summary,
+    matchHistoryStatus: createMatchHistoryStatus({
+      ...appState.matchHistoryStatus,
+      phase: 'idle',
+      message: '',
+      error: null
+    })
   });
-  log.debug('Match history loaded', { path: historyPath, summary });
+  log.debug('Account match history loaded', { path: historyPath, puuid, summary });
   return history;
+}
+
+async function syncMatchHistoryForSummoner(summoner, reason) {
+  const puuid = getPuuidFromSummoner(summoner);
+  if (!puuid) {
+    resetMatchHistoryData({ reason });
+    return null;
+  }
+
+  return loadMatchHistoryForPuuid(puuid);
 }
 
 async function saveChampionPool(_event, nextChampionPool) {
@@ -347,14 +404,174 @@ function encodePathSegment(value) {
   return encodeURIComponent(String(value));
 }
 
-function createRiotRetryHandler() {
-  return ({ attempt, delayMs }) => {
+function getDefaultSeasonStartAt() {
+  const year = new Date().getFullYear();
+  return new Date(`${year}-01-01T00:00:00+09:00`);
+}
+
+function clearRiotRateLimitCountdown() {
+  if (riotRateLimitCountdownTimer) {
+    clearInterval(riotRateLimitCountdownTimer);
+    riotRateLimitCountdownTimer = null;
+  }
+}
+
+function formatRiotRateLimitMessage(nextRetryAtMs) {
+  const seconds = Math.max(0, Math.ceil((nextRetryAtMs - Date.now()) / 1000));
+  return `RiotAPIのRateLimitを待機中... (次回取得まで${seconds}秒)`;
+}
+
+function createRiotRetryHandler({ onRateLimitStart = null } = {}) {
+  return async ({ attempt, delayMs }) => {
+    const nextRetryAtMs = Date.now() + delayMs;
+    clearRiotRateLimitCountdown();
     updateMatchHistoryStatus({
       phase: 'retrying',
       retryAttempt: attempt,
-      nextRetryAt: new Date(Date.now() + delayMs).toISOString(),
-      message: `Riot API制限のため再試行します ${Math.ceil(delayMs / 1000)}秒後`
+      nextRetryAt: new Date(nextRetryAtMs).toISOString(),
+      message: formatRiotRateLimitMessage(nextRetryAtMs)
     });
+    riotRateLimitCountdownTimer = setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((nextRetryAtMs - Date.now()) / 1000));
+      updateMatchHistoryStatus({
+        phase: 'retrying',
+        retryAttempt: attempt,
+        nextRetryAt: new Date(nextRetryAtMs).toISOString(),
+        message: formatRiotRateLimitMessage(nextRetryAtMs)
+      });
+      if (seconds <= 0) {
+        clearRiotRateLimitCountdown();
+      }
+    }, 1000);
+
+    if (typeof onRateLimitStart === 'function') {
+      await onRateLimitStart();
+    }
+  };
+}
+
+async function collectMatchIdsByMode({ host, puuid, apiToken, requestedMatches, mode, onRetry }) {
+  if (mode !== 'season') {
+    const matchIds = await requestRiotJson({
+      host,
+      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=0&count=${requestedMatches}`,
+      apiToken,
+      onRetry
+    });
+    clearRiotRateLimitCountdown();
+
+    return Array.isArray(matchIds) ? matchIds.slice(0, requestedMatches) : [];
+  }
+
+  const seasonStartAt = getDefaultSeasonStartAt();
+  const startTime = Math.floor(seasonStartAt.getTime() / 1000);
+  const allMatchIds = [];
+
+  for (let start = 0; ; start += RIOT_MATCH_IDS_PAGE_SIZE) {
+    const page = await requestRiotJson({
+      host,
+      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=${start}&count=${RIOT_MATCH_IDS_PAGE_SIZE}&startTime=${startTime}`,
+      apiToken,
+      onRetry
+    });
+    clearRiotRateLimitCountdown();
+    const pageMatchIds = Array.isArray(page) ? page : [];
+    allMatchIds.push(...pageMatchIds);
+
+    updateMatchHistoryStatus({
+      phase: 'collecting',
+      requestedMatches: allMatchIds.length,
+      message: `試合IDリスト取得中... ${allMatchIds.length} 試合`
+    });
+
+    if (pageMatchIds.length < RIOT_MATCH_IDS_PAGE_SIZE) break;
+  }
+
+  return allMatchIds;
+}
+
+async function publishMatchHistorySnapshot({
+  cachePath,
+  historyPath,
+  matchesById,
+  storagePuuid,
+  targetPuuid,
+  riotId,
+  normalizedMatchIds,
+  analysisMatchIds = normalizedMatchIds,
+  requestedMatches,
+  mode,
+  fetchedMatches,
+  failedRequests,
+  applyToState = true
+}) {
+  const updatedAt = new Date().toISOString();
+  await writeJsonFile(cachePath, {
+    version: 1,
+    source: 'riot-api',
+    updatedAt,
+    matchesById
+  });
+
+  const normalizedMatches = normalizeRiotMatches(matchesById, targetPuuid, analysisMatchIds);
+  const championStats = aggregateChampionStats(normalizedMatches);
+  const enemyChampionStats = aggregateEnemyChampionStats(normalizedMatches);
+  const laneOpponentStats = aggregateLaneOpponentStats(normalizedMatches);
+  const selfVsLaneOpponentStats = aggregateSelfChampionVsLaneOpponentStats(normalizedMatches);
+  const history = {
+    version: 1,
+    source: 'riot-api',
+    updatedAt,
+    puuid: storagePuuid,
+    riotPuuid: targetPuuid,
+    riotId: {
+      gameName: riotId.gameName,
+      tagLine: riotId.tagLine
+    },
+    matches: normalizedMatches,
+    championStats,
+    enemyChampionStats,
+    laneOpponentStats,
+    selfVsLaneOpponentStats
+  };
+
+  await writeJsonFile(historyPath, history);
+
+  const summary = createMatchHistorySummary({
+    updatedAt,
+    requestedMatches: mode === 'season' ? normalizedMatchIds.length : requestedMatches,
+    matchIds: analysisMatchIds.length,
+    updatedMatches: fetchedMatches,
+    failedRequests,
+    championStats: championStats.length,
+    matches: normalizedMatches
+  });
+
+  const loggedInPuuid = getPuuidFromSummoner(appState.summoner);
+  if (applyToState && loggedInPuuid === storagePuuid) {
+    activeMatchHistoryPuuid = storagePuuid;
+    matchHistoryChampionStats = championStats;
+    matchHistoryEnemyChampionStats = enemyChampionStats;
+    matchHistoryLaneOpponentStats = laneOpponentStats;
+    matchHistorySelfVsLaneOpponentStats = selfVsLaneOpponentStats;
+    updateState({
+      matchHistoryChampionStats,
+      matchHistoryEnemyChampionStats,
+      matchHistoryLaneOpponentStats,
+      matchHistorySelfVsLaneOpponentStats,
+      matchHistorySummary: summary
+    });
+  }
+
+  return {
+    summary,
+    normalizedMatches,
+    championStats,
+    enemyChampionStats,
+    laneOpponentStats,
+    selfVsLaneOpponentStats,
+    loggedInPuuid,
+    updatedAt
   };
 }
 
@@ -365,6 +582,7 @@ function isInBlockingGamePhase(phase) {
 function canAutoCollectRiotMatchHistory() {
   if (matchHistoryInProgress || !settings.riotApiToken) return false;
   if (isInBlockingGamePhase(appState.gameflowPhase)) return false;
+  if (!getPuuidFromSummoner(appState.summoner)) return false;
 
   try {
     getRiotIdFromSummoner(appState.summoner);
@@ -412,13 +630,15 @@ async function collectRiotMatchHistory(_event, options = {}) {
   }
 
   matchHistoryInProgress = true;
-  const requestedMatches = Number(options.count) || RIOT_MATCHES_PER_RUN;
+  const mode = options.mode === 'season' ? 'season' : 'recent';
+  const requestedMatches = mode === 'season' ? 0 : Number(options.count) || RIOT_MATCHES_PER_RUN;
   const source = options.source === 'auto' ? 'auto' : 'manual';
   const startedAt = new Date().toISOString();
 
   updateMatchHistoryStatus({
     phase: 'collecting',
     source,
+    mode,
     requestedMatches,
     fetchedMatches: 0,
     normalizedMatches: 0,
@@ -432,9 +652,15 @@ async function collectRiotMatchHistory(_event, options = {}) {
   });
 
   try {
+    const currentSummonerPuuid = getPuuidFromSummoner(appState.summoner);
+    if (!currentSummonerPuuid) {
+      throw new Error('試合データを取得するにはLoLクライアントへログインしてください');
+    }
+
     const riotId = getRiotIdFromSummoner(appState.summoner);
     const hosts = createRiotApiHosts(settings.riotPlatformRegion);
     const onRetry = createRiotRetryHandler();
+    const storagePuuid = currentSummonerPuuid;
     const account = await requestRiotJson({
       host: hosts.regionalHost,
       path: `/riot/account/v1/accounts/by-riot-id/${encodePathSegment(riotId.gameName)}/${encodePathSegment(riotId.tagLine)}`,
@@ -445,17 +671,19 @@ async function collectRiotMatchHistory(_event, options = {}) {
     if (!account?.puuid) {
       throw new Error('Riot APIからPUUIDを取得できませんでした');
     }
+    clearRiotRateLimitCountdown();
+    const targetPuuid = account.puuid;
 
-    const matchIds = await requestRiotJson({
+    const normalizedMatchIds = await collectMatchIdsByMode({
       host: hosts.regionalHost,
-      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(account.puuid)}/ids?start=0&count=${requestedMatches}`,
+      puuid: targetPuuid,
       apiToken: settings.riotApiToken,
+      requestedMatches,
+      mode,
       onRetry
     });
-
-    const normalizedMatchIds = Array.isArray(matchIds) ? matchIds.slice(0, requestedMatches) : [];
-    const cachePath = getRiotMatchCachePath();
-    const historyPath = getMatchHistoryPath();
+    const cachePath = getRiotMatchCachePath(storagePuuid);
+    const historyPath = getMatchHistoryPath(storagePuuid);
     const cache = await readJsonFile(cachePath, {
       version: 1,
       source: 'riot-api',
@@ -463,17 +691,56 @@ async function collectRiotMatchHistory(_event, options = {}) {
       matchesById: {}
     });
     const matchesById = cache.matchesById && typeof cache.matchesById === 'object' ? cache.matchesById : {};
-    const missingMatchIds = normalizedMatchIds.filter((matchId) => !matchesById[matchId]);
+    const existingHistory = await readJsonFile(historyPath, null);
+    const analysisMatchIds = createAnalysisMatchIds({
+      mode,
+      normalizedMatchIds,
+      existingHistory,
+      storagePuuid
+    });
+    const missingMatchIds = collectMissingMatchIds(normalizedMatchIds, matchesById);
+    const detailConcurrency = mode === 'season' ? RIOT_SEASON_MATCH_DETAIL_CONCURRENCY : RIOT_MATCH_DETAIL_CONCURRENCY;
+    const detailBatchDelayMs = mode === 'season' ? RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS : RIOT_MATCH_DETAIL_BATCH_DELAY_MS;
     let fetchedMatches = 0;
     let failedRequests = 0;
+    let snapshotPromise = Promise.resolve();
+    const publishCurrentSnapshot = ({ swallowErrors = false } = {}) => {
+      const nextSnapshotPromise = snapshotPromise
+        .catch(() => null)
+        .then(() => publishMatchHistorySnapshot({
+          cachePath,
+          historyPath,
+          matchesById,
+          storagePuuid,
+          targetPuuid,
+          riotId,
+          normalizedMatchIds,
+          analysisMatchIds,
+          requestedMatches,
+          mode,
+          fetchedMatches,
+          failedRequests
+        }));
+      snapshotPromise = nextSnapshotPromise;
+      if (!swallowErrors) return nextSnapshotPromise;
 
-    for (let index = 0; index < missingMatchIds.length; index += RIOT_MATCH_DETAIL_CONCURRENCY) {
-      const batch = missingMatchIds.slice(index, index + RIOT_MATCH_DETAIL_CONCURRENCY);
+      return nextSnapshotPromise.catch((error) => {
+        log.warn('Riot match history snapshot update failed', serializeForLog(error));
+        return null;
+      });
+    };
+    const detailOnRetry = createRiotRetryHandler({
+      onRateLimitStart: () => publishCurrentSnapshot({ swallowErrors: true })
+    });
+
+    for (let index = 0; index < missingMatchIds.length; index += detailConcurrency) {
+      const batch = missingMatchIds.slice(index, index + detailConcurrency);
 
       updateMatchHistoryStatus({
         phase: 'collecting',
         message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
       });
+      clearRiotRateLimitCountdown();
 
       const results = await Promise.all(batch.map(async (matchId) => {
         try {
@@ -481,7 +748,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
             host: hosts.regionalHost,
             path: `/lol/match/v5/matches/${encodePathSegment(matchId)}`,
             apiToken: settings.riotApiToken,
-            onRetry
+            onRetry: detailOnRetry
           });
           return { matchId, detail };
         } catch (error) {
@@ -505,82 +772,43 @@ async function collectRiotMatchHistory(_event, options = {}) {
         message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
       });
 
-      if (index + RIOT_MATCH_DETAIL_CONCURRENCY < missingMatchIds.length) {
-        await new Promise((resolve) => setTimeout(resolve, RIOT_MATCH_DETAIL_BATCH_DELAY_MS));
+      if (detailBatchDelayMs > 0 && index + detailConcurrency < missingMatchIds.length) {
+        await new Promise((resolve) => setTimeout(resolve, detailBatchDelayMs));
       }
     }
-
-    const updatedAt = new Date().toISOString();
-    await writeJsonFile(cachePath, {
-      version: 1,
-      source: 'riot-api',
-      updatedAt,
-      matchesById
-    });
 
     updateMatchHistoryStatus({
       phase: 'normalizing',
       message: '試合データを正規化しています'
     });
 
-    const normalizedMatches = normalizeRiotMatches(matchesById, account.puuid).slice(0, requestedMatches);
-    const championStats = aggregateChampionStats(normalizedMatches);
-    const enemyChampionStats = aggregateEnemyChampionStats(normalizedMatches);
-    const laneOpponentStats = aggregateLaneOpponentStats(normalizedMatches);
-    const selfVsLaneOpponentStats = aggregateSelfChampionVsLaneOpponentStats(normalizedMatches);
-    const history = {
-      version: 1,
-      source: 'riot-api',
-      updatedAt,
-      puuid: account.puuid,
-      riotId: {
-        gameName: riotId.gameName,
-        tagLine: riotId.tagLine
-      },
-      matches: normalizedMatches,
-      championStats,
-      enemyChampionStats,
-      laneOpponentStats,
-      selfVsLaneOpponentStats
-    };
-
-    await writeJsonFile(historyPath, history);
+    const snapshot = await publishCurrentSnapshot();
+    const summary = snapshot.summary;
+    const normalizedMatches = snapshot.normalizedMatches;
 
     const phase = failedRequests > 0 ? 'partial' : 'completed';
-    matchHistoryChampionStats = championStats;
-    matchHistoryEnemyChampionStats = enemyChampionStats;
-    matchHistoryLaneOpponentStats = laneOpponentStats;
-    matchHistorySelfVsLaneOpponentStats = selfVsLaneOpponentStats;
-    const summary = createMatchHistorySummary({
-      updatedAt,
-      requestedMatches,
-      matchIds: normalizedMatchIds.length,
-      updatedMatches: fetchedMatches,
-      failedRequests,
-      championStats: championStats.length,
-      matches: normalizedMatches
-    });
-
-    updateState({
-      matchHistoryChampionStats,
-      matchHistoryEnemyChampionStats,
-      matchHistoryLaneOpponentStats,
-      matchHistorySelfVsLaneOpponentStats,
-      matchHistorySummary: summary
-    });
-    updateMatchHistoryStatus({
-      phase,
-      fetchedMatches,
-      normalizedMatches: normalizedMatches.length,
-      updatedMatches: fetchedMatches,
-      failedRequests,
-      retryAttempt: 0,
-      nextRetryAt: null,
-      message: phase === 'completed'
-        ? `試合データ収集完了 ${fetchedMatches}試合を更新しました`
-        : `一部の試合データを収集しました ${fetchedMatches}試合を更新 / ${failedRequests}件失敗`,
-      error: null
-    });
+    if (snapshot.loggedInPuuid !== storagePuuid) {
+      log.info('Riot match history collected for inactive account; skipped applying stats', {
+        collectedPuuid: storagePuuid,
+        loggedInPuuid: snapshot.loggedInPuuid
+      });
+    }
+    if (snapshot.loggedInPuuid === storagePuuid) {
+      updateMatchHistoryStatus({
+        phase,
+        mode,
+        fetchedMatches,
+        normalizedMatches: normalizedMatches.length,
+        updatedMatches: fetchedMatches,
+        failedRequests,
+        retryAttempt: 0,
+        nextRetryAt: null,
+        message: phase === 'completed'
+          ? `試合データ収集完了 ${fetchedMatches}試合を更新しました`
+          : `一部の試合データを収集しました ${fetchedMatches}試合を更新 / ${failedRequests}件失敗`,
+        error: null
+      });
+    }
 
     log.info('Riot match history collected', summary);
     return summary;
@@ -593,6 +821,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
     });
     throw error;
   } finally {
+    clearRiotRateLimitCountdown();
     matchHistoryInProgress = false;
   }
 }
@@ -827,6 +1056,7 @@ async function refreshLcuState() {
       lcuStatus: 'connected',
       error: null
     });
+    await syncMatchHistoryForSummoner(summoner, 'lcu-refresh');
 
     connectWebSocket();
     if (!startupMatchHistoryScheduled && canAutoCollectRiotMatchHistory()) {
@@ -848,6 +1078,7 @@ async function refreshLcuState() {
       championsById: {},
       error: error.message
     });
+    resetMatchHistoryData({ reason: 'lcu-disconnected' });
     scheduleRetry();
     return appState;
   }
@@ -865,6 +1096,7 @@ function cleanupWebSocket() {
   }
 
   clearRetryTimer();
+  clearRiotRateLimitCountdown();
 
   closeWebSocket();
 }
@@ -980,6 +1212,7 @@ async function applyWebSocketEvent(event) {
     updateState({ champSelect: data });
   } else if (uri === LCU_ENDPOINTS.summoner) {
     updateState({ summoner: data });
+    await syncMatchHistoryForSummoner(data, 'summoner-event');
   } else if (uri === LCU_ENDPOINTS.gameflowPhase) {
     const previousPhase = appState.gameflowPhase;
     updateState({
@@ -997,7 +1230,6 @@ app.whenReady().then(async () => {
   log.info('App ready');
   await loadSettings();
   await loadChampionPool();
-  await loadMatchHistory();
 
   ipcMain.handle('lcu:get-state', () => appState);
   ipcMain.handle('lcu:refresh', refreshLcuState);

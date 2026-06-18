@@ -111,12 +111,29 @@ code {
   line-height: 1.15;
 }
 
-.match-data-summary span:last-child {
+.match-data-summary #matchDataRange {
   color: var(--muted);
   font-size: 13px;
 }
 
-.match-data-update-button {
+.match-data-progress {
+  color: #f1ddb0;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 14px;
+}
+
+.match-data-progress[data-phase="error"] {
+  color: var(--danger);
+}
+
+.match-data-download {
+  display: inline-flex;
+  position: relative;
+}
+
+.match-data-update-button,
+.match-data-menu-button {
   background: rgba(212, 175, 55, 0.12);
   border-color: rgba(212, 175, 55, 0.54);
   color: #f1ddb0;
@@ -125,9 +142,52 @@ code {
   white-space: nowrap;
 }
 
-.match-data-update-button:hover:not(:disabled) {
+.match-data-update-button {
+  border-radius: 6px 0 0 6px;
+}
+
+.match-data-menu-button {
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  min-width: 34px;
+  padding: 0 9px;
+}
+
+.match-data-update-button:hover:not(:disabled),
+.match-data-menu-button:hover:not(:disabled) {
   background: rgba(212, 175, 55, 0.22);
   border-color: rgba(212, 175, 55, 0.78);
+}
+
+.match-data-menu {
+  background: rgba(17, 24, 33, 0.98);
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  border-radius: 6px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  min-width: 238px;
+  padding: 5px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+}
+
+.match-data-menu button {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text);
+  display: block;
+  font-size: 13px;
+  min-height: 34px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.match-data-menu button:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.14);
+  color: #f1ddb0;
 }
 
 .view-tabs {
@@ -372,8 +432,23 @@ h2 {
 
 .pool-champion-stats {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pool-champion-stats .pick-pool-stat-chip {
+  background: rgba(8, 18, 28, 0.72);
+  border-color: rgba(154, 167, 184, 0.24);
+  min-height: 21px;
+  padding: 2px 7px;
+}
+
+.pool-champion-stats .pick-pool-stat-chip small {
+  font-size: 9px;
+}
+
+.pool-champion-stats .pick-pool-stat-chip b {
+  font-size: 11px;
 }
 
 .pool-stat-line {

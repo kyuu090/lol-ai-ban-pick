@@ -1,8 +1,12 @@
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
+  matchDataMenuButton: document.querySelector('#matchDataMenuButton'),
+  matchDataMenu: document.querySelector('#matchDataMenu'),
+  collectSeasonRiotMatchesButton: document.querySelector('#collectSeasonRiotMatchesButton'),
   matchDataCount: document.querySelector('#matchDataCount'),
   matchDataRange: document.querySelector('#matchDataRange'),
+  matchDataProgress: document.querySelector('#matchDataProgress'),
   tabButtons: document.querySelectorAll('.tab-button'),
   coachView: document.querySelector('#coachView'),
   championPoolView: document.querySelector('#championPoolView'),
@@ -71,6 +75,7 @@ const championIconObserver = typeof IntersectionObserver === 'function'
   : null;
 let matchHistoryButtonTimer = null;
 let dismissedMatchHistoryButtonKey = null;
+let matchDataMenuOpen = false;
 const {
   collectBans,
   getActiveAction,
@@ -155,10 +160,6 @@ function formatNumber(value, digits = 1) {
   return Number(value || 0).toFixed(digits);
 }
 
-function formatStatsPosition(position) {
-  return position ? `${positionLabel(position)} ` : '';
-}
-
 function sortWorstWinRateStats(stats) {
   return [...stats].sort((a, b) => (
     (Number(a.winRate || 0) - Number(b.winRate || 0)) ||
@@ -172,24 +173,19 @@ function createChampionStatsElement(stats, className = 'pool-champion-stats') {
   container.className = className;
 
   if (!stats || !stats.games) {
-    const empty = document.createElement('span');
-    empty.className = 'pool-stat-line muted';
-    empty.textContent = 'No games';
-    container.append(empty);
+    container.append(createPickPoolStatChip('Games', 'No games'));
     return container;
   }
 
   const wins = Number(stats.wins || 0);
   const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
   [
-    `${formatStatsPosition(stats.position)}${stats.games}games`,
-    `Ave KDA ${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`,
-    `${wins}W/${losses}L WR ${formatPercent(stats.winRate)}`
-  ].forEach((text, index) => {
-    const line = document.createElement('span');
-    line.className = `pool-stat-line${index === 0 ? ' games' : ''}`;
-    line.textContent = text;
-    container.append(line);
+    ['Games', `${stats.games}`],
+    ['W-L', `${wins}-${losses}`],
+    ['WR', formatPercent(stats.winRate)],
+    ['KDA', `${formatNumber(stats.avgKills)}/${formatNumber(stats.avgDeaths)}/${formatNumber(stats.avgAssists)}`]
+  ].forEach(([label, value]) => {
+    container.append(createPickPoolStatChip(label, value));
   });
 
   return container;
@@ -325,7 +321,10 @@ function renderMatchHistoryStatus(status) {
 
   if (!status || status.phase === 'idle') {
     elements.collectRiotMatchesButton.disabled = false;
-    elements.collectRiotMatchesButton.textContent = 'Update match data';
+    elements.matchDataMenuButton.disabled = false;
+    elements.collectSeasonRiotMatchesButton.disabled = false;
+    elements.collectRiotMatchesButton.textContent = 'Download recent match';
+    renderMatchDataProgress(null);
     dismissedMatchHistoryButtonKey = null;
     return;
   }
@@ -337,33 +336,47 @@ function renderMatchHistoryStatus(status) {
     dismissedMatchHistoryButtonKey = null;
   } else if (dismissedMatchHistoryButtonKey === statusKey) {
     elements.collectRiotMatchesButton.disabled = false;
-    elements.collectRiotMatchesButton.textContent = 'Update match data';
+    elements.matchDataMenuButton.disabled = false;
+    elements.collectSeasonRiotMatchesButton.disabled = false;
+    elements.collectRiotMatchesButton.textContent = 'Download recent match';
+    renderMatchDataProgress(null);
     return;
   }
 
   elements.collectRiotMatchesButton.disabled = isActive;
+  elements.matchDataMenuButton.disabled = isActive;
+  elements.collectSeasonRiotMatchesButton.disabled = isActive;
   elements.collectRiotMatchesButton.textContent = getMatchHistoryButtonText(status);
+  renderMatchDataProgress(status);
 
   if (!isActive) {
     const delayMs = status.phase === 'completed' ? 3000 : 5000;
     matchHistoryButtonTimer = setTimeout(() => {
-      elements.collectRiotMatchesButton.textContent = 'Update match data';
+      elements.collectRiotMatchesButton.textContent = 'Download recent match';
+      renderMatchDataProgress(null);
       dismissedMatchHistoryButtonKey = statusKey;
     }, delayMs);
   }
 }
 
-function getMatchHistoryButtonText(status) {
-  if (!status) return 'Update match data';
+function renderMatchDataProgress(status) {
+  const message = status?.message || '';
+  elements.matchDataProgress.hidden = !message;
+  elements.matchDataProgress.textContent = message;
+  elements.matchDataProgress.dataset.phase = status?.phase || '';
+}
 
-  if (status.phase === 'collecting') return 'Updating...';
+function getMatchHistoryButtonText(status) {
+  if (!status) return 'Download recent match';
+
+  if (status.phase === 'collecting') return status.mode === 'season' ? 'Downloading season...' : 'Downloading...';
   if (status.phase === 'normalizing' || status.phase === 'aggregating') return 'Saving...';
   if (status.phase === 'retrying') return 'Retrying...';
-  if (status.phase === 'completed') return `Updated ${Number(status.updatedMatches || 0)} matches data`;
-  if (status.phase === 'partial') return `Updated ${Number(status.updatedMatches || 0)} matches data`;
-  if (status.phase === 'error') return 'Update failed';
+  if (status.phase === 'completed') return `Downloaded ${Number(status.updatedMatches || 0)} matches`;
+  if (status.phase === 'partial') return `Downloaded ${Number(status.updatedMatches || 0)} matches`;
+  if (status.phase === 'error') return 'Download failed';
 
-  return 'Update match data';
+  return 'Download recent match';
 }
 
 function renderSettings(settings) {
@@ -1263,13 +1276,26 @@ async function refresh() {
   }
 }
 
-async function collectRiotMatchHistory() {
+function setMatchDataMenuOpen(open) {
+  matchDataMenuOpen = Boolean(open);
+  elements.matchDataMenu.hidden = !matchDataMenuOpen;
+  elements.matchDataMenuButton.setAttribute('aria-expanded', String(matchDataMenuOpen));
+}
+
+function toggleMatchDataMenu() {
+  setMatchDataMenuOpen(!matchDataMenuOpen);
+}
+
+async function collectRiotMatchHistory(mode = 'recent') {
+  setMatchDataMenuOpen(false);
   elements.collectRiotMatchesButton.disabled = true;
-  elements.collectRiotMatchesButton.textContent = 'Updating...';
+  elements.matchDataMenuButton.disabled = true;
+  elements.collectSeasonRiotMatchesButton.disabled = true;
+  elements.collectRiotMatchesButton.textContent = mode === 'season' ? 'Downloading season...' : 'Downloading...';
 
   try {
-    logDebug('Manual Riot match history collection requested');
-    const summary = await window.lcuApi.collectRiotMatchHistory();
+    logDebug('Manual Riot match history collection requested', { mode });
+    const summary = await window.lcuApi.collectRiotMatchHistory({ mode });
     logDebug('Manual Riot match history collection completed', summary);
   } catch (error) {
     logWarn('Manual Riot match history collection failed', { message: error.message, stack: error.stack });
@@ -1281,7 +1307,14 @@ async function collectRiotMatchHistory() {
 
 window.lcuApi.onState(renderState);
 elements.refreshButton.addEventListener('click', refresh);
-elements.collectRiotMatchesButton.addEventListener('click', collectRiotMatchHistory);
+elements.collectRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('recent'));
+elements.matchDataMenuButton.addEventListener('click', toggleMatchDataMenu);
+elements.collectSeasonRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('season'));
+document.addEventListener('click', (event) => {
+  if (!matchDataMenuOpen) return;
+  if (event.target === elements.matchDataMenuButton || elements.matchDataMenu.contains(event.target)) return;
+  setMatchDataMenuOpen(false);
+});
 elements.tabButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveView(button.dataset.view));
 });

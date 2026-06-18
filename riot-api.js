@@ -122,7 +122,7 @@ async function requestRiotJson(options) {
     if (response.statusCode === 429 && attempt < maxRetries) {
       const delayMs = getRetryDelayMs(response, attempt);
       if (typeof onRetry === 'function') {
-        onRetry({ attempt: attempt + 1, delayMs, response });
+        await onRetry({ attempt: attempt + 1, delayMs, response });
       }
       await wait(delayMs);
       continue;

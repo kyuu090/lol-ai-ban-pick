@@ -14,8 +14,15 @@
             <span class="label">5v5 SR match data</span>
             <strong id="matchDataCount">No data</strong>
             <span id="matchDataRange">Riot試合取得後に表示します</span>
+            <span id="matchDataProgress" class="match-data-progress" role="status" hidden></span>
           </div>
-          <button id="collectRiotMatchesButton" class="match-data-update-button" type="button">Update match data</button>
+          <div class="match-data-download">
+            <button id="collectRiotMatchesButton" class="match-data-update-button" type="button">Download recent match</button>
+            <button id="matchDataMenuButton" class="match-data-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">▾</button>
+            <div id="matchDataMenu" class="match-data-menu" role="menu" hidden>
+              <button id="collectSeasonRiotMatchesButton" type="button" role="menuitem">Download current season matches</button>
+            </div>
+          </div>
         </div>
         <div class="header-actions">
           <nav class="view-tabs" aria-label="view switcher">
