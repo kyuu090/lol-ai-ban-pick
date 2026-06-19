@@ -564,31 +564,130 @@ Ahri
 
 AIモードは raw match detail を直接渡さない。
 
-アプリ側で候補を絞り、集計済みの小さな context だけを渡す。
+AIの初期役割は「勝率予測」や「最終決定」ではなく、ドラフト状況の整理と説明役にする。大量の外部 matchup sample がない段階で、AIに勝率や matchup delta を自由に作らせない。
+
+OpenAI API は Electron クライアントから直接呼ばず、BFF 経由で呼ぶ。秘密鍵、課金防御、context validation、cache、in-flight lock の設計は `docs/bff-design.md` にまとめる。
+
+主な用途:
+
+- バンピックの状況整理
+- 味方チーム構成の強み、不足、噛み合いの整理
+- 敵チーム構成の脅威、注意点の整理
+- ChampionPool内の候補を補助的に2〜3体提示する
+- 試合開始時に、両チームの構成からゲーム展開を短く予測する
+
+AIの出力では、サンプル不足や予定pickの不確実性を明示する。
+
+アプリ側で候補を絞り、集計済みの小さな context だけを渡す。raw match detail、Riot API token、LCU password、Basic認証ヘッダ、Debug state全体は渡さない。
 
 ```js
 {
+  mode: "draft_brief",
+  phase: "pick",
   currentRole: "MIDDLE",
-  championPoolCandidates: [
+  localPlayer: {
+    cellId: 2,
+    isLocalTurn: true,
+    intendedChampionId: 103,
+    lockedChampionId: 0
+  },
+  draft: {
+    allyIntendedPicks: [
+      {
+        cellId: 3,
+        championId: 157,
+        championName: "Yasuo",
+        role: "MIDDLE",
+        isLocalPlayer: false,
+        status: "tentative"
+      }
+    ],
+    allyLockedPicks: [
+      {
+        cellId: 1,
+        championId: 64,
+        championName: "Lee Sin",
+        role: "JUNGLE",
+        isLocalPlayer: false,
+        status: "locked"
+      }
+    ],
+    enemyLockedPicks: [
+      {
+        cellId: 7,
+        championId: 134,
+        championName: "Syndra",
+        role: "MIDDLE",
+        status: "locked"
+      }
+    ],
+    bans: {
+      allyChampionIds: [238],
+      enemyChampionIds: [157]
+    }
+  },
+  candidatePicks: [
     {
       championId: 103,
-      name: "Ahri",
+      championName: "Ahri",
+      source: "champion_pool",
       games: 18,
       winRate: 0.611,
       avgKda: 3.58,
       recentWinRate: 0.6,
-      score: 82
+      matchupWinRate: 0.5,
+      notes: ["ChampionPool", "Reliable sample"]
     }
   ],
-  currentDraft: {
-    allyChampionIds: [122, 64],
-    enemyChampionIds: [134],
-    bannedChampionIds: [99, 55]
-  }
+  constraints: [
+    "Do not claim exact win probability.",
+    "Mention low sample when relevant.",
+    "Treat ally intended picks as tentative.",
+    "Prefer candidatePicks for recommendations."
+  ]
 }
 ```
 
-AIモードの初期役割は、推薦そのものではなく説明役とする。
+### Draft Brief
+
+PICKタイミングで表示するAI要約。
+
+入力:
+
+- 現在のroleと自分のpick状態
+- 味方の予定pick
+- 味方の確定pick
+- 敵の確定pick
+- BAN済みchampion
+- ChampionPool内の候補
+- 対面マークがある場合は、同一ロール対面の実績
+
+出力:
+
+- 現在のバンピック状況
+- 味方構成の強みと不足
+- 敵構成の脅威
+- ChampionPool内からの候補2〜3体
+- サンプル不足や予定pickの不確実性
+
+### Game Plan
+
+試合開始時に表示するAI要約。
+
+入力:
+
+- ChampSelect終了時点の味方/敵の確定pick
+- 自分のchampion、role、自己戦績
+- 同一ロール対面が分かる場合は direct matchup 実績
+
+出力:
+
+- 味方構成の勝ち筋
+- 敵構成の勝ち筋
+- 序盤/中盤/終盤のざっくりした展開予測
+- 自分視点の注意点
+
+Game Plan でも、Live Client Data API やリアルタイム戦闘情報には初期実装で踏み込まない。
 
 ## 取得ステータスと表示
 

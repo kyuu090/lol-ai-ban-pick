@@ -2,6 +2,8 @@
 
 新規Node.jsプロジェクトとして `lol-ai-banpick-bff` を作成してください。
 
+この文書は Riot API allowlist proxy の Phase1 実装プロンプトである。BFF 全体の目的、OpenAI API 連携、課金防御、quota、cache、in-flight lock などの上位設計は `docs/bff-design.md` を参照する。
+
 ## 目的
 
 League of Legends用Electronアプリ `lol-ai-banpick` からRiot APIキーを取り除くための、Phase1 BFFを実装する。
