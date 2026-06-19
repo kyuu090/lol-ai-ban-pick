@@ -42,3 +42,4 @@ jobs:
           name: BanPick-ai-windows-portable
           path: dist/*.exe
           if-no-files-found: error
+          retention-days: 3
