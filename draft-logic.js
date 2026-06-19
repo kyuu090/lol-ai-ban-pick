@@ -117,11 +117,21 @@
   }
 
   function getPlannedPickChampionId(localMember) {
-    const selectedChampionId = Number(localMember?.championId) || 0;
+    return getMemberChampionId(localMember);
+  }
+
+  function getMemberChampionId(member) {
+    const selectedChampionId = Number(member?.championId) || 0;
     if (selectedChampionId > 0) return selectedChampionId;
 
-    const intendedChampionId = Number(localMember?.championPickIntent) || 0;
+    const intendedChampionId = Number(member?.championPickIntent) || 0;
     return intendedChampionId > 0 ? intendedChampionId : 0;
+  }
+
+  function getLocalChampSelectMember(champSelect) {
+    const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+    const localCellId = champSelect?.localPlayerCellId;
+    return allyTeam.find((member) => member.cellId === localCellId) || null;
   }
 
   function collectUnavailableChampionReasons(champSelect, allyTeam = champSelect?.myTeam, enemyTeam = champSelect?.theirTeam) {
@@ -230,6 +240,36 @@
     };
   }
 
+  function createInGameContext({ champSelect, summonerName = '', matchupStats = [] } = {}) {
+    const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+    const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+    const localMember = getLocalChampSelectMember(champSelect);
+    const championId = getMemberChampionId(localMember);
+    const position = normalizePosition(localMember?.assignedPosition);
+    const opponent = enemyTeam.find((member) => (
+      normalizePosition(member?.assignedPosition) === position &&
+      getMemberChampionId(member) > 0
+    )) || null;
+    const opponentChampionId = getMemberChampionId(opponent);
+    const directMatchupStats = championId > 0 && opponentChampionId > 0 && position
+      ? (Array.isArray(matchupStats) ? matchupStats : []).find((stats) => (
+        Number(stats?.championId) === championId &&
+        Number(stats?.opponentChampionId) === opponentChampionId &&
+        normalizePosition(stats?.position) === position
+      )) || null
+      : null;
+
+    return {
+      championId,
+      position,
+      summonerName,
+      opponentChampionId,
+      directMatchupStats,
+      allyChampionIds: allyTeam.map(getMemberChampionId).filter((id) => id > 0).slice(0, 5),
+      enemyChampionIds: enemyTeam.map(getMemberChampionId).filter((id) => id > 0).slice(0, 5)
+    };
+  }
+
   return {
     POSITION_LABELS,
     CHAMPION_POOL_LANES,
@@ -247,12 +287,15 @@
     getActiveAction,
     normalizePosition,
     getPlannedPickChampionId,
+    getMemberChampionId,
+    getLocalChampSelectMember,
     collectUnavailableChampionReasons,
     sortWorstWinRateStats,
     sortBestWinRateStats,
     getPlannedPickThreatStats,
     getBestIntoOpponentStats,
     sortPickPoolCandidates,
-    getDraftPanelState
+    getDraftPanelState,
+    createInGameContext
   };
 });

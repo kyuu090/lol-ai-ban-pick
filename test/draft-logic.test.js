@@ -3,9 +3,12 @@ const assert = require('node:assert/strict');
 const {
   collectBans,
   collectUnavailableChampionReasons,
+  createInGameContext,
   getBestIntoOpponentStats,
   getActiveAction,
   getDraftPanelState,
+  getLocalChampSelectMember,
+  getMemberChampionId,
   getPendingLabel,
   getPlannedPickChampionId,
   getPlannedPickThreatStats,
@@ -186,6 +189,8 @@ test('getPlannedPickThreatStats uses selected or intended pick and same-position
 test('planned and marked opponent stats return empty results when inputs are incomplete', () => {
   assert.equal(normalizePosition('middle'), 'MIDDLE');
   assert.equal(getPlannedPickChampionId({ championId: 0, championPickIntent: 127 }), 127);
+  assert.equal(getMemberChampionId({ championId: 0, championPickIntent: 99 }), 99);
+  assert.equal(getMemberChampionId({ championId: 103, championPickIntent: 99 }), 103);
   assert.deepEqual(getPlannedPickThreatStats({ localMember: { assignedPosition: 'MIDDLE' } }), {
     plannedChampionId: 0,
     position: 'MIDDLE',
@@ -193,6 +198,48 @@ test('planned and marked opponent stats return empty results when inputs are inc
   });
   assert.deepEqual(getBestIntoOpponentStats({ stats: [], opponentChampionId: 0, position: 'MIDDLE' }), []);
   assert.deepEqual(getBestIntoOpponentStats({ stats: [], opponentChampionId: 103, position: '' }), []);
+});
+
+test('createInGameContext extracts local pick, same-position opponent, and draft snapshot', () => {
+  const champSelect = {
+    localPlayerCellId: 2,
+    myTeam: [
+      { cellId: 1, championId: 122, assignedPosition: 'TOP' },
+      { cellId: 2, championId: 0, championPickIntent: 103, assignedPosition: 'MIDDLE' }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 24, assignedPosition: 'TOP' },
+      { cellId: 7, championId: 134, assignedPosition: 'MIDDLE' }
+    ]
+  };
+  const matchup = { championId: 103, opponentChampionId: 134, position: 'MIDDLE', games: 6, winRate: 0.5 };
+
+  assert.equal(getLocalChampSelectMember(champSelect), champSelect.myTeam[1]);
+  assert.deepEqual(createInGameContext({
+    champSelect,
+    summonerName: 'Tester',
+    matchupStats: [matchup]
+  }), {
+    championId: 103,
+    position: 'MIDDLE',
+    summonerName: 'Tester',
+    opponentChampionId: 134,
+    directMatchupStats: matchup,
+    allyChampionIds: [122, 103],
+    enemyChampionIds: [24, 134]
+  });
+});
+
+test('createInGameContext handles missing champ-select snapshot', () => {
+  assert.deepEqual(createInGameContext(), {
+    championId: 0,
+    position: '',
+    summonerName: '',
+    opponentChampionId: 0,
+    directMatchupStats: null,
+    allyChampionIds: [],
+    enemyChampionIds: []
+  });
 });
 
 test('getBestIntoOpponentStats filters by opponent and position then ranks best win rate', () => {

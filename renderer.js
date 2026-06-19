@@ -115,6 +115,7 @@ let dismissedMatchHistoryButtonKey = null;
 let matchDataMenuOpen = false;
 const {
   collectBans,
+  createInGameContext,
   getActiveAction,
   getBestIntoOpponentStats,
   getDraftPanelState,
@@ -1023,19 +1024,16 @@ function showOnlyDraftPanel(loggedIn, inChampSelect, inGame) {
 }
 
 function renderInGame(state) {
-  const champSelect = lastChampSelectSnapshot;
-  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
-  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
-  const localCellId = champSelect?.localPlayerCellId;
-  const localMember = allyTeam.find((member) => member.cellId === localCellId);
-  const championId = Number(localMember?.championId || localMember?.championPickIntent) || 0;
-  const position = String(localMember?.assignedPosition || '').toUpperCase();
-  const summonerName = getSummonerName(state.summoner);
+  const context = createInGameContext({
+    champSelect: lastChampSelectSnapshot,
+    summonerName: getSummonerName(state.summoner),
+    matchupStats: matchHistorySelfVsLaneOpponentStats
+  });
 
-  renderInGameSelfCard({ championId, position, summonerName });
-  renderInGameMatchup({ championId, position, enemyTeam });
-  renderInGameTeamSnapshot(elements.inGameAllyTeam, allyTeam);
-  renderInGameTeamSnapshot(elements.inGameEnemyTeam, enemyTeam);
+  renderInGameSelfCard(context);
+  renderInGameMatchup(context);
+  renderInGameTeamSnapshot(elements.inGameAllyTeam, context.allyChampionIds);
+  renderInGameTeamSnapshot(elements.inGameEnemyTeam, context.enemyChampionIds);
 }
 
 function renderInGameSelfCard({ championId, position, summonerName }) {
@@ -1084,13 +1082,7 @@ function createInGameStatsSummary(stats, position) {
   return container;
 }
 
-function renderInGameMatchup({ championId, position, enemyTeam }) {
-  const laneOpponent = enemyTeam.find((member) => (
-    String(member?.assignedPosition || '').toUpperCase() === position &&
-    Number(member?.championId || member?.championPickIntent) > 0
-  ));
-  const opponentChampionId = Number(laneOpponent?.championId || laneOpponent?.championPickIntent) || 0;
-
+function renderInGameMatchup({ championId, position, opponentChampionId, directMatchupStats }) {
   elements.inGameMatchupBody.replaceChildren();
 
   if (!championId || !position) {
@@ -1103,13 +1095,7 @@ function renderInGameMatchup({ championId, position, enemyTeam }) {
     return;
   }
 
-  const directStats = matchHistorySelfVsLaneOpponentStats.find((stats) => (
-    Number(stats.championId) === championId &&
-    Number(stats.opponentChampionId) === opponentChampionId &&
-    String(stats.position || '').toUpperCase() === position
-  ));
-
-  if (!directStats || !directStats.games) {
+  if (!directMatchupStats || !directMatchupStats.games) {
     elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
     elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
     elements.inGameMatchupBody.append(createInGameEmptyNote('No same-role matchup history'));
@@ -1118,8 +1104,8 @@ function renderInGameMatchup({ championId, position, enemyTeam }) {
 
   elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
   elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
-  elements.inGameMatchupBody.append(createWinRateStatsElement(directStats, { includeKda: true }));
-  if (Number(directStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
+  elements.inGameMatchupBody.append(createWinRateStatsElement(directMatchupStats, { includeKda: true }));
+  if (Number(directMatchupStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
     const badge = document.createElement('span');
     badge.className = 'low-sample-badge';
     badge.textContent = 'Low sample';
@@ -1148,12 +1134,8 @@ function createInGameEmptyNote(text) {
   return note;
 }
 
-function renderInGameTeamSnapshot(container, team) {
-  const chips = (Array.isArray(team) ? team : [])
-    .map((member) => Number(member?.championId || member?.championPickIntent) || 0)
-    .filter((championId) => championId > 0)
-    .slice(0, 5)
-    .map(createInGameChampionChip);
+function renderInGameTeamSnapshot(container, championIds) {
+  const chips = (Array.isArray(championIds) ? championIds : []).map(createInGameChampionChip);
 
   container.replaceChildren(...chips);
   if (!chips.length) {
