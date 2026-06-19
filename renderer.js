@@ -56,6 +56,13 @@ const elements = {
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
   inGameView: document.querySelector('#inGameView'),
+  inGameSelfPortrait: document.querySelector('#inGameSelfPortrait'),
+  inGameChampionName: document.querySelector('#inGameChampionName'),
+  inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
+  inGameSelfStats: document.querySelector('#inGameSelfStats'),
+  inGameMatchupBody: document.querySelector('#inGameMatchupBody'),
+  inGameAllyTeam: document.querySelector('#inGameAllyTeam'),
+  inGameEnemyTeam: document.querySelector('#inGameEnemyTeam'),
   champSelectView: document.querySelector('#champSelectView'),
   helloMessage: document.querySelector('#helloMessage'),
   allyBans: document.querySelector('#allyBans'),
@@ -94,6 +101,7 @@ let matchHistorySelfVsLaneOpponentStats = [];
 let championPoolDirty = false;
 let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
+let lastChampSelectSnapshot = null;
 let wasInChampSelect = false;
 const championIconCache = new Map();
 const championIconQueue = [];
@@ -107,6 +115,7 @@ let dismissedMatchHistoryButtonKey = null;
 let matchDataMenuOpen = false;
 const {
   collectBans,
+  createInGameContext,
   getActiveAction,
   getBestIntoOpponentStats,
   getDraftPanelState,
@@ -1000,7 +1009,10 @@ function renderDraft(state) {
   elements.helloMessage.textContent = `こんにちは ${getSummonerName(state.summoner)}`;
 
   if (inChampSelect) {
+    lastChampSelectSnapshot = champSelect;
     renderChampSelect(champSelect);
+  } else if (inGame) {
+    renderInGame(state);
   }
 }
 
@@ -1009,6 +1021,142 @@ function showOnlyDraftPanel(loggedIn, inChampSelect, inGame) {
   elements.loggedInView.hidden = !loggedIn || inChampSelect || inGame;
   elements.champSelectView.hidden = !loggedIn || !inChampSelect || inGame;
   elements.inGameView.hidden = !loggedIn || !inGame;
+}
+
+function renderInGame(state) {
+  const context = createInGameContext({
+    champSelect: lastChampSelectSnapshot,
+    summonerName: getSummonerName(state.summoner),
+    matchupStats: matchHistorySelfVsLaneOpponentStats
+  });
+
+  renderInGameSelfCard(context);
+  renderInGameMatchup(context);
+  renderInGameTeamSnapshot(elements.inGameAllyTeam, context.allyChampionIds);
+  renderInGameTeamSnapshot(elements.inGameEnemyTeam, context.enemyChampionIds);
+}
+
+function renderInGameSelfCard({ championId, position, summonerName }) {
+  elements.inGameSelfPortrait.replaceChildren();
+
+  if (championId > 0) {
+    const image = document.createElement('img');
+    image.alt = championLabel(championId);
+    loadChampionIcon(image, championId);
+    elements.inGameSelfPortrait.append(image);
+  } else {
+    elements.inGameSelfPortrait.textContent = '?';
+  }
+
+  elements.inGameChampionName.textContent = championId > 0 ? championLabel(championId) : '試合中です';
+  elements.inGameChampionDetail.textContent = championId > 0
+    ? `${positionLabel(position)} / ${summonerName || 'Summoner'}`
+    : 'ドラフト情報が取得できた試合では、ここに今回のピックメモを表示します。';
+
+  const stats = championId > 0 ? getChampionRoleDisplayStats(championId, position) : null;
+  elements.inGameSelfStats.replaceChildren();
+  elements.inGameSelfStats.append(createInGameStatsSummary(stats, position));
+}
+
+function createInGameStatsSummary(stats, position) {
+  const container = document.createElement('div');
+  container.className = 'in-game-self-stats';
+
+  if (!stats || !stats.games) {
+    container.append(createPickPoolStatChip('Games', `No ${positionLabel(position)}`));
+    container.append(createPickPoolStatChip('Focus', 'Fresh run'));
+    return container;
+  }
+
+  const wins = Number(stats.wins || 0);
+  const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
+  [
+    ['Games', `${stats.games}`],
+    ['W-L', `${wins}-${losses}`],
+    ['WR', formatPercent(stats.winRate)],
+    ['KDA', formatAverageKda(stats)]
+  ].forEach(([label, value]) => {
+    container.append(createPickPoolStatChip(label, value));
+  });
+
+  return container;
+}
+
+function renderInGameMatchup({ championId, position, opponentChampionId, directMatchupStats }) {
+  elements.inGameMatchupBody.replaceChildren();
+
+  if (!championId || !position) {
+    elements.inGameMatchupBody.append(createInGameEmptyNote('今回のロールとピックを確認できませんでした。'));
+    return;
+  }
+
+  if (!opponentChampionId) {
+    elements.inGameMatchupBody.append(createInGameEmptyNote('同じロールの対面チャンピオンは未確定です。'));
+    return;
+  }
+
+  if (!directMatchupStats || !directMatchupStats.games) {
+    elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
+    elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
+    elements.inGameMatchupBody.append(createInGameEmptyNote('No same-role matchup history'));
+    return;
+  }
+
+  elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
+  elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
+  elements.inGameMatchupBody.append(createWinRateStatsElement(directMatchupStats, { includeKda: true }));
+  if (Number(directMatchupStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
+    const badge = document.createElement('span');
+    badge.className = 'low-sample-badge';
+    badge.textContent = 'Low sample';
+    elements.inGameMatchupBody.append(badge);
+  }
+}
+
+function createInGameMatchupTitle(position, opponentChampionId) {
+  const title = document.createElement('strong');
+  title.className = 'in-game-matchup-title';
+  title.textContent = `${positionLabel(position)} vs ${championLabel(opponentChampionId)}`;
+  return title;
+}
+
+function createInGameMatchupNames(championId, opponentChampionId) {
+  const row = document.createElement('div');
+  row.className = 'in-game-matchup-names';
+  row.append(createInlineChampionName(championId), document.createTextNode(' into '), createInlineChampionName(opponentChampionId));
+  return row;
+}
+
+function createInGameEmptyNote(text) {
+  const note = document.createElement('p');
+  note.className = 'in-game-empty-note';
+  note.textContent = text;
+  return note;
+}
+
+function renderInGameTeamSnapshot(container, championIds) {
+  const chips = (Array.isArray(championIds) ? championIds : []).map(createInGameChampionChip);
+
+  container.replaceChildren(...chips);
+  if (!chips.length) {
+    container.append(createInGameEmptyNote('No champion snapshot'));
+  }
+}
+
+function createInGameChampionChip(championId) {
+  const chip = document.createElement('span');
+  chip.className = 'in-game-champion-chip';
+  chip.title = championTitle(championId);
+
+  const image = document.createElement('img');
+  image.alt = '';
+  loadChampionIcon(image, championId);
+
+  const label = document.createElement('span');
+  label.textContent = championLabel(championId);
+
+  chip.append(image, label);
+  return chip;
 }
 
 function renderChampSelect(champSelect) {

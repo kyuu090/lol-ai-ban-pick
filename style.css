@@ -825,6 +825,198 @@ h2 {
   color: var(--muted);
 }
 
+.in-game-view {
+  display: grid;
+  gap: 12px;
+}
+
+.in-game-hero,
+.in-game-card {
+  background: rgba(17, 24, 33, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.in-game-hero {
+  align-items: center;
+  background:
+    linear-gradient(100deg, rgba(212, 175, 55, 0.18), rgba(17, 24, 33, 0.92) 44%, rgba(36, 182, 217, 0.12)),
+    rgba(17, 24, 33, 0.92);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 190px;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.in-game-portrait {
+  align-items: center;
+  background: rgba(8, 12, 18, 0.42);
+  border: 2px solid rgba(212, 175, 55, 0.56);
+  border-radius: 8px;
+  box-shadow: 0 0 34px rgba(212, 175, 55, 0.16);
+  color: rgba(244, 247, 251, 0.62);
+  display: flex;
+  font-size: 54px;
+  font-weight: 800;
+  height: 132px;
+  justify-content: center;
+  overflow: hidden;
+  width: 132px;
+}
+
+.in-game-portrait img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.in-game-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.in-game-main h2 {
+  color: #f7e7bb;
+  font-size: 34px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.in-game-main p:not(.eyebrow) {
+  color: rgba(217, 228, 242, 0.78);
+}
+
+.in-game-stat-row,
+.in-game-self-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.in-game-self-stats .pick-pool-stat-chip {
+  background: rgba(8, 12, 18, 0.36);
+  border-color: rgba(212, 175, 55, 0.28);
+  min-height: 28px;
+  padding: 4px 7px;
+}
+
+.in-game-self-stats .pick-pool-stat-chip b {
+  color: #f1ddb0;
+  font-size: 12px;
+}
+
+.in-game-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+}
+
+.in-game-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px 16px;
+}
+
+.in-game-card-header {
+  display: grid;
+}
+
+.in-game-matchup-body {
+  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.in-game-matchup-title {
+  color: #f1ddb0;
+  font-size: 13px;
+  line-height: 1.2;
+  width: 100%;
+}
+
+.in-game-matchup-names {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.in-game-empty-note {
+  color: rgba(154, 167, 184, 0.78);
+  font-size: 12px;
+  margin: 0;
+}
+
+.low-sample-badge {
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 7px;
+  text-transform: uppercase;
+}
+
+.in-game-team-columns {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.in-game-team-label {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  margin-bottom: 7px;
+}
+
+.in-game-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.in-game-champion-chip {
+  align-items: center;
+  background: rgba(8, 12, 18, 0.28);
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 6px;
+  max-width: 150px;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 7px 4px 4px;
+}
+
+.in-game-champion-chip img {
+  border: 1px solid rgba(212, 175, 55, 0.34);
+  border-radius: 4px;
+  flex: 0 0 auto;
+  height: 22px;
+  object-fit: cover;
+  width: 22px;
+}
+
+.in-game-champion-chip span {
+  color: rgba(217, 228, 242, 0.92);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .eyebrow {
   color: var(--accent);
   font-size: 11px;
@@ -1604,11 +1796,34 @@ pre {
   .content-grid,
   .draft-header,
   .teams-layout,
+  .in-game-hero,
+  .in-game-grid,
+  .in-game-team-columns,
   .counters-grid,
   .strengths-grid,
   .path-input-row,
   .token-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .in-game-hero {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .in-game-main {
+    justify-items: center;
+  }
+
+  .in-game-main h2 {
+    font-size: 28px;
+  }
+
+  .in-game-stat-row,
+  .in-game-self-stats,
+  .in-game-matchup-body,
+  .in-game-chip-list {
+    justify-content: center;
   }
 
   .weak-lane-matchup-item,
