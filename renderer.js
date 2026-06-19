@@ -60,7 +60,6 @@ const elements = {
   inGameChampionName: document.querySelector('#inGameChampionName'),
   inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
   inGameSelfStats: document.querySelector('#inGameSelfStats'),
-  inGameMatchupTitle: document.querySelector('#inGameMatchupTitle'),
   inGameMatchupBody: document.querySelector('#inGameMatchupBody'),
   inGameAllyTeam: document.querySelector('#inGameAllyTeam'),
   inGameEnemyTeam: document.querySelector('#inGameEnemyTeam'),
@@ -1092,9 +1091,6 @@ function renderInGameMatchup({ championId, position, enemyTeam }) {
   ));
   const opponentChampionId = Number(laneOpponent?.championId || laneOpponent?.championPickIntent) || 0;
 
-  elements.inGameMatchupTitle.textContent = opponentChampionId > 0
-    ? `${positionLabel(position)} vs ${championLabel(opponentChampionId)}`
-    : '対面メモ';
   elements.inGameMatchupBody.replaceChildren();
 
   if (!championId || !position) {
@@ -1114,11 +1110,13 @@ function renderInGameMatchup({ championId, position, enemyTeam }) {
   ));
 
   if (!directStats || !directStats.games) {
+    elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
     elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
     elements.inGameMatchupBody.append(createInGameEmptyNote('No same-role matchup history'));
     return;
   }
 
+  elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
   elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
   elements.inGameMatchupBody.append(createWinRateStatsElement(directStats, { includeKda: true }));
   if (Number(directStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
@@ -1127,6 +1125,13 @@ function renderInGameMatchup({ championId, position, enemyTeam }) {
     badge.textContent = 'Low sample';
     elements.inGameMatchupBody.append(badge);
   }
+}
+
+function createInGameMatchupTitle(position, opponentChampionId) {
+  const title = document.createElement('strong');
+  title.className = 'in-game-matchup-title';
+  title.textContent = `${positionLabel(position)} vs ${championLabel(opponentChampionId)}`;
+  return title;
 }
 
 function createInGameMatchupNames(championId, opponentChampionId) {

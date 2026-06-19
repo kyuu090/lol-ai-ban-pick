@@ -924,13 +924,6 @@ h2 {
 
 .in-game-card-header {
   display: grid;
-  gap: 2px;
-}
-
-.in-game-card-header h3 {
-  color: #f1ddb0;
-  font-size: 16px;
-  line-height: 1.2;
 }
 
 .in-game-matchup-body {
@@ -938,6 +931,13 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.in-game-matchup-title {
+  color: #f1ddb0;
+  font-size: 13px;
+  line-height: 1.2;
+  width: 100%;
 }
 
 .in-game-matchup-names {
