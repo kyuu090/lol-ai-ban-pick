@@ -14,15 +14,15 @@ const elements = {
   championPoolView: document.querySelector('#championPoolView'),
   statsView: document.querySelector('#statsView'),
   statsSubtabButtons: document.querySelectorAll('.stats-subtab'),
-  countersView: document.querySelector('#countersView'),
-  strengthsView: document.querySelector('#strengthsView'),
+  playedStatsView: document.querySelector('#playedStatsView'),
+  opponentStatsView: document.querySelector('#opponentStatsView'),
   debugView: document.querySelector('#debugView'),
   settingsView: document.querySelector('#settingsView'),
   laneTabs: document.querySelector('#laneTabs'),
-  counterLaneTabs: document.querySelector('#counterLaneTabs'),
-  strengthLaneTabs: document.querySelector('#strengthLaneTabs'),
-  weakChampionSampleFilter: document.querySelector('#weakChampionSampleFilter'),
-  strongChampionSampleFilter: document.querySelector('#strongChampionSampleFilter'),
+  playedStatsLaneTabs: document.querySelector('#playedStatsLaneTabs'),
+  opponentStatsLaneTabs: document.querySelector('#opponentStatsLaneTabs'),
+  playedStatsSampleFilter: document.querySelector('#playedStatsSampleFilter'),
+  opponentStatsSampleFilter: document.querySelector('#opponentStatsSampleFilter'),
   championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
   championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
   championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
@@ -30,18 +30,16 @@ const elements = {
   championPoolListTitle: document.querySelector('#championPoolListTitle'),
   championPoolList: document.querySelector('#championPoolList'),
   championPoolEmpty: document.querySelector('#championPoolEmpty'),
-  weakChampionSampleSelect: document.querySelector('#weakChampionSampleSelect'),
-  weakEnemyChampionList: document.querySelector('#weakEnemyChampionList'),
-  weakEnemyChampionEmpty: document.querySelector('#weakEnemyChampionEmpty'),
-  weakLaneChampionTitle: document.querySelector('#weakLaneChampionTitle'),
-  weakLaneChampionList: document.querySelector('#weakLaneChampionList'),
-  weakLaneChampionEmpty: document.querySelector('#weakLaneChampionEmpty'),
-  strongChampionSampleSelect: document.querySelector('#strongChampionSampleSelect'),
-  strongChampionList: document.querySelector('#strongChampionList'),
-  strongChampionEmpty: document.querySelector('#strongChampionEmpty'),
-  strongLaneMatchupTitle: document.querySelector('#strongLaneMatchupTitle'),
-  strongLaneMatchupList: document.querySelector('#strongLaneMatchupList'),
-  strongLaneMatchupEmpty: document.querySelector('#strongLaneMatchupEmpty'),
+  playedStatsSampleSelect: document.querySelector('#playedStatsSampleSelect'),
+  playedStatsSortGamesButton: document.querySelector('#playedStatsSortGamesButton'),
+  playedStatsSortWinRateButton: document.querySelector('#playedStatsSortWinRateButton'),
+  playedStatsTableBody: document.querySelector('#playedStatsTableBody'),
+  playedStatsEmpty: document.querySelector('#playedStatsEmpty'),
+  opponentStatsSampleSelect: document.querySelector('#opponentStatsSampleSelect'),
+  opponentStatsSortGamesButton: document.querySelector('#opponentStatsSortGamesButton'),
+  opponentStatsSortWinRateButton: document.querySelector('#opponentStatsSortWinRateButton'),
+  opponentStatsTableBody: document.querySelector('#opponentStatsTableBody'),
+  opponentStatsEmpty: document.querySelector('#opponentStatsEmpty'),
   championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   riotApiTokenInput: document.querySelector('#riotApiTokenInput'),
@@ -85,12 +83,20 @@ const elements = {
 };
 
 let activeView = 'draft';
-let activeStatsView = 'strengths';
+let activeStatsView = 'played';
 let activeChampionPoolLane = 'top';
-let activeCounterLane = 'top';
-let activeStrengthLane = 'top';
-let weakChampionMinGames = 5;
-let strongChampionMinGames = 5;
+let activePlayedStatsLane = 'top';
+let activeOpponentStatsLane = 'top';
+let playedStatsMinGames = 5;
+let opponentStatsMinGames = 5;
+let playedStatsSortKey = 'winRate';
+let opponentStatsSortKey = 'winRate';
+let playedStatsSortDirection = 'desc';
+let opponentStatsSortDirection = 'asc';
+let expandedPlayedStatsChampionId = null;
+let expandedOpponentStatsChampionId = null;
+let shouldOpenFirstPlayedStatsRow = true;
+let shouldOpenFirstOpponentStatsRow = true;
 let banInsightMinGames = 5;
 let championsById = {};
 let championPool = {};
@@ -261,14 +267,14 @@ function createChampionStatsElement(stats, className = 'pool-champion-stats') {
   return container;
 }
 
-function getWeakChampionMinGames() {
-  const selectedGames = Number(elements.weakChampionSampleSelect?.value);
-  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : weakChampionMinGames;
+function getPlayedStatsMinGames() {
+  const selectedGames = Number(elements.playedStatsSampleSelect?.value);
+  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : playedStatsMinGames;
 }
 
-function getStrongChampionMinGames() {
-  const selectedGames = Number(elements.strongChampionSampleSelect?.value);
-  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : strongChampionMinGames;
+function getOpponentStatsMinGames() {
+  const selectedGames = Number(elements.opponentStatsSampleSelect?.value);
+  return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : opponentStatsMinGames;
 }
 
 function loadChampionIcon(img, championId) {
@@ -372,8 +378,8 @@ function renderState(state) {
   renderMatchDataSummary(state.matchHistorySummary, state.settings);
   renderSettings(state.settings);
   renderChampionPool();
-  renderCounters();
-  renderStrengths();
+  renderPlayedChampionStats();
+  renderLaneOpponentStats();
   renderDraft(state);
   renderDebug(state);
 }
@@ -571,10 +577,10 @@ function renderLaneTabs() {
   elements.laneTabs.replaceChildren(...buttons);
 }
 
-function renderCounterLaneTabs() {
-  if (elements.counterLaneTabs.childElementCount > 0) {
-    elements.counterLaneTabs.querySelectorAll('button').forEach((button) => {
-      button.classList.toggle('active', button.dataset.lane === activeCounterLane);
+function renderPlayedStatsLaneTabs() {
+  if (elements.playedStatsLaneTabs.childElementCount > 0) {
+    elements.playedStatsLaneTabs.querySelectorAll('button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lane === activePlayedStatsLane);
     });
     return;
   }
@@ -584,21 +590,23 @@ function renderCounterLaneTabs() {
     button.type = 'button';
     button.dataset.lane = lane.id;
     button.textContent = lane.label;
-    button.className = `lane-tab${lane.id === activeCounterLane ? ' active' : ''}`;
+    button.className = `lane-tab${lane.id === activePlayedStatsLane ? ' active' : ''}`;
     button.addEventListener('click', () => {
-      activeCounterLane = lane.id;
-      renderCounters();
+      activePlayedStatsLane = lane.id;
+      expandedPlayedStatsChampionId = null;
+      shouldOpenFirstPlayedStatsRow = true;
+      renderPlayedChampionStats();
     });
     return button;
   });
 
-  elements.counterLaneTabs.replaceChildren(...buttons);
+  elements.playedStatsLaneTabs.replaceChildren(...buttons);
 }
 
-function renderStrengthLaneTabs() {
-  if (elements.strengthLaneTabs.childElementCount > 0) {
-    elements.strengthLaneTabs.querySelectorAll('button').forEach((button) => {
-      button.classList.toggle('active', button.dataset.lane === activeStrengthLane);
+function renderOpponentStatsLaneTabs() {
+  if (elements.opponentStatsLaneTabs.childElementCount > 0) {
+    elements.opponentStatsLaneTabs.querySelectorAll('button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lane === activeOpponentStatsLane);
     });
     return;
   }
@@ -608,15 +616,17 @@ function renderStrengthLaneTabs() {
     button.type = 'button';
     button.dataset.lane = lane.id;
     button.textContent = lane.label;
-    button.className = `lane-tab${lane.id === activeStrengthLane ? ' active' : ''}`;
+    button.className = `lane-tab${lane.id === activeOpponentStatsLane ? ' active' : ''}`;
     button.addEventListener('click', () => {
-      activeStrengthLane = lane.id;
-      renderStrengths();
+      activeOpponentStatsLane = lane.id;
+      expandedOpponentStatsChampionId = null;
+      shouldOpenFirstOpponentStatsRow = true;
+      renderLaneOpponentStats();
     });
     return button;
   });
 
-  elements.strengthLaneTabs.replaceChildren(...buttons);
+  elements.opponentStatsLaneTabs.replaceChildren(...buttons);
 }
 
 function renderChampionPicker(championIds) {
@@ -713,6 +723,136 @@ function renderChampionPool() {
   }));
 }
 
+function renderPlayedChampionStatsLegacy() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activePlayedStatsLane) || CHAMPION_POOL_LANES[0];
+  const position = getChampionPoolLanePosition(lane.id);
+  const minGames = getPlayedStatsMinGames();
+  renderPlayedStatsLaneTabs();
+
+  const statsList = sortStatsTableRows(matchHistoryChampionStats.filter((stats) => (
+    stats.queueGroup === 'all_sr_5v5' &&
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames
+  )), playedStatsSortKey, playedStatsSortDirection);
+
+  renderStatsTable(
+    elements.playedStatsTableBody,
+    elements.playedStatsEmpty,
+    statsList,
+    'championId',
+    '条件に合うチャンピオン実績がありません。'
+  );
+  renderStatsSortButtons('played');
+}
+
+function renderLaneOpponentStatsLegacy() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activeOpponentStatsLane) || CHAMPION_POOL_LANES[0];
+  const position = getChampionPoolLanePosition(lane.id);
+  const minGames = getOpponentStatsMinGames();
+  renderOpponentStatsLaneTabs();
+
+  const statsList = sortStatsTableRows(matchHistoryLaneOpponentStats.filter((stats) => (
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames
+  )), opponentStatsSortKey, opponentStatsSortDirection);
+
+  renderStatsTable(
+    elements.opponentStatsTableBody,
+    elements.opponentStatsEmpty,
+    statsList,
+    'championId',
+    '条件に合う対面データがありません。'
+  );
+  renderStatsSortButtons('opponents');
+}
+
+function sortStatsTableRows(statsList, sortKey, sortDirection = 'desc') {
+  const direction = sortDirection === 'asc' ? 1 : -1;
+  return [...statsList].sort((a, b) => {
+    const primary = sortKey === 'winRate'
+      ? Number(a.winRate || 0) - Number(b.winRate || 0)
+      : Number(a.games || 0) - Number(b.games || 0);
+    if (primary !== 0) return primary * direction;
+
+    const secondary = sortKey === 'winRate'
+      ? Number(a.games || 0) - Number(b.games || 0)
+      : Number(a.winRate || 0) - Number(b.winRate || 0);
+    if (secondary !== 0) return secondary * direction;
+
+    return championLabel(a.championId).localeCompare(championLabel(b.championId), 'en');
+  });
+}
+
+function renderStatsTable(bodyElement, emptyElement, statsList, championIdKey, emptyText) {
+  bodyElement.replaceChildren(...statsList.map((stats) => createStatsTableRow(stats, championIdKey)));
+  emptyElement.hidden = statsList.length > 0;
+  emptyElement.textContent = emptyText;
+}
+
+function createStatsTableRow(stats, championIdKey) {
+  const row = document.createElement('tr');
+
+  const championCell = document.createElement('th');
+  championCell.scope = 'row';
+  championCell.append(createInlineChampionName(stats[championIdKey], 'inline-champion-name stats-table-champion'));
+
+  const gamesCell = document.createElement('td');
+  gamesCell.textContent = String(Number(stats.games || 0));
+
+  const winRateCell = document.createElement('td');
+  winRateCell.textContent = formatPercent(stats.winRate);
+
+  const kdaCell = document.createElement('td');
+  kdaCell.textContent = formatAverageKda(stats);
+
+  row.append(championCell, gamesCell, winRateCell, kdaCell);
+  return row;
+}
+
+function renderStatsSortButtons(viewName) {
+  const sortKey = viewName === 'opponents' ? opponentStatsSortKey : playedStatsSortKey;
+  const sortDirection = viewName === 'opponents' ? opponentStatsSortDirection : playedStatsSortDirection;
+  const gamesButton = viewName === 'opponents'
+    ? elements.opponentStatsSortGamesButton
+    : elements.playedStatsSortGamesButton;
+  const winRateButton = viewName === 'opponents'
+    ? elements.opponentStatsSortWinRateButton
+    : elements.playedStatsSortWinRateButton;
+
+  [
+    [gamesButton, 'games'],
+    [winRateButton, 'winRate']
+  ].forEach(([button, key]) => {
+    if (!button) return;
+    const active = sortKey === key;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+    button.dataset.sortDirection = active ? sortDirection : '';
+    button.setAttribute('aria-sort', active ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
+}
+
+function setStatsSort(viewName, sortKey) {
+  if (viewName === 'opponents') {
+    opponentStatsSortDirection = opponentStatsSortKey === sortKey && opponentStatsSortDirection === 'desc'
+      ? 'asc'
+      : 'desc';
+    opponentStatsSortKey = sortKey;
+    expandedOpponentStatsChampionId = null;
+    shouldOpenFirstOpponentStatsRow = true;
+    renderLaneOpponentStats();
+    return;
+  }
+
+  playedStatsSortDirection = playedStatsSortKey === sortKey && playedStatsSortDirection === 'desc'
+    ? 'asc'
+    : 'desc';
+  playedStatsSortKey = sortKey;
+  expandedPlayedStatsChampionId = null;
+  shouldOpenFirstPlayedStatsRow = true;
+  renderPlayedChampionStats();
+}
+
 function renderCounters() {
   const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activeCounterLane) || CHAMPION_POOL_LANES[0];
   renderCounterLaneTabs();
@@ -766,14 +906,20 @@ function createWeakChampionItem(stats, options = {}) {
 
   const main = document.createElement('div');
   main.className = 'weak-champion-main';
+  if (options.includeSelfPicks) {
+    main.append(createStatsSideBadge('ENEMY', 'enemy'));
+  }
   main.append(name, detail);
-  item.append(main);
 
   if (options.includeSelfPicks) {
     const selfPickSummary = createLaneSelfPickSummary(stats, options.position, { splitByWinRate: true });
     if (selfPickSummary) {
-      item.append(selfPickSummary);
+      item.append(selfPickSummary, main);
+    } else {
+      item.append(createStatsEmptySide('YOU', 'you', '自分のピック実績なし'), main);
     }
+  } else {
+    item.append(main);
   }
   return item;
 }
@@ -805,6 +951,7 @@ function createLaneSelfPickSummary(opponentStats, position, options = {}) {
 
   const summary = document.createElement('div');
   summary.className = 'weak-self-pick-summary';
+  summary.append(createStatsSideBadge('YOU', 'you'));
 
   if (wonFirst && wonWith.length) {
     summary.append(createWeakSelfPickRow('○', wonWith, 'won'));
@@ -847,14 +994,17 @@ function createWeakSelfPickRow(symbol, statsList, tone) {
   const row = document.createElement('div');
   row.className = `weak-self-pick-row ${tone}`;
 
-  const marker = document.createElement('span');
-  marker.className = 'weak-self-pick-marker';
-  marker.textContent = symbol;
-  row.append(marker);
+  const title = document.createElement('span');
+  title.className = 'weak-self-pick-group-title';
+  title.textContent = tone === 'lost' ? '苦手だったピック' : '勝てているピック';
+  row.append(title);
 
+  const tokens = document.createElement('div');
+  tokens.className = 'weak-self-pick-group-tokens';
   statsList.forEach((stats) => {
-    row.append(createWeakSelfPickToken(stats));
+    tokens.append(createWeakSelfPickToken(stats));
   });
+  row.append(tokens);
 
   return row;
 }
@@ -869,6 +1019,25 @@ function createWeakSelfPickToken(stats) {
 
   token.append(champion, record);
   return token;
+}
+
+function createStatsSideBadge(text, tone) {
+  const badge = document.createElement('span');
+  badge.className = `stats-side-badge ${tone}`;
+  badge.textContent = text;
+  return badge;
+}
+
+function createStatsEmptySide(text, tone, emptyText) {
+  const side = document.createElement('div');
+  side.className = 'weak-self-pick-summary stats-empty-side';
+  side.append(createStatsSideBadge(text, tone));
+
+  const note = document.createElement('span');
+  note.className = 'stats-empty-side-note';
+  note.textContent = emptyText;
+  side.append(note);
+  return side;
 }
 
 function formatWinLoss(stats) {
@@ -971,19 +1140,273 @@ function createStrongLaneMatchupItem(stats) {
   const main = document.createElement('div');
   main.className = 'strong-champion-main';
 
-  const matchup = document.createElement('span');
-  matchup.className = 'strong-champion-name';
-  matchup.append(createInlineChampionName(stats.opponentChampionId));
+  const selfPick = document.createElement('span');
+  selfPick.className = 'strong-champion-name';
+  selfPick.append(createInlineChampionName(stats.championId));
 
   const detail = createWinRateStatsElement(stats, { includeKda: true });
-  main.append(matchup, detail);
+  main.append(createStatsSideBadge('YOU', 'you'), selfPick, detail);
 
-  const selfPickSummary = createLaneSelfPickSummary(stats, stats.position, { order: 'won-first' });
-  item.append(main);
-  if (selfPickSummary) {
-    item.append(selfPickSummary);
-  }
+  const opponent = document.createElement('div');
+  opponent.className = 'weak-self-pick-summary strong-opponent-summary';
+  opponent.append(createStatsSideBadge('ENEMY', 'enemy'));
+  opponent.append(createWeakSelfPickToken({
+    championId: stats.opponentChampionId,
+    wins: stats.wins,
+    losses: getLosses(stats)
+  }));
+
+  item.append(main, opponent);
   return item;
+}
+
+function renderLaneOpponentStats() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activeOpponentStatsLane) || CHAMPION_POOL_LANES[0];
+  const position = getChampionPoolLanePosition(lane.id);
+  const minGames = getOpponentStatsMinGames();
+  renderOpponentStatsLaneTabs();
+
+  const statsList = sortStatsTableRows(matchHistoryLaneOpponentStats.filter((stats) => (
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames
+  )), opponentStatsSortKey, opponentStatsSortDirection);
+
+  if (!statsList.some((stats) => Number(stats.championId) === expandedOpponentStatsChampionId)) {
+    expandedOpponentStatsChampionId = null;
+  }
+  if (shouldOpenFirstOpponentStatsRow && !expandedOpponentStatsChampionId && statsList.length > 0) {
+    expandedOpponentStatsChampionId = Number(statsList[0].championId);
+  }
+  shouldOpenFirstOpponentStatsRow = false;
+
+  renderOpponentStatsTable(statsList, position);
+  renderStatsSortButtons('opponents');
+}
+
+function renderOpponentStatsTable(statsList, position) {
+  const rows = [];
+  statsList.forEach((stats) => {
+    const championId = Number(stats.championId);
+    const selected = championId === expandedOpponentStatsChampionId;
+    const row = createStatsTableRow(stats, 'championId');
+    row.classList.add('stats-table-clickable-row');
+    row.classList.toggle('expanded', selected);
+    row.title = `${championLabel(championId)} に対する自分ピックを表示`;
+    row.addEventListener('click', () => {
+      expandedOpponentStatsChampionId = selected ? null : championId;
+      renderLaneOpponentStats();
+    });
+    rows.push(row);
+
+    if (selected) {
+      rows.push(createOpponentPickBreakdownRow(championId, position));
+    }
+  });
+
+  elements.opponentStatsTableBody.replaceChildren(...rows);
+  elements.opponentStatsEmpty.hidden = statsList.length > 0;
+  elements.opponentStatsEmpty.textContent = '条件に合う対面データがありません。';
+}
+
+function createOpponentPickBreakdownRow(opponentChampionId, position) {
+  const row = document.createElement('tr');
+  row.className = 'stats-opponent-detail-row';
+
+  const cell = document.createElement('td');
+  cell.colSpan = 4;
+  cell.append(createOpponentPickBreakdown(opponentChampionId, position));
+
+  row.append(cell);
+  return row;
+}
+
+function createOpponentPickBreakdown(opponentChampionId, position) {
+  const container = document.createElement('div');
+  container.className = 'stats-opponent-detail';
+
+  const normalizedPosition = String(position || '').toUpperCase();
+  const matchupStats = matchHistorySelfVsLaneOpponentStats.filter((stats) => (
+    Number(stats.opponentChampionId) === Number(opponentChampionId) &&
+    String(stats.position || '').toUpperCase() === normalizedPosition &&
+    Number(stats.games || 0) > 0
+  ));
+
+  const winning = matchupStats
+    .filter((stats) => getWinMargin(stats) > 0)
+    .sort(compareWinningMatchupStats)
+    .slice(0, 3);
+  const losing = matchupStats
+    .filter((stats) => getLossMargin(stats) > 0)
+    .sort(compareLosingMatchupStats)
+    .slice(0, 3);
+
+  container.append(
+    createOpponentPickBreakdownGroup('勝ち越しが多い自分ピック', winning, 'won'),
+    createOpponentPickBreakdownGroup('負け越しが多い自分ピック', losing, 'lost')
+  );
+  return container;
+}
+
+function createOpponentPickBreakdownGroup(title, statsList, tone) {
+  return createMatchupBreakdownGroup(title, statsList, tone, 'championId');
+}
+
+function createMatchupBreakdownGroup(title, statsList, tone, championIdKey) {
+  const group = document.createElement('section');
+  group.className = `stats-opponent-detail-group ${tone}`;
+
+  const heading = document.createElement('h4');
+  heading.textContent = title;
+  group.append(heading);
+
+  if (!statsList.length) {
+    const empty = document.createElement('p');
+    empty.className = 'stats-opponent-detail-empty';
+    empty.textContent = '該当するピックはありません。';
+    group.append(empty);
+    return group;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'stats-opponent-detail-picks';
+  statsList.forEach((stats) => {
+    list.append(createMatchupBreakdownToken(stats, Number(stats[championIdKey]), tone));
+  });
+  group.append(list);
+  return group;
+}
+
+function createOpponentPickBreakdownToken(stats, tone) {
+  return createMatchupBreakdownToken(stats, Number(stats.championId), tone);
+}
+
+function createMatchupBreakdownToken(stats, championId, tone) {
+  const token = document.createElement('span');
+  token.className = `stats-opponent-detail-pick ${tone}`;
+
+  const champion = createInlineChampionName(championId, 'inline-champion-name weak-self-pick-name');
+  const record = document.createElement('b');
+  record.textContent = formatWinLoss(stats);
+
+  const margin = document.createElement('small');
+  margin.textContent = tone === 'won' ? `+${getWinMargin(stats)}` : `-${getLossMargin(stats)}`;
+
+  token.append(champion, record, margin);
+  return token;
+}
+
+function getWinMargin(stats) {
+  return Number(stats?.wins || 0) - getLosses(stats);
+}
+
+function getLossMargin(stats) {
+  return getLosses(stats) - Number(stats?.wins || 0);
+}
+
+function compareWinningMatchupStats(a, b) {
+  return (
+    (getWinMargin(b) - getWinMargin(a)) ||
+    (Number(b.wins || 0) - Number(a.wins || 0)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  );
+}
+
+function compareLosingMatchupStats(a, b) {
+  return (
+    (getLossMargin(b) - getLossMargin(a)) ||
+    (getLosses(b) - getLosses(a)) ||
+    (Number(b.games || 0) - Number(a.games || 0)) ||
+    championLabel(a.championId).localeCompare(championLabel(b.championId), 'en')
+  );
+}
+
+function renderPlayedChampionStats() {
+  const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activePlayedStatsLane) || CHAMPION_POOL_LANES[0];
+  const position = getChampionPoolLanePosition(lane.id);
+  const minGames = getPlayedStatsMinGames();
+  renderPlayedStatsLaneTabs();
+
+  const statsList = sortStatsTableRows(matchHistoryChampionStats.filter((stats) => (
+    stats.queueGroup === 'all_sr_5v5' &&
+    String(stats.position || '').toUpperCase() === position &&
+    Number(stats.games || 0) >= minGames
+  )), playedStatsSortKey, playedStatsSortDirection);
+
+  if (!statsList.some((stats) => Number(stats.championId) === expandedPlayedStatsChampionId)) {
+    expandedPlayedStatsChampionId = null;
+  }
+  if (shouldOpenFirstPlayedStatsRow && !expandedPlayedStatsChampionId && statsList.length > 0) {
+    expandedPlayedStatsChampionId = Number(statsList[0].championId);
+  }
+  shouldOpenFirstPlayedStatsRow = false;
+
+  renderPlayedStatsTable(statsList, position);
+  renderStatsSortButtons('played');
+}
+
+function renderPlayedStatsTable(statsList, position) {
+  const rows = [];
+  statsList.forEach((stats) => {
+    const championId = Number(stats.championId);
+    const selected = championId === expandedPlayedStatsChampionId;
+    const row = createStatsTableRow(stats, 'championId');
+    row.classList.add('stats-table-clickable-row');
+    row.classList.toggle('expanded', selected);
+    row.title = `${championLabel(championId)} の対面別成績を表示`;
+    row.addEventListener('click', () => {
+      expandedPlayedStatsChampionId = selected ? null : championId;
+      renderPlayedChampionStats();
+    });
+    rows.push(row);
+
+    if (selected) {
+      rows.push(createPlayedPickBreakdownRow(championId, position));
+    }
+  });
+
+  elements.playedStatsTableBody.replaceChildren(...rows);
+  elements.playedStatsEmpty.hidden = statsList.length > 0;
+  elements.playedStatsEmpty.textContent = '条件に合うチャンピオン実績がありません。';
+}
+
+function createPlayedPickBreakdownRow(championId, position) {
+  const row = document.createElement('tr');
+  row.className = 'stats-opponent-detail-row';
+
+  const cell = document.createElement('td');
+  cell.colSpan = 4;
+  cell.append(createPlayedPickBreakdown(championId, position));
+
+  row.append(cell);
+  return row;
+}
+
+function createPlayedPickBreakdown(championId, position) {
+  const container = document.createElement('div');
+  container.className = 'stats-opponent-detail';
+
+  const normalizedPosition = String(position || '').toUpperCase();
+  const matchupStats = matchHistorySelfVsLaneOpponentStats.filter((stats) => (
+    Number(stats.championId) === Number(championId) &&
+    String(stats.position || '').toUpperCase() === normalizedPosition &&
+    Number(stats.games || 0) > 0
+  ));
+
+  const strongInto = matchupStats
+    .filter((stats) => getWinMargin(stats) > 0)
+    .sort(compareWinningMatchupStats)
+    .slice(0, 3);
+  const weakInto = matchupStats
+    .filter((stats) => getLossMargin(stats) > 0)
+    .sort(compareLosingMatchupStats)
+    .slice(0, 3);
+
+  container.append(
+    createMatchupBreakdownGroup('得意な対面', strongInto, 'won', 'opponentChampionId'),
+    createMatchupBreakdownGroup('苦手な対面', weakInto, 'lost', 'opponentChampionId')
+  );
+  return container;
 }
 
 function renderStatus(state) {
@@ -1763,16 +2186,16 @@ function setActiveView(viewName) {
 }
 
 function setActiveStatsView(viewName) {
-  activeStatsView = viewName === 'counters' ? 'counters' : 'strengths';
+  activeStatsView = viewName === 'opponents' ? 'opponents' : 'played';
   logDebug('Active stats view changed', { viewName: activeStatsView });
   renderStatsSubtabs();
 }
 
 function renderStatsSubtabs() {
-  elements.strengthsView.hidden = activeStatsView !== 'strengths';
-  elements.countersView.hidden = activeStatsView !== 'counters';
-  elements.strongChampionSampleFilter.hidden = activeStatsView !== 'strengths';
-  elements.weakChampionSampleFilter.hidden = activeStatsView !== 'counters';
+  elements.playedStatsView.hidden = activeStatsView !== 'played';
+  elements.opponentStatsView.hidden = activeStatsView !== 'opponents';
+  elements.playedStatsSampleFilter.hidden = activeStatsView !== 'played';
+  elements.opponentStatsSampleFilter.hidden = activeStatsView !== 'opponents';
 
   elements.statsSubtabButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.statsView === activeStatsView);
@@ -1968,15 +2391,31 @@ elements.saveRiotApiTokenButton.addEventListener('click', saveRiotApiToken);
 elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
-elements.weakChampionSampleSelect.addEventListener('change', () => {
-  weakChampionMinGames = getWeakChampionMinGames();
-  logDebug('Weak champion sample filter changed', { minGames: weakChampionMinGames });
-  renderCounters();
+elements.playedStatsSampleSelect.addEventListener('change', () => {
+  playedStatsMinGames = getPlayedStatsMinGames();
+  expandedPlayedStatsChampionId = null;
+  shouldOpenFirstPlayedStatsRow = true;
+  logDebug('Played champion stats sample filter changed', { minGames: playedStatsMinGames });
+  renderPlayedChampionStats();
 });
-elements.strongChampionSampleSelect.addEventListener('change', () => {
-  strongChampionMinGames = getStrongChampionMinGames();
-  logDebug('Strong champion sample filter changed', { minGames: strongChampionMinGames });
-  renderStrengths();
+elements.opponentStatsSampleSelect.addEventListener('change', () => {
+  opponentStatsMinGames = getOpponentStatsMinGames();
+  expandedOpponentStatsChampionId = null;
+  shouldOpenFirstOpponentStatsRow = true;
+  logDebug('Lane opponent stats sample filter changed', { minGames: opponentStatsMinGames });
+  renderLaneOpponentStats();
+});
+elements.playedStatsSortGamesButton.addEventListener('click', () => {
+  setStatsSort('played', 'games');
+});
+elements.playedStatsSortWinRateButton.addEventListener('click', () => {
+  setStatsSort('played', 'winRate');
+});
+elements.opponentStatsSortGamesButton.addEventListener('click', () => {
+  setStatsSort('opponents', 'games');
+});
+elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
+  setStatsSort('opponents', 'winRate');
 });
 
 setActiveView(activeView);

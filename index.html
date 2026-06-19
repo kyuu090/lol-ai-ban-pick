@@ -213,13 +213,13 @@
         <section class="stats-panel">
           <div class="stats-toolbar">
             <nav class="stats-subtabs" aria-label="stats switcher">
-              <button class="stats-subtab active" id="strengthsSubtabButton" type="button" data-stats-view="strengths">Strengths</button>
-              <button class="stats-subtab" id="countersSubtabButton" type="button" data-stats-view="counters">Counters</button>
+              <button class="stats-subtab active" id="playedStatsSubtabButton" type="button" data-stats-view="played">プレイしたチャンピオン</button>
+              <button class="stats-subtab" id="opponentStatsSubtabButton" type="button" data-stats-view="opponents">対面チャンピオン</button>
             </nav>
 
-            <label id="strongChampionSampleFilter" class="sample-filter" for="strongChampionSampleSelect">
+            <label id="playedStatsSampleFilter" class="sample-filter" for="playedStatsSampleSelect">
               <span>Sample</span>
-              <select id="strongChampionSampleSelect">
+              <select id="playedStatsSampleSelect">
                 <option value="1">1+ games</option>
                 <option value="3">3+ games</option>
                 <option value="5" selected>5+ games</option>
@@ -228,9 +228,9 @@
               </select>
             </label>
 
-            <label id="weakChampionSampleFilter" class="sample-filter" for="weakChampionSampleSelect" hidden>
+            <label id="opponentStatsSampleFilter" class="sample-filter" for="opponentStatsSampleSelect" hidden>
               <span>Sample</span>
-              <select id="weakChampionSampleSelect">
+              <select id="opponentStatsSampleSelect">
                 <option value="1">1+ games</option>
                 <option value="3">3+ games</option>
                 <option value="5" selected>5+ games</option>
@@ -240,39 +240,47 @@
             </label>
           </div>
 
-          <section id="strengthsView" class="stats-subview">
-            <nav id="strengthLaneTabs" class="lane-tabs" aria-label="strength lane switcher"></nav>
+          <section id="playedStatsView" class="stats-subview">
+            <nav id="playedStatsLaneTabs" class="lane-tabs" aria-label="played champion lane switcher"></nav>
 
-            <section class="strengths-grid">
-              <section class="strong-champion-section">
-                <h3>あなたの得意なピック</h3>
-                <ol id="strongChampionList" class="strong-champion-list"></ol>
-                <p id="strongChampionEmpty" class="pool-empty">条件に合うチャンピオン実績がありません。</p>
-              </section>
-
-              <section class="strong-champion-section">
-                <h3><span id="strongLaneMatchupTitle">TOP</span> 対面別の得意ピック</h3>
-                <ol id="strongLaneMatchupList" class="strong-champion-list"></ol>
-                <p id="strongLaneMatchupEmpty" class="pool-empty">条件に合う対面データがありません。</p>
-              </section>
+            <section class="stats-table-section">
+              <h3>自分がプレイしたチャンピオン統計</h3>
+              <div class="stats-table-wrap">
+                <table class="stats-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">チャンピオン</th>
+                      <th scope="col"><button id="playedStatsSortGamesButton" class="stats-sort-button" type="button">試合数</button></th>
+                      <th scope="col"><button id="playedStatsSortWinRateButton" class="stats-sort-button" type="button">勝率</button></th>
+                      <th scope="col">K/D/A</th>
+                    </tr>
+                  </thead>
+                  <tbody id="playedStatsTableBody"></tbody>
+                </table>
+              </div>
+              <p id="playedStatsEmpty" class="pool-empty">条件に合うチャンピオン実績がありません。</p>
             </section>
           </section>
 
-          <section id="countersView" class="stats-subview" hidden>
-            <nav id="counterLaneTabs" class="lane-tabs" aria-label="counter lane switcher"></nav>
+          <section id="opponentStatsView" class="stats-subview" hidden>
+            <nav id="opponentStatsLaneTabs" class="lane-tabs" aria-label="lane opponent switcher"></nav>
 
-            <section class="counters-grid">
-              <section class="weak-champion-section">
-                <h3>相手にいると苦手</h3>
-                <ol id="weakEnemyChampionList" class="weak-champion-list"></ol>
-                <p id="weakEnemyChampionEmpty" class="pool-empty">条件に合う試合データがありません。</p>
-              </section>
-
-              <section class="weak-champion-section">
-                <h3><span id="weakLaneChampionTitle">TOP</span> 対面で苦手</h3>
-                <ol id="weakLaneChampionList" class="weak-champion-list"></ol>
-                <p id="weakLaneChampionEmpty" class="pool-empty">条件に合う対面データがありません。</p>
-              </section>
+            <section class="stats-table-section">
+              <h3>レーンで対面したチャンピオン統計</h3>
+              <div class="stats-table-wrap">
+                <table class="stats-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">対面チャンピオン</th>
+                      <th scope="col"><button id="opponentStatsSortGamesButton" class="stats-sort-button" type="button">対面試合数</button></th>
+                      <th scope="col"><button id="opponentStatsSortWinRateButton" class="stats-sort-button" type="button">対面勝率</button></th>
+                      <th scope="col">自分のK/D/A</th>
+                    </tr>
+                  </thead>
+                  <tbody id="opponentStatsTableBody"></tbody>
+                </table>
+              </div>
+              <p id="opponentStatsEmpty" class="pool-empty">条件に合う対面データがありません。</p>
             </section>
           </section>
         </section>

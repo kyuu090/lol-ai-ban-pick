@@ -6,7 +6,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "build": "electron-builder --win portable",
+    "build": "electron-builder --win",
     "build:locked": "npm ci && npm run build",
     "pack": "electron-builder --dir",
     "pack:locked": "npm ci && npm run pack",
@@ -40,11 +40,18 @@
       "icon": "assets/icon.ico",
       "signAndEditExecutable": false,
       "target": [
-        "portable"
+        "portable",
+        "nsis"
       ]
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     }
   },
   "dependencies": {
