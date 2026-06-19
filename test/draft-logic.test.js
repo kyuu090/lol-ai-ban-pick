@@ -242,6 +242,43 @@ test('createInGameContext handles missing champ-select snapshot', () => {
   });
 });
 
+test('createInGameContext ignores off-position opponents and caps team snapshots', () => {
+  const champSelect = {
+    localPlayerCellId: 1,
+    myTeam: [
+      { cellId: 1, championId: 103, assignedPosition: 'MIDDLE' },
+      { cellId: 2, championId: 122, assignedPosition: 'TOP' },
+      { cellId: 3, championId: 64, assignedPosition: 'JUNGLE' },
+      { cellId: 4, championId: 202, assignedPosition: 'BOTTOM' },
+      { cellId: 5, championId: 412, assignedPosition: 'UTILITY' },
+      { cellId: 99, championId: 99, assignedPosition: 'MIDDLE' }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 24, assignedPosition: 'TOP' },
+      { cellId: 7, championId: 121, assignedPosition: 'JUNGLE' },
+      { cellId: 8, championId: 145, assignedPosition: 'BOTTOM' },
+      { cellId: 9, championId: 111, assignedPosition: 'UTILITY' },
+      { cellId: 10, championId: 0, championPickIntent: 134, assignedPosition: 'MIDDLE' },
+      { cellId: 100, championId: 55, assignedPosition: 'MIDDLE' }
+    ]
+  };
+  const middleMatchup = { championId: 103, opponentChampionId: 134, position: 'MIDDLE', games: 3, winRate: 0.33 };
+  const wrongPositionMatchup = { championId: 103, opponentChampionId: 24, position: 'TOP', games: 9, winRate: 1 };
+
+  assert.deepEqual(createInGameContext({
+    champSelect,
+    matchupStats: [wrongPositionMatchup, middleMatchup]
+  }), {
+    championId: 103,
+    position: 'MIDDLE',
+    summonerName: '',
+    opponentChampionId: 134,
+    directMatchupStats: middleMatchup,
+    allyChampionIds: [103, 122, 64, 202, 412],
+    enemyChampionIds: [24, 121, 145, 111, 134]
+  });
+});
+
 test('getBestIntoOpponentStats filters by opponent and position then ranks best win rate', () => {
   const stats = [
     { championId: 127, opponentChampionId: 103, position: 'MIDDLE', games: 4, winRate: 1 },
