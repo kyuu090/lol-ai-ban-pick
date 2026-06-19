@@ -360,7 +360,7 @@ function renderState(state) {
   }
   renderStatus(state);
   renderMatchHistoryStatus(state.matchHistoryStatus);
-  renderMatchDataSummary(state.matchHistorySummary);
+  renderMatchDataSummary(state.matchHistorySummary, state.settings);
   renderSettings(state.settings);
   renderChampionPool();
   renderCounters();
@@ -380,11 +380,23 @@ function syncDraftAutoFocus(state) {
   wasInChampSelect = inChampSelect;
 }
 
-function renderMatchDataSummary(summary) {
+function renderMatchDataSummary(summary, settings) {
   const matchCount = Number(summary?.normalizedMatches || 0);
+  const hasRiotApiToken = Boolean(settings?.hasRiotApiToken);
+
+  if (!hasRiotApiToken) {
+    elements.matchDataCount.textContent = matchCount > 0 ? `${matchCount} matches` : 'No data';
+    elements.matchDataRange.textContent = 'Riot API Tokenが設定されていません。Settingsタブから設定できます。';
+    elements.matchDataRange.classList.add('is-error');
+    elements.matchDataSeasonHint.hidden = true;
+    return;
+  }
+
+  elements.matchDataRange.classList.remove('is-error');
+
   if (matchCount <= 0) {
     elements.matchDataCount.textContent = 'No data';
-    elements.matchDataRange.textContent = 'Riot試合取得後に表示します';
+    elements.matchDataRange.textContent = '試合データが取得されていません';
     elements.matchDataSeasonHint.hidden = true;
     return;
   }
@@ -1705,6 +1717,7 @@ async function saveRiotApiToken() {
     const settings = await window.lcuApi.updateRiotApiToken(riotApiToken);
     elements.riotApiTokenInput.value = '';
     renderSettings(settings);
+    renderMatchDataSummary(lastRenderedState?.matchHistorySummary, settings);
     logDebug('Riot API token saved', { hasRiotApiToken: settings.hasRiotApiToken });
     elements.settingsMessage.textContent = settings.hasRiotApiToken
       ? 'Riot APIトークンを保存しました。'

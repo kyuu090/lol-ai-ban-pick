@@ -120,6 +120,10 @@ code {
   font-size: 12px;
 }
 
+.match-data-summary #matchDataRange.is-error {
+  color: var(--danger);
+}
+
 .match-data-season-hint {
   align-self: start;
   background: rgba(212, 175, 55, 0.1);
