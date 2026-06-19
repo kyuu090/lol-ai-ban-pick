@@ -49,10 +49,43 @@
           <p>ロビーまたはチャンピオン選択に入ると、ドラフト画面に切り替わります。</p>
         </section>
 
-        <section id="inGameView" class="center-state" hidden>
-          <p class="eyebrow">Gameflow</p>
-          <h2>試合中です</h2>
-          <p>試合が終了したら、次のドラフトを監視します。</p>
+        <section id="inGameView" class="in-game-view" hidden>
+          <section class="in-game-hero">
+            <div class="in-game-portrait" id="inGameSelfPortrait">?</div>
+            <div class="in-game-main">
+              <p class="eyebrow">Current Game</p>
+              <h2 id="inGameChampionName">試合中です</h2>
+              <p id="inGameChampionDetail">試合が終了したら、次のドラフトを監視します。</p>
+              <div id="inGameSelfStats" class="in-game-stat-row"></div>
+            </div>
+          </section>
+
+          <section class="in-game-grid">
+            <article class="in-game-card">
+              <div class="in-game-card-header">
+                <p class="eyebrow">Matchup</p>
+                <h3 id="inGameMatchupTitle">対面メモ</h3>
+              </div>
+              <div id="inGameMatchupBody" class="in-game-matchup-body"></div>
+            </article>
+
+            <article class="in-game-card">
+              <div class="in-game-card-header">
+                <p class="eyebrow">Draft Notes</p>
+                <h3>構成スナップショット</h3>
+              </div>
+              <div class="in-game-team-columns">
+                <div>
+                  <span class="in-game-team-label">ALLY</span>
+                  <div id="inGameAllyTeam" class="in-game-chip-list"></div>
+                </div>
+                <div>
+                  <span class="in-game-team-label">ENEMY</span>
+                  <div id="inGameEnemyTeam" class="in-game-chip-list"></div>
+                </div>
+              </div>
+            </article>
+          </section>
         </section>
 
         <section id="champSelectView" class="draft-board" hidden>
