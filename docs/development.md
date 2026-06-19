@@ -125,6 +125,20 @@ git push origin v0.1.1
 
 リリース作成後は、GitHub Release の内容、添付された exe、リリースノートを確認します。未署名 exe のため、利用者環境では Windows SmartScreen の警告が出る可能性があります。
 
+## Windows Defender / SmartScreen 対策
+
+未署名の Windows portable exe は、配布直後やダウンロード数が少ない間に Microsoft Defender、SmartScreen、Smart App Control で警告や誤検知の対象になる可能性があります。これは配布ファイルの内容だけでなく、署名、配布元、ダウンロード実績、ファイルの評判にも影響されます。
+
+当面の方針:
+
+- GitHub Release から配布し、配布元を固定します。
+- リリースタグ、`package.json` の `version`、exe のファイル名を一致させます。
+- Release note に変更内容を残し、利用者が出所と内容を確認できるようにします。
+- Defender で実際に誤検知された場合のみ、Microsoft Security Intelligence の submission portal から `Incorrectly detected as malware/malicious` として申請します。
+- CI/CD から submission portal へ毎ビルド自動申請する仕組みは、公式に安定した API と認証方式を確認できるまで入れません。
+
+長期的には、配布用 exe へのコード署名を検討します。コード署名証明書を使うと、発行元の識別と評判の蓄積がしやすくなり、SmartScreen 警告を減らせる可能性があります。ただし証明書の費用、秘密鍵の保管、GitHub Actions での署名手順、更新時の運用が必要になります。
+
 ## 実装概要
 
 - Electron のメインプロセスは `main.js` です。
