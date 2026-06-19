@@ -1,12 +1,12 @@
 {
   "name": "lol-ai-draft-coach",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local Electron app for viewing League Client Update API draft state.",
   "author": "lol-ai-banpick",
   "main": "main.js",
   "private": true,
   "scripts": {
-    "build": "electron-builder --win",
+    "build": "electron-builder --win --publish never",
     "build:locked": "npm ci && npm run build",
     "pack": "electron-builder --dir",
     "pack:locked": "npm ci && npm run pack",
