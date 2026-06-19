@@ -1163,8 +1163,8 @@ function renderChampSelect(champSelect) {
   const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
   const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
   const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
-  const activeAction = getActiveAction(champSelect);
   const localCellId = champSelect?.localPlayerCellId;
+  const activeAction = getActiveAction(champSelect, localCellId);
   const localMember = allyTeam.find((member) => member.cellId === localCellId);
   const isLocalTurn = activeAction?.actorCellId === localCellId;
   if (markedLaneOpponentCellId !== null && !enemyTeam.some((member) => member.cellId === markedLaneOpponentCellId)) {
@@ -1302,9 +1302,10 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   if (activeAction) {
     const isActionInProgress = Boolean(activeAction.isInProgress);
     const isLocalTurn = isDraftActionPhase && isActionInProgress && activeAction.actorCellId === localCellId;
+    const insightType = isDraftActionPhase && isActionInProgress ? activeAction.type : null;
     const actionLabel = activeAction.type === 'ban' ? 'BAN' : 'PICK';
     elements.currentAction.textContent = isLocalTurn ? `YOUR ${actionLabel}` : isDraftActionPhase && isActionInProgress ? `${actionLabel} PHASE` : 'Waiting';
-    renderDraftInsights(isLocalTurn ? activeAction.type : null, { champSelect, localMember });
+    renderDraftInsights(insightType, { champSelect, localMember });
     elements.currentPick.textContent = isLocalTurn
       ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
       : isDraftActionPhase && isActionInProgress ? `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです` : 'チャンピオン選択情報を監視しています。';

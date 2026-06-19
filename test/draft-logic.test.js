@@ -59,6 +59,16 @@ test('getActiveAction prefers in-progress action before pending actions', () => 
   assert.equal(getActiveAction({ actions: [[{ completed: true }]] }), null);
 });
 
+test('getActiveAction prefers local in-progress action during simultaneous draft turns', () => {
+  const firstPick = { id: 1, actorCellId: 1, type: 'pick', isInProgress: true, completed: false };
+  const secondPick = { id: 2, actorCellId: 2, type: 'pick', isInProgress: true, completed: false };
+  const localBan = { id: 3, actorCellId: 4, type: 'ban', isInProgress: true, completed: false };
+
+  assert.equal(getActiveAction({ actions: [[firstPick, secondPick]] }, 2), secondPick);
+  assert.equal(getActiveAction({ actions: [[firstPick], [localBan]] }, 4), localBan);
+  assert.equal(getActiveAction({ actions: [[firstPick, secondPick]] }, 9), firstPick);
+});
+
 test('getDraftPanelState distinguishes logged out, champ select, and in-game states', () => {
   assert.deepEqual(getDraftPanelState({ lcuStatus: 'disconnected' }), {
     phase: null,

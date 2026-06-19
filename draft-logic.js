@@ -107,8 +107,17 @@
     };
   }
 
-  function getActiveAction(champSelect) {
+  function getActiveAction(champSelect, preferredActorCellId = null) {
     const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
+    const preferredCellId = Number(preferredActorCellId);
+    if (Number.isInteger(preferredCellId)) {
+      const preferredAction = actions.find((action) => (
+        action?.isInProgress &&
+        action.actorCellId === preferredCellId
+      ));
+      if (preferredAction) return preferredAction;
+    }
+
     return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
   }
 
