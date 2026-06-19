@@ -386,6 +386,7 @@ h2 {
   min-height: 32px;
   min-width: 104px;
   padding: 0 14px;
+  white-space: nowrap;
 }
 
 .stats-subtab.active {
@@ -469,6 +470,214 @@ h2 {
   min-height: 34px;
 }
 
+.stats-table-section {
+  background: rgba(8, 18, 28, 0.48);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 13px;
+}
+
+.stats-table-section h3 {
+  color: #f1ddb0;
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.stats-table-wrap {
+  overflow-x: auto;
+}
+
+.stats-table {
+  border-collapse: collapse;
+  min-width: 560px;
+  width: 100%;
+}
+
+.stats-table th,
+.stats-table td {
+  border-bottom: 1px solid rgba(154, 167, 184, 0.14);
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.stats-table thead th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stats-table tbody th {
+  font-weight: 800;
+  position: relative;
+}
+
+.stats-table tbody tr:hover {
+  background: rgba(26, 35, 48, 0.38);
+}
+
+.stats-table tbody tr:last-child th,
+.stats-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.stats-sort-button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  min-height: 0;
+  padding: 0;
+  text-transform: inherit;
+}
+
+.stats-sort-button.active {
+  color: #d7efff;
+}
+
+.stats-sort-button.active[data-sort-direction="desc"]::after {
+  content: " v";
+}
+
+.stats-sort-button.active[data-sort-direction="asc"]::after {
+  content: " ^";
+}
+
+.stats-table-champion {
+  font-size: 13px;
+}
+
+.stats-table-clickable-row {
+  cursor: pointer;
+}
+
+.stats-table-clickable-row td:last-child {
+  padding-right: 34px;
+  position: relative;
+}
+
+.stats-table-clickable-row td:last-child::after {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  color: var(--muted);
+  content: "";
+  height: 7px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-65%) rotate(45deg);
+  transform-origin: center;
+  width: 7px;
+}
+
+.stats-table-clickable-row:hover td:last-child::after,
+.stats-table-clickable-row.expanded td:last-child::after {
+  color: #a9ecfb;
+}
+
+.stats-table-clickable-row.expanded td:last-child::after {
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.stats-table-clickable-row.expanded {
+  background: rgba(26, 35, 48, 0.5);
+}
+
+.stats-opponent-detail-row td {
+  background: rgba(8, 18, 28, 0.36);
+  padding: 10px;
+}
+
+.stats-opponent-detail {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stats-opponent-detail-group {
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 6px;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+}
+
+.stats-opponent-detail-group.won {
+  background: rgba(41, 154, 204, 0.1);
+  border-color: rgba(95, 216, 255, 0.28);
+}
+
+.stats-opponent-detail-group.lost {
+  background: rgba(212, 72, 72, 0.1);
+  border-color: rgba(255, 145, 145, 0.28);
+}
+
+.stats-opponent-detail-group h4 {
+  font-size: 11px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.stats-opponent-detail-group.won h4 {
+  color: #a9ecfb;
+}
+
+.stats-opponent-detail-group.lost h4 {
+  color: #ffb0b0;
+}
+
+.stats-opponent-detail-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.stats-opponent-detail-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stats-opponent-detail-pick {
+  align-items: center;
+  background: rgba(8, 18, 28, 0.62);
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 5px;
+  display: inline-flex;
+  gap: 5px;
+  min-height: 24px;
+  min-width: 0;
+  padding: 3px 6px 3px 3px;
+}
+
+.stats-opponent-detail-pick.won {
+  border-color: rgba(95, 216, 255, 0.28);
+}
+
+.stats-opponent-detail-pick.lost {
+  border-color: rgba(255, 145, 145, 0.28);
+}
+
+.stats-opponent-detail-pick b {
+  color: #d9e4f2;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.stats-opponent-detail-pick small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .weak-champion-list,
 .strong-champion-list {
   display: grid;
@@ -498,8 +707,32 @@ h2 {
 .weak-champion-main,
 .strong-champion-main {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
+}
+
+.stats-side-badge {
+  border: 1px solid rgba(154, 167, 184, 0.2);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 900;
+  justify-self: start;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.stats-side-badge.you {
+  background: rgba(41, 154, 204, 0.14);
+  border-color: rgba(95, 216, 255, 0.38);
+  color: #9fe9ff;
+}
+
+.stats-side-badge.enemy {
+  background: rgba(212, 72, 72, 0.12);
+  border-color: rgba(255, 145, 145, 0.34);
+  color: #ffb0b0;
 }
 
 .weak-champion-name,
@@ -526,27 +759,65 @@ h2 {
   padding-left: 10px;
 }
 
-.weak-self-pick-row {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+.weak-lane-matchup-item .weak-self-pick-summary {
+  border-left: 0;
+  border-right: 1px solid rgba(154, 167, 184, 0.14);
+  padding-left: 0;
+  padding-right: 10px;
 }
 
-.weak-self-pick-marker {
+.strong-lane-matchup-item .weak-self-pick-summary {
+  border-left: 1px solid rgba(154, 167, 184, 0.14);
+  border-right: 0;
+  padding-left: 10px;
+  padding-right: 0;
+}
+
+.stats-empty-side-note {
   color: var(--muted);
-  flex: 0 0 14px;
   font-size: 11px;
+  font-weight: 700;
+}
+
+.weak-self-pick-row {
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px;
+}
+
+.weak-self-pick-row.lost {
+  background: rgba(212, 72, 72, 0.1);
+  border-color: rgba(255, 145, 145, 0.28);
+}
+
+.weak-self-pick-row.won {
+  background: rgba(41, 154, 204, 0.1);
+  border-color: rgba(95, 216, 255, 0.28);
+}
+
+.weak-self-pick-group-title {
+  font-size: 10px;
   font-weight: 900;
   line-height: 1;
 }
 
-.weak-self-pick-row.lost .weak-self-pick-marker {
-  color: #ff9a9a;
+.weak-self-pick-row.lost .weak-self-pick-group-title {
+  color: #ffb0b0;
 }
 
-.weak-self-pick-row.won .weak-self-pick-marker {
+.weak-self-pick-row.won .weak-self-pick-group-title {
   color: #a9ecfb;
+}
+
+.weak-self-pick-group-tokens {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
 }
 
 .weak-self-pick-token {

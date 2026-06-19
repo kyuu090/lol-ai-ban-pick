@@ -32,6 +32,47 @@ debug.old.log
 
 ログは主に URI と eventType を出している。現在のログでは、各 event の `data` の要約が十分に残っていないため、今後は対象 endpoint に限って安全な要約ログを追加すると調査しやすい。
 
+## Champion data と role 情報の調査
+
+`debug.log` へ一時的に payload sample を出して、`/lol-game-data/assets/v1/champion-summary.json` の内容を確認した。
+
+確認した `champion-summary.json` の root key:
+
+```text
+alias
+contentId
+description
+id
+name
+roles
+squarePortraitPath
+```
+
+サンプル:
+
+```js
+{
+  id: 1,
+  alias: 'Annie',
+  roles: ['mage', 'support']
+}
+
+{
+  id: 2,
+  alias: 'Olaf',
+  roles: ['fighter', 'tank']
+}
+```
+
+結論:
+
+- `champion-summary.json` には `roles` がある。
+- この `roles` は `mage` / `support` / `fighter` / `tank` のようなチャンピオンクラス分類であり、`TOP` / `JUNGLE` / `MIDDLE` / `BOTTOM` / `UTILITY` のような主流レーン情報ではない。
+- そのため、LCU の `champion-summary.json` だけでは「チャンピオンごとに主に使われているロール」は判定できない。
+- 主流レーンを使う場合は Riot API Match-V5 の `teamPosition` / `individualPosition` から自前集計するか、外部メタ統計または静的マップを別途持つ必要がある。
+
+`/lol-champ-select/v1/grid-champions/{championId}` についても一時ログを入れたが、確認時は `gameflowPhase: 'None'` かつ `/lol-champ-select/v1/session` が 404 で、追加後の `grid-champions` payload sample は取得できなかった。Champ Select 中に再調査する場合は、対象 endpoint の `data` を数件だけ要約ログに出す。
+
 ## 使えそうな endpoint
 
 ### `/lol-gameflow/v1/gameflow-phase`
