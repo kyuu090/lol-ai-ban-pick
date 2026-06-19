@@ -25,6 +25,35 @@ npm test
 
 Node.js 標準の `node:test` で、LCU lockfile のパース、認証ヘッダ生成、チャンピオン一覧の正規化、ドラフト表示用の BAN 集計・ターン判定・表示状態判定、Riot API retry、試合履歴の正規化・集計、match history 更新時の ID 重複排除を確認します。
 
+## 開発フロー
+
+通常の開発は、`main` から作業ブランチを作って Pull Request で取り込む流れにします。
+
+```bash
+git checkout main
+git pull
+git checkout -b feature/<topic>
+```
+
+実装中は、影響範囲に応じて `npm test` と `npm run build` を手元で確認します。小さなロジック変更であれば `npm test` を必須、Electron の起動・パッケージング・配布物に関わる変更であれば `npm run build` まで確認します。
+
+Pull Request は `main` 向けに作成します。PR 作成・更新時には GitHub Actions で以下が実行されます。
+
+- `Build`: `npm test`、Windows portable exe のビルド、artifact 保存
+- `Security Scan`: `npm audit` と CodeQL
+
+CI がすべて通り、レビューで問題がなければ `main` に merge します。`main` への push 後にも `Build` と `Security Scan` が実行されるため、merge 後の状態も確認できます。
+
+## GitHub Actions
+
+`.github/workflows/` 配下に CI / Release 用 workflow を置きます。
+
+- `build.yml`: PR、`main` push、手動実行でテストと Windows portable exe のビルドを実行し、artifact として保存します。
+- `security-scan.yml`: PR、`main` push、週次、手動実行で依存関係と静的解析の脆弱性診断を実行します。
+- `release.yml`: `v*` タグ push で Windows portable exe をビルドし、GitHub Release に添付します。
+
+GitHub Actions では lockfile を前提にするため、依存関係の復元は `npm ci` を使います。
+
 ## Windows ビルド
 
 スタンドアロン実行できる portable exe を作る場合は次を使います。
@@ -65,6 +94,36 @@ npm run pack:locked
 ```
 
 このプロジェクトでは未署名ビルドとして `signAndEditExecutable: false` を使います。署名が必要になった場合は、Windows の symlink 権限または electron-builder の署名用キャッシュ展開に注意してください。
+
+## リリース手順
+
+リリースは `main` に取り込まれた commit から行います。GitHub Release は `v*` タグを push したタイミングで自動作成します。
+
+1. リリース対象の変更を PR 経由で `main` に merge します。
+2. `package.json` の `version` を次のバージョンに更新します。
+3. バージョン更新も PR 経由で `main` に merge します。
+4. `main` を最新化し、リリースタグを作成して push します。
+
+```bash
+git checkout main
+git pull
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+タグ名は `package.json` の `version` と一致させます。例えば `version` が `0.1.1` の場合、タグは `v0.1.1` にします。
+
+タグ push 後、`Release` workflow が次を実行します。
+
+- `npm ci`
+- `npm test`
+- `npm run build`
+- `dist/*.exe` を GitHub Release に添付
+- GitHub の自動生成リリースノートを作成
+
+成果物は `package.json` の `build.portable.artifactName` に従い、`BanPick-ai-<version>-portable.exe` として生成されます。
+
+リリース作成後は、GitHub Release の内容、添付された exe、リリースノートを確認します。未署名 exe のため、利用者環境では Windows SmartScreen の警告が出る可能性があります。
 
 ## 実装概要
 
