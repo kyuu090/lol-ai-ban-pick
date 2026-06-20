@@ -42,13 +42,10 @@ const elements = {
   opponentStatsEmpty: document.querySelector('#opponentStatsEmpty'),
   championPoolMessage: document.querySelector('#championPoolMessage'),
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
-  riotApiTokenInput: document.querySelector('#riotApiTokenInput'),
-  riotApiTokenStatus: document.querySelector('#riotApiTokenStatus'),
   riotPlatformRegionSelect: document.querySelector('#riotPlatformRegionSelect'),
   riotRegionalRouteStatus: document.querySelector('#riotRegionalRouteStatus'),
   chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
   saveLolDirButton: document.querySelector('#saveLolDirButton'),
-  saveRiotApiTokenButton: document.querySelector('#saveRiotApiTokenButton'),
   saveRiotPlatformRegionButton: document.querySelector('#saveRiotPlatformRegionButton'),
   settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
@@ -397,15 +394,6 @@ function syncDraftAutoFocus(state) {
 
 function renderMatchDataSummary(summary, settings) {
   const matchCount = Number(summary?.normalizedMatches || 0);
-  const hasRiotApiToken = Boolean(settings?.hasRiotApiToken);
-
-  if (!hasRiotApiToken) {
-    elements.matchDataCount.textContent = matchCount > 0 ? `${matchCount} matches` : 'No data';
-    elements.matchDataRange.textContent = 'Riot API Tokenが設定されていません。Settingsタブから設定できます。';
-    elements.matchDataRange.classList.add('is-error');
-    elements.matchDataSeasonHint.hidden = true;
-    return;
-  }
 
   elements.matchDataRange.classList.remove('is-error');
 
@@ -503,12 +491,8 @@ function renderSettings(settings) {
     elements.lolInstallDirInput.value = settings.lolInstallDir;
   }
 
-  elements.riotApiTokenStatus.textContent = settings.hasRiotApiToken
-    ? '登録済みです。空欄で保存すると削除できます。'
-    : '未登録';
-
   renderRiotPlatformRegions(settings);
-  elements.riotRegionalRouteStatus.textContent = `Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
+  elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
 }
 
 function renderRiotPlatformRegions(settings) {
@@ -2280,28 +2264,6 @@ async function saveLolInstallDir() {
   }
 }
 
-async function saveRiotApiToken() {
-  const riotApiToken = elements.riotApiTokenInput.value.trim();
-  elements.saveRiotApiTokenButton.disabled = true;
-  elements.settingsMessage.textContent = '';
-
-  try {
-    const settings = await window.lcuApi.updateRiotApiToken(riotApiToken);
-    elements.riotApiTokenInput.value = '';
-    renderSettings(settings);
-    renderMatchDataSummary(lastRenderedState?.matchHistorySummary, settings);
-    logDebug('Riot API token saved', { hasRiotApiToken: settings.hasRiotApiToken });
-    elements.settingsMessage.textContent = settings.hasRiotApiToken
-      ? 'Riot APIトークンを保存しました。'
-      : 'Riot APIトークンを削除しました。';
-  } catch (error) {
-    logWarn('Riot API token save failed', { message: error.message, stack: error.stack });
-    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
-  } finally {
-    elements.saveRiotApiTokenButton.disabled = false;
-  }
-}
-
 async function saveRiotPlatformRegion() {
   const riotPlatformRegion = elements.riotPlatformRegionSelect.value;
   elements.saveRiotPlatformRegionButton.disabled = true;
@@ -2387,7 +2349,6 @@ elements.statsSubtabButtons.forEach((button) => {
 });
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
-elements.saveRiotApiTokenButton.addEventListener('click', saveRiotApiToken);
 elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
