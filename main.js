@@ -9,10 +9,11 @@ const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-lo
 const {
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
+  DEFAULT_RIOT_BFF_BASE_URL,
   createRiotApiHosts,
-  isRiotApiAuthError,
   normalizeRiotPlatformRegion,
-  requestRiotJson
+  parseRetryAfterMs,
+  requestRiotBffJson
 } = require('./riot-api');
 const {
   aggregateEnemyChampionStats,
@@ -48,7 +49,7 @@ const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
-const RIOT_API_TOKEN_HELP_MESSAGE = 'Riot API Tokenが正しく設定されているか確認してください。Settingsタブから確認できます。';
+const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
 
 let mainWindow;
 let lcuConnection = null;
@@ -79,8 +80,17 @@ if (process.platform === 'win32') {
 function createDefaultSettings() {
   return {
     lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
-    riotApiToken: '',
     riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION
+  };
+}
+
+function normalizeSettings(sourceSettings = {}) {
+  const defaults = createDefaultSettings();
+  return {
+    lolInstallDir: typeof sourceSettings.lolInstallDir === 'string' && sourceSettings.lolInstallDir.trim()
+      ? sourceSettings.lolInstallDir
+      : defaults.lolInstallDir,
+    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion)
   };
 }
 
@@ -151,7 +161,6 @@ function createPublicSettings(sourceSettings = settings) {
 
   return {
     lolInstallDir: sourceSettings.lolInstallDir,
-    hasRiotApiToken: Boolean(sourceSettings.riotApiToken),
     riotPlatformRegion,
     riotRegionalRoute: riotHosts.regionalRoute,
     riotPlatformRegions: RIOT_PLATFORM_REGIONS
@@ -186,10 +195,7 @@ function getPuuidFromSummoner(summoner) {
 async function loadSettings() {
   try {
     const raw = await fs.readFile(getSettingsPath(), 'utf8');
-    settings = {
-      ...createDefaultSettings(),
-      ...JSON.parse(raw)
-    };
+    settings = normalizeSettings(JSON.parse(raw));
     log.debug('Settings loaded', { path: getSettingsPath(), settings: createPublicSettings(settings) });
   } catch {
     settings = createDefaultSettings();
@@ -316,9 +322,10 @@ async function saveChampionPool(_event, nextChampionPool) {
 
 async function saveSettings(nextSettings) {
   settings = {
-    ...settings,
+    ...normalizeSettings(settings),
     ...nextSettings
   };
+  settings = normalizeSettings(settings);
 
   await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
   await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
@@ -407,6 +414,90 @@ function encodePathSegment(value) {
   return encodeURIComponent(String(value));
 }
 
+function createRiotBffPath(region, segments, query = null) {
+  const path = `/api/riot/${[
+    region,
+    ...segments
+  ].map(encodePathSegment).join('/')}`;
+
+  if (!query) return path;
+
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    params.set(key, String(value));
+  });
+
+  const queryString = params.toString();
+  return queryString ? `${path}?${queryString}` : path;
+}
+
+function requestBffJson({ path, onRetry = null, maxRetries = undefined }) {
+  return requestRiotBffJson({
+    baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
+    path,
+    onRetry,
+    ...(maxRetries === undefined ? {} : { maxRetries })
+  });
+}
+
+function requestBffHealth({ onRetry = null } = {}) {
+  return requestBffJson({
+    path: '/health',
+    onRetry
+  });
+}
+
+function requestBffAccountByRiotId({ region, riotId, onRetry = null }) {
+  return requestBffJson({
+    path: createRiotBffPath(region, ['account', 'by-riot-id', riotId.gameName, riotId.tagLine]),
+    onRetry
+  });
+}
+
+function requestBffMatchIds({ region, puuid, start, count, startTime = null, onRetry = null }) {
+  return requestBffJson({
+    path: createRiotBffPath(region, ['matches', 'by-puuid', puuid, 'ids'], {
+      start,
+      count,
+      startTime
+    }),
+    onRetry
+  });
+}
+
+function normalizeBffMatchIdsResponse(body) {
+  return Array.isArray(body?.matchIds) ? body.matchIds : [];
+}
+
+function normalizeBffMatchDetailsResponse(body) {
+  return {
+    matchesById: body?.matchesById && typeof body.matchesById === 'object' ? body.matchesById : {},
+    failedMatchIds: Array.isArray(body?.failedMatchIds) ? body.failedMatchIds : [],
+    retryAfter: body?.retryAfter ?? null
+  };
+}
+
+function applyBffMatchDetailsResponse({ response, pending, matchesById }) {
+  let fetchedMatches = 0;
+
+  Object.entries(response.matchesById).forEach(([matchId, detail]) => {
+    if (!pending.has(matchId)) return;
+    matchesById[matchId] = detail;
+    pending.delete(matchId);
+    fetchedMatches += 1;
+  });
+
+  const failedMatchIds = new Set(response.failedMatchIds);
+  [...pending].forEach((matchId) => {
+    if (!response.matchesById[matchId] && !failedMatchIds.has(matchId)) {
+      pending.delete(matchId);
+    }
+  });
+
+  return fetchedMatches;
+}
+
 function getDefaultSeasonStartAt() {
   const year = new Date().getFullYear();
   return new Date(`${year}-01-01T00:00:00+09:00`);
@@ -453,17 +544,18 @@ function createRiotRetryHandler({ onRateLimitStart = null } = {}) {
   };
 }
 
-async function collectMatchIdsByMode({ host, puuid, apiToken, requestedMatches, mode, onRetry }) {
+async function collectMatchIdsByMode({ region, puuid, requestedMatches, mode, onRetry }) {
   if (mode !== 'season') {
-    const matchIds = await requestRiotJson({
-      host,
-      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=0&count=${requestedMatches}`,
-      apiToken,
+    const body = await requestBffMatchIds({
+      region,
+      puuid,
+      start: 0,
+      count: requestedMatches,
       onRetry
     });
     clearRiotRateLimitCountdown();
 
-    return Array.isArray(matchIds) ? matchIds.slice(0, requestedMatches) : [];
+    return normalizeBffMatchIdsResponse(body).slice(0, requestedMatches);
   }
 
   const seasonStartAt = getDefaultSeasonStartAt();
@@ -471,14 +563,16 @@ async function collectMatchIdsByMode({ host, puuid, apiToken, requestedMatches, 
   const allMatchIds = [];
 
   for (let start = 0; ; start += RIOT_MATCH_IDS_PAGE_SIZE) {
-    const page = await requestRiotJson({
-      host,
-      path: `/lol/match/v5/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=${start}&count=${RIOT_MATCH_IDS_PAGE_SIZE}&startTime=${startTime}`,
-      apiToken,
+    const page = await requestBffMatchIds({
+      region,
+      puuid,
+      start,
+      count: RIOT_MATCH_IDS_PAGE_SIZE,
+      startTime,
       onRetry
     });
     clearRiotRateLimitCountdown();
-    const pageMatchIds = Array.isArray(page) ? page : [];
+    const pageMatchIds = normalizeBffMatchIdsResponse(page);
     allMatchIds.push(...pageMatchIds);
 
     updateMatchHistoryStatus({
@@ -491,6 +585,55 @@ async function collectMatchIdsByMode({ host, puuid, apiToken, requestedMatches, 
   }
 
   return allMatchIds;
+}
+
+async function requestBffMatchDetails({ region, matchIds }) {
+  const body = await requestBffJson({
+    path: createRiotBffPath(region, ['matches', 'details'], {
+      matchIds: matchIds.join(',')
+    }),
+    maxRetries: 0
+  });
+
+  return normalizeBffMatchDetailsResponse(body);
+}
+
+async function collectBffMatchDetailsBatch({
+  region,
+  matchIds,
+  matchesById,
+  onRetry,
+  publishCurrentSnapshot,
+  maxAttempts = 3
+}) {
+  const pending = new Set(matchIds);
+  let fetchedMatches = 0;
+
+  for (let attempt = 0; attempt < maxAttempts && pending.size > 0; attempt += 1) {
+    const targetMatchIds = [...pending];
+    const response = await requestBffMatchDetails({
+      region,
+      matchIds: targetMatchIds
+    });
+
+    fetchedMatches += applyBffMatchDetailsResponse({ response, pending, matchesById });
+
+    if (pending.size === 0) break;
+
+    const retryDelayMs = parseRetryAfterMs(response.retryAfter);
+    if (retryDelayMs === null || attempt + 1 >= maxAttempts) break;
+
+    await publishCurrentSnapshot({ swallowErrors: true });
+    if (typeof onRetry === 'function') {
+      await onRetry({ attempt: attempt + 1, delayMs: retryDelayMs });
+    }
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  }
+
+  return {
+    fetchedMatches,
+    failedMatchIds: [...pending]
+  };
 }
 
 async function publishMatchHistorySnapshot({
@@ -583,7 +726,7 @@ function isInBlockingGamePhase(phase) {
 }
 
 function canAutoCollectRiotMatchHistory() {
-  if (matchHistoryInProgress || !settings.riotApiToken) return false;
+  if (matchHistoryInProgress) return false;
   if (isInBlockingGamePhase(appState.gameflowPhase)) return false;
   if (!getPuuidFromSummoner(appState.summoner)) return false;
 
@@ -608,7 +751,6 @@ function scheduleAutoRiotMatchHistory(reason, delayMs) {
     if (!canAutoCollectRiotMatchHistory()) {
       log.debug('Automatic Riot match history collection skipped', {
         reason,
-        hasRiotApiToken: Boolean(settings.riotApiToken),
         lcuStatus: appState.lcuStatus,
         gameflowPhase: appState.gameflowPhase,
         matchHistoryInProgress
@@ -658,17 +800,6 @@ async function collectRiotMatchHistory(_event, options = {}) {
   if (matchHistoryInProgress) {
     throw new Error('試合データを取得中です');
   }
-  if (!settings.riotApiToken) {
-    const error = new Error('Riot APIトークンが未設定です');
-    updateMatchHistoryStatus({
-      phase: 'error',
-      source: options.source === 'auto' ? 'auto' : 'manual',
-      mode: options.mode === 'season' ? 'season' : 'recent',
-      message: RIOT_API_TOKEN_HELP_MESSAGE,
-      error: error.message
-    });
-    throw error;
-  }
 
   matchHistoryInProgress = true;
   const mode = options.mode === 'season' ? 'season' : 'recent';
@@ -699,13 +830,16 @@ async function collectRiotMatchHistory(_event, options = {}) {
     }
 
     const riotId = getRiotIdFromSummoner(appState.summoner);
-    const hosts = createRiotApiHosts(settings.riotPlatformRegion);
+    const region = normalizeRiotPlatformRegion(settings.riotPlatformRegion);
     const onRetry = createRiotRetryHandler();
     const storagePuuid = currentSummonerPuuid;
-    const account = await requestRiotJson({
-      host: hosts.regionalHost,
-      path: `/riot/account/v1/accounts/by-riot-id/${encodePathSegment(riotId.gameName)}/${encodePathSegment(riotId.tagLine)}`,
-      apiToken: settings.riotApiToken,
+    await requestBffHealth({
+      onRetry
+    });
+
+    const account = await requestBffAccountByRiotId({
+      region,
+      riotId,
       onRetry
     });
 
@@ -716,9 +850,8 @@ async function collectRiotMatchHistory(_event, options = {}) {
     const targetPuuid = account.puuid;
 
     const normalizedMatchIds = await collectMatchIdsByMode({
-      host: hosts.regionalHost,
+      region,
       puuid: targetPuuid,
-      apiToken: settings.riotApiToken,
       requestedMatches,
       mode,
       onRetry
@@ -805,28 +938,26 @@ async function collectRiotMatchHistory(_event, options = {}) {
       });
       clearRiotRateLimitCountdown();
 
-      const results = await Promise.all(batch.map(async (matchId) => {
-        try {
-          const detail = await requestRiotJson({
-            host: hosts.regionalHost,
-            path: `/lol/match/v5/matches/${encodePathSegment(matchId)}`,
-            apiToken: settings.riotApiToken,
-            onRetry: detailOnRetry
-          });
-          return { matchId, detail };
-        } catch (error) {
-          failedRequests += 1;
-          log.warn(`Riot match detail fetch failed for matchId=${matchId}`, serializeForLog(error));
-          return { matchId, error };
-        }
-      }));
-
-      results.forEach((result) => {
-        if (result.detail) {
-          matchesById[result.matchId] = result.detail;
-          fetchedMatches += 1;
-        }
-      });
+      try {
+        const result = await collectBffMatchDetailsBatch({
+          region,
+          matchIds: batch,
+          matchesById,
+          onRetry: detailOnRetry,
+          publishCurrentSnapshot
+        });
+        fetchedMatches += result.fetchedMatches;
+        failedRequests += result.failedMatchIds.length;
+        result.failedMatchIds.forEach((matchId) => {
+          log.warn(`Riot BFF match detail fetch failed for matchId=${matchId}`);
+        });
+      } catch (error) {
+        failedRequests += batch.length;
+        log.warn('Riot BFF match detail batch fetch failed', {
+          matchIds: batch,
+          error: serializeForLog(error)
+        });
+      }
 
       updateMatchHistoryStatus({
         phase: 'collecting',
@@ -877,13 +1008,11 @@ async function collectRiotMatchHistory(_event, options = {}) {
     return summary;
   } catch (error) {
     log.warn('Riot match history collection failed', serializeForLog(error));
-    const message = isRiotApiAuthError(error)
-      ? RIOT_API_TOKEN_HELP_MESSAGE
-      : `試合データ収集に失敗しました ${error.message}`;
+    const message = RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE;
     updateMatchHistoryStatus({
       phase: 'error',
       message,
-      error: error.message
+      error: message
     });
     throw error;
   } finally {
@@ -932,16 +1061,6 @@ async function updateLolInstallDir(_event, lolInstallDir) {
 
   await saveSettings({ lolInstallDir });
   await reconnectWithCurrentSettings();
-  return createPublicSettings(settings);
-}
-
-async function updateRiotApiToken(_event, riotApiToken) {
-  if (typeof riotApiToken !== 'string') {
-    throw new Error('Riot APIトークンが文字列ではありません');
-  }
-
-  await saveSettings({ riotApiToken: riotApiToken.trim() });
-  scheduleStartupRiotMatchHistoryIfReady('riot-token-saved');
   return createPublicSettings(settings);
 }
 
@@ -1305,7 +1424,6 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:get', () => createPublicSettings(settings));
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
-  ipcMain.handle('settings:update-riot-api-token', updateRiotApiToken);
   ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
   ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
   ipcMain.on('log:renderer', logRendererMessage);

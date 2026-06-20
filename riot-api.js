@@ -1,3 +1,4 @@
+const http = require('node:http');
 const https = require('node:https');
 
 const RIOT_PLATFORM_REGIONS = [
@@ -39,6 +40,7 @@ const PLATFORM_TO_REGIONAL_ROUTE = {
 };
 
 const DEFAULT_RIOT_PLATFORM_REGION = 'JP1';
+const DEFAULT_RIOT_BFF_BASE_URL = 'https://lol-ai-ban-pick-bff-production.up.railway.app';
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 30000;
 
@@ -55,6 +57,24 @@ class RiotApiError extends Error {
 function normalizeRiotPlatformRegion(value) {
   const region = String(value || '').trim().toUpperCase();
   return RIOT_PLATFORM_REGIONS.includes(region) ? region : DEFAULT_RIOT_PLATFORM_REGION;
+}
+
+function normalizeRiotBffBaseUrl(value) {
+  const baseUrl = String(value || '').trim() || DEFAULT_RIOT_BFF_BASE_URL;
+
+  try {
+    const parsed = new URL(baseUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return DEFAULT_RIOT_BFF_BASE_URL;
+    }
+
+    parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return DEFAULT_RIOT_BFF_BASE_URL;
+  }
 }
 
 function getRiotRegionalRoute(platformRegion) {
@@ -102,30 +122,27 @@ function delay(ms) {
   });
 }
 
-async function requestRiotJson(options) {
+async function requestRiotBffJson(options) {
   const {
-    host,
+    baseUrl = DEFAULT_RIOT_BFF_BASE_URL,
     path,
-    apiToken,
     maxRetries = DEFAULT_MAX_RETRIES,
-    requestFn = requestHttpsJson,
+    requestFn = requestHttpJson,
     wait = delay,
     onRetry = null
   } = options || {};
 
-  if (!host) throw new Error('Riot API host is required');
   if (!path || typeof path !== 'string' || !path.startsWith('/')) {
-    throw new Error('Riot API path must start with /');
+    throw new Error('BFF API path must start with /');
   }
-  if (!apiToken) throw new Error('Riot APIトークンが未設定です');
+
+  const url = new URL(path, `${normalizeRiotBffBaseUrl(baseUrl)}/`);
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const response = await requestFn({
-      host,
-      path,
+      url,
       headers: {
-        Accept: 'application/json',
-        'X-Riot-Token': apiToken
+        Accept: 'application/json'
       }
     });
 
@@ -139,7 +156,7 @@ async function requestRiotJson(options) {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw new RiotApiError(`Riot API ${path} returned HTTP ${response.statusCode}: ${response.body}`, {
+      throw new RiotApiError(`Riot BFF ${path} returned HTTP ${response.statusCode}: ${response.body}`, {
         statusCode: response.statusCode,
         path,
         body: response.body
@@ -149,16 +166,16 @@ async function requestRiotJson(options) {
     return response.body ? JSON.parse(response.body) : null;
   }
 
-  throw new Error(`Riot API ${path} retry limit exceeded`);
+  throw new Error(`Riot BFF ${path} retry limit exceeded`);
 }
 
-function requestHttpsJson({ host, path, headers }) {
+function requestHttpJson({ url, headers }) {
   return new Promise((resolve, reject) => {
-    const request = https.request(
+    const client = url.protocol === 'https:' ? https : http;
+    const request = client.request(
+      url,
       {
         method: 'GET',
-        host,
-        path,
         headers,
         timeout: 10000
       },
@@ -177,7 +194,7 @@ function requestHttpsJson({ host, path, headers }) {
     );
 
     request.on('timeout', () => {
-      request.destroy(new Error(`Riot API request timed out: ${host}${path}`));
+      request.destroy(new Error(`Riot BFF request timed out: ${url.toString()}`));
     });
 
     request.on('error', reject);
@@ -185,19 +202,16 @@ function requestHttpsJson({ host, path, headers }) {
   });
 }
 
-function isRiotApiAuthError(error) {
-  return Number(error?.statusCode) === 401 || Number(error?.statusCode) === 403;
-}
-
 module.exports = {
   RiotApiError,
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
+  DEFAULT_RIOT_BFF_BASE_URL,
   normalizeRiotPlatformRegion,
+  normalizeRiotBffBaseUrl,
   getRiotRegionalRoute,
   createRiotApiHosts,
   parseRetryAfterMs,
   getRetryDelayMs,
-  isRiotApiAuthError,
-  requestRiotJson
+  requestRiotBffJson
 };

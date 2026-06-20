@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LoL AI Draft Coach</title>
+    <title>BanPick.AI</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -13,7 +13,7 @@
           <div class="match-data-summary">
             <span class="label">5v5 SR match data</span>
             <strong id="matchDataCount">No data</strong>
-            <span id="matchDataRange">Riot API Tokenが設定されていません。Settingsタブから設定できます。</span>
+            <span id="matchDataRange">試合データが取得されていません</span>
             <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>シーズン中データの全取得でサンプル数を増やせる可能性があります</button>
             <span id="matchDataProgress" class="match-data-progress" role="status" hidden></span>
           </div>
@@ -305,27 +305,13 @@
 
           <div class="settings-divider"></div>
 
-          <div>
-            <h2>Riot API トークン</h2>
-            <p>Riot API連携で使う開発者トークンを保存します。画面やDebugのstateには表示しません。</p>
-          </div>
-
-          <label class="settings-field" for="riotApiTokenInput">
-            <span>APIトークン</span>
-            <div class="token-input-row">
-              <input id="riotApiTokenInput" type="password" spellcheck="false" autocomplete="off" placeholder="RGAPI-..." />
-              <button id="saveRiotApiTokenButton" type="button">保存</button>
-            </div>
-            <small id="riotApiTokenStatus" class="settings-help">未登録</small>
-          </label>
-
           <label class="settings-field" for="riotPlatformRegionSelect">
-            <span>Region</span>
+            <span>ログイン先サーバ</span>
             <div class="token-input-row">
               <select id="riotPlatformRegionSelect"></select>
               <button id="saveRiotPlatformRegionButton" type="button">保存</button>
             </div>
-            <small id="riotRegionalRouteStatus" class="settings-help">Match-V5 route: ASIA</small>
+            <small id="riotRegionalRouteStatus" class="settings-help">ログイン先サーバ: JP1 / Match-V5 route: ASIA</small>
           </label>
 
           <p id="settingsMessage" class="settings-message" role="status"></p>
