@@ -6,7 +6,7 @@ const {
   normalizeRiotBffBaseUrl,
   parseRetryAfterMs,
   RiotApiError,
-  requestRiotJson
+  requestRiotBffJson
 } = require('../riot-api');
 
 test('parseRetryAfterMs supports seconds', () => {
@@ -29,10 +29,10 @@ test('normalizeRiotBffBaseUrl falls back to production URL for invalid values', 
   assert.equal(normalizeRiotBffBaseUrl('not a url'), DEFAULT_RIOT_BFF_BASE_URL);
 });
 
-test('requestRiotJson notifies before retrying 429', async () => {
+test('requestRiotBffJson notifies before retrying 429', async () => {
   const retries = [];
   let calls = 0;
-  const body = await requestRiotJson({
+  const body = await requestRiotBffJson({
     baseUrl: 'https://bff.example.test',
     path: '/test',
     wait: async () => {},
@@ -53,9 +53,9 @@ test('requestRiotJson notifies before retrying 429', async () => {
   assert.equal(retries[0].delayMs, 3000);
 });
 
-test('requestRiotJson exposes BFF non-2xx failures', async () => {
+test('requestRiotBffJson exposes BFF non-2xx failures', async () => {
   await assert.rejects(
-    requestRiotJson({
+    requestRiotBffJson({
       baseUrl: 'https://bff.example.test',
       path: '/test',
       requestFn: async () => ({ statusCode: 503, headers: {}, body: '{"error":{"code":"riot_api_unavailable"}}' })

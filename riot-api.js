@@ -122,7 +122,7 @@ function delay(ms) {
   });
 }
 
-async function requestRiotJson(options) {
+async function requestRiotBffJson(options) {
   const {
     baseUrl = DEFAULT_RIOT_BFF_BASE_URL,
     path,
@@ -213,5 +213,5 @@ module.exports = {
   createRiotApiHosts,
   parseRetryAfterMs,
   getRetryDelayMs,
-  requestRiotJson
+  requestRiotBffJson
 };

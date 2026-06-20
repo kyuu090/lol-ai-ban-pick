@@ -13,7 +13,7 @@ const {
   createRiotApiHosts,
   normalizeRiotPlatformRegion,
   parseRetryAfterMs,
-  requestRiotJson
+  requestRiotBffJson
 } = require('./riot-api');
 const {
   aggregateEnemyChampionStats,
@@ -414,6 +414,58 @@ function encodePathSegment(value) {
   return encodeURIComponent(String(value));
 }
 
+function createRiotBffPath(region, segments, query = null) {
+  const path = `/api/riot/${[
+    region,
+    ...segments
+  ].map(encodePathSegment).join('/')}`;
+
+  if (!query) return path;
+
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    params.set(key, String(value));
+  });
+
+  const queryString = params.toString();
+  return queryString ? `${path}?${queryString}` : path;
+}
+
+function requestBffJson({ path, onRetry = null, maxRetries = undefined }) {
+  return requestRiotBffJson({
+    baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
+    path,
+    onRetry,
+    ...(maxRetries === undefined ? {} : { maxRetries })
+  });
+}
+
+function requestBffHealth({ onRetry = null } = {}) {
+  return requestBffJson({
+    path: '/health',
+    onRetry
+  });
+}
+
+function requestBffAccountByRiotId({ region, riotId, onRetry = null }) {
+  return requestBffJson({
+    path: createRiotBffPath(region, ['account', 'by-riot-id', riotId.gameName, riotId.tagLine]),
+    onRetry
+  });
+}
+
+function requestBffMatchIds({ region, puuid, start, count, startTime = null, onRetry = null }) {
+  return requestBffJson({
+    path: createRiotBffPath(region, ['matches', 'by-puuid', puuid, 'ids'], {
+      start,
+      count,
+      startTime
+    }),
+    onRetry
+  });
+}
+
 function getDefaultSeasonStartAt() {
   const year = new Date().getFullYear();
   return new Date(`${year}-01-01T00:00:00+09:00`);
@@ -460,11 +512,13 @@ function createRiotRetryHandler({ onRateLimitStart = null } = {}) {
   };
 }
 
-async function collectMatchIdsByMode({ baseUrl, region, puuid, requestedMatches, mode, onRetry }) {
+async function collectMatchIdsByMode({ region, puuid, requestedMatches, mode, onRetry }) {
   if (mode !== 'season') {
-    const body = await requestRiotJson({
-      baseUrl,
-      path: `/api/riot/${encodePathSegment(region)}/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=0&count=${requestedMatches}`,
+    const body = await requestBffMatchIds({
+      region,
+      puuid,
+      start: 0,
+      count: requestedMatches,
       onRetry
     });
     clearRiotRateLimitCountdown();
@@ -478,9 +532,12 @@ async function collectMatchIdsByMode({ baseUrl, region, puuid, requestedMatches,
   const allMatchIds = [];
 
   for (let start = 0; ; start += RIOT_MATCH_IDS_PAGE_SIZE) {
-    const page = await requestRiotJson({
-      baseUrl,
-      path: `/api/riot/${encodePathSegment(region)}/matches/by-puuid/${encodePathSegment(puuid)}/ids?start=${start}&count=${RIOT_MATCH_IDS_PAGE_SIZE}&startTime=${startTime}`,
+    const page = await requestBffMatchIds({
+      region,
+      puuid,
+      start,
+      count: RIOT_MATCH_IDS_PAGE_SIZE,
+      startTime,
       onRetry
     });
     clearRiotRateLimitCountdown();
@@ -499,14 +556,11 @@ async function collectMatchIdsByMode({ baseUrl, region, puuid, requestedMatches,
   return allMatchIds;
 }
 
-async function requestBffMatchDetails({ baseUrl, region, matchIds }) {
-  const params = new URLSearchParams({
-    matchIds: matchIds.join(',')
-  });
-
-  const body = await requestRiotJson({
-    baseUrl,
-    path: `/api/riot/${encodePathSegment(region)}/matches/details?${params}`,
+async function requestBffMatchDetails({ region, matchIds }) {
+  const body = await requestBffJson({
+    path: createRiotBffPath(region, ['matches', 'details'], {
+      matchIds: matchIds.join(',')
+    }),
     maxRetries: 0
   });
 
@@ -518,7 +572,6 @@ async function requestBffMatchDetails({ baseUrl, region, matchIds }) {
 }
 
 async function collectBffMatchDetailsBatch({
-  baseUrl,
   region,
   matchIds,
   matchesById,
@@ -532,7 +585,6 @@ async function collectBffMatchDetailsBatch({
   for (let attempt = 0; attempt < maxAttempts && pending.size > 0; attempt += 1) {
     const targetMatchIds = [...pending];
     const response = await requestBffMatchDetails({
-      baseUrl,
       region,
       matchIds: targetMatchIds
     });
@@ -763,19 +815,16 @@ async function collectRiotMatchHistory(_event, options = {}) {
     }
 
     const riotId = getRiotIdFromSummoner(appState.summoner);
-    const baseUrl = DEFAULT_RIOT_BFF_BASE_URL;
     const region = normalizeRiotPlatformRegion(settings.riotPlatformRegion);
     const onRetry = createRiotRetryHandler();
     const storagePuuid = currentSummonerPuuid;
-    await requestRiotJson({
-      baseUrl,
-      path: '/health',
+    await requestBffHealth({
       onRetry
     });
 
-    const account = await requestRiotJson({
-      baseUrl,
-      path: `/api/riot/${encodePathSegment(region)}/account/by-riot-id/${encodePathSegment(riotId.gameName)}/${encodePathSegment(riotId.tagLine)}`,
+    const account = await requestBffAccountByRiotId({
+      region,
+      riotId,
       onRetry
     });
 
@@ -786,7 +835,6 @@ async function collectRiotMatchHistory(_event, options = {}) {
     const targetPuuid = account.puuid;
 
     const normalizedMatchIds = await collectMatchIdsByMode({
-      baseUrl,
       region,
       puuid: targetPuuid,
       requestedMatches,
@@ -877,7 +925,6 @@ async function collectRiotMatchHistory(_event, options = {}) {
 
       try {
         const result = await collectBffMatchDetailsBatch({
-          baseUrl,
           region,
           matchIds: batch,
           matchesById,
