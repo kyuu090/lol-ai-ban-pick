@@ -466,6 +466,38 @@ function requestBffMatchIds({ region, puuid, start, count, startTime = null, onR
   });
 }
 
+function normalizeBffMatchIdsResponse(body) {
+  return Array.isArray(body?.matchIds) ? body.matchIds : [];
+}
+
+function normalizeBffMatchDetailsResponse(body) {
+  return {
+    matchesById: body?.matchesById && typeof body.matchesById === 'object' ? body.matchesById : {},
+    failedMatchIds: Array.isArray(body?.failedMatchIds) ? body.failedMatchIds : [],
+    retryAfter: body?.retryAfter ?? null
+  };
+}
+
+function applyBffMatchDetailsResponse({ response, pending, matchesById }) {
+  let fetchedMatches = 0;
+
+  Object.entries(response.matchesById).forEach(([matchId, detail]) => {
+    if (!pending.has(matchId)) return;
+    matchesById[matchId] = detail;
+    pending.delete(matchId);
+    fetchedMatches += 1;
+  });
+
+  const failedMatchIds = new Set(response.failedMatchIds);
+  [...pending].forEach((matchId) => {
+    if (!response.matchesById[matchId] && !failedMatchIds.has(matchId)) {
+      pending.delete(matchId);
+    }
+  });
+
+  return fetchedMatches;
+}
+
 function getDefaultSeasonStartAt() {
   const year = new Date().getFullYear();
   return new Date(`${year}-01-01T00:00:00+09:00`);
@@ -523,8 +555,7 @@ async function collectMatchIdsByMode({ region, puuid, requestedMatches, mode, on
     });
     clearRiotRateLimitCountdown();
 
-    const matchIds = Array.isArray(body?.matchIds) ? body.matchIds : [];
-    return matchIds.slice(0, requestedMatches);
+    return normalizeBffMatchIdsResponse(body).slice(0, requestedMatches);
   }
 
   const seasonStartAt = getDefaultSeasonStartAt();
@@ -541,7 +572,7 @@ async function collectMatchIdsByMode({ region, puuid, requestedMatches, mode, on
       onRetry
     });
     clearRiotRateLimitCountdown();
-    const pageMatchIds = Array.isArray(page?.matchIds) ? page.matchIds : [];
+    const pageMatchIds = normalizeBffMatchIdsResponse(page);
     allMatchIds.push(...pageMatchIds);
 
     updateMatchHistoryStatus({
@@ -564,11 +595,7 @@ async function requestBffMatchDetails({ region, matchIds }) {
     maxRetries: 0
   });
 
-  return {
-    matchesById: body?.matchesById && typeof body.matchesById === 'object' ? body.matchesById : {},
-    failedMatchIds: Array.isArray(body?.failedMatchIds) ? body.failedMatchIds : [],
-    retryAfter: body?.retryAfter ?? null
-  };
+  return normalizeBffMatchDetailsResponse(body);
 }
 
 async function collectBffMatchDetailsBatch({
@@ -589,19 +616,7 @@ async function collectBffMatchDetailsBatch({
       matchIds: targetMatchIds
     });
 
-    Object.entries(response.matchesById).forEach(([matchId, detail]) => {
-      if (!pending.has(matchId)) return;
-      matchesById[matchId] = detail;
-      pending.delete(matchId);
-      fetchedMatches += 1;
-    });
-
-    const failedMatchIds = new Set(response.failedMatchIds);
-    targetMatchIds.forEach((matchId) => {
-      if (!response.matchesById[matchId] && !failedMatchIds.has(matchId)) {
-        pending.delete(matchId);
-      }
-    });
+    fetchedMatches += applyBffMatchDetailsResponse({ response, pending, matchesById });
 
     if (pending.size === 0) break;
 
