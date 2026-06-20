@@ -38,7 +38,6 @@
     },
     "win": {
       "icon": "assets/icon.ico",
-      "signAndEditExecutable": false,
       "target": [
         "portable",
         "nsis"
@@ -49,6 +48,8 @@
     },
     "nsis": {
       "artifactName": "${productName}-${version}-setup.${ext}",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true

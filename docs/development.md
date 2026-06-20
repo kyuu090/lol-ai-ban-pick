@@ -94,7 +94,9 @@ dist/win-unpacked/LoL AI Draft Coach.exe
 npm run pack:locked
 ```
 
-このプロジェクトでは未署名ビルドとして `signAndEditExecutable: false` を使います。署名が必要になった場合は、Windows の symlink 権限または electron-builder の署名用キャッシュ展開に注意してください。
+このプロジェクトでは未署名ビルドでも Windows exe のリソース編集は有効にします。`win.icon` と `nsis.installerIcon` / `nsis.uninstallerIcon` に `assets/icon.ico` を指定し、portable exe、NSIS installer、インストール後のアプリ exe のアイコンを揃えます。
+
+`signAndEditExecutable: false` を指定すると exe のリソース編集も無効になり、インストール後のアプリ exe やショートカットが Electron のデフォルトアイコンになることがあります。
 
 ## リリース手順
 
