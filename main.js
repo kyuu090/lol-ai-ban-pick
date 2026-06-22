@@ -49,6 +49,7 @@ const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
+const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
 const THEME_MODES = ['system', 'light', 'dark'];
 
@@ -72,6 +73,7 @@ let autoMatchHistoryTimer = null;
 let activeMatchHistoryPuuid = null;
 let riotRateLimitCountdownTimer = null;
 
+configureAppUserDataPath();
 configureLogger();
 
 if (process.platform === 'win32') {
@@ -84,6 +86,11 @@ function createDefaultSettings() {
     riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION,
     themeMode: 'system'
   };
+}
+
+function configureAppUserDataPath() {
+  const userDataPath = path.join(app.getPath('appData'), APP_USER_DATA_DIR_NAME);
+  app.setPath('userData', userDataPath);
 }
 
 function normalizeThemeMode(themeMode) {
