@@ -1,4 +1,8 @@
 const elements = {
+  windowTitlebar: document.querySelector('#windowTitlebar'),
+  windowMinimizeButton: document.querySelector('#windowMinimizeButton'),
+  windowMaximizeButton: document.querySelector('#windowMaximizeButton'),
+  windowCloseButton: document.querySelector('#windowCloseButton'),
   refreshButton: document.querySelector('#refreshButton'),
   collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
   matchDataMenuButton: document.querySelector('#matchDataMenuButton'),
@@ -44,9 +48,12 @@ const elements = {
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   riotPlatformRegionSelect: document.querySelector('#riotPlatformRegionSelect'),
   riotRegionalRouteStatus: document.querySelector('#riotRegionalRouteStatus'),
+  themeModeSelect: document.querySelector('#themeModeSelect'),
+  themeModeStatus: document.querySelector('#themeModeStatus'),
   chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
   saveLolDirButton: document.querySelector('#saveLolDirButton'),
   saveRiotPlatformRegionButton: document.querySelector('#saveRiotPlatformRegionButton'),
+  saveThemeModeButton: document.querySelector('#saveThemeModeButton'),
   settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
@@ -66,7 +73,9 @@ const elements = {
   enemyTeam: document.querySelector('#enemyTeam'),
   currentAction: document.querySelector('#currentAction'),
   currentPick: document.querySelector('#currentPick'),
+  draftSelfSummary: document.querySelector('#draftSelfSummary'),
   banInsightPanel: document.querySelector('#banInsightPanel'),
+  draftAiAnalysisPanel: document.querySelector('#draftAiAnalysisPanel'),
   lcuStatus: document.querySelector('#lcuStatus'),
   websocketStatus: document.querySelector('#websocketStatus'),
   gameflowPhase: document.querySelector('#gameflowPhase'),
@@ -106,6 +115,10 @@ let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
 let lastChampSelectSnapshot = null;
 let wasInChampSelect = false;
+let draftAiAnalysisStatus = 'idle';
+let draftAiAnalysisNotes = [];
+let draftAiAnalysisRequestKey = null;
+let draftAiAnalysisError = '';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
@@ -122,10 +135,12 @@ const {
   getActiveAction,
   getBestIntoOpponentStats,
   getDraftPanelState,
+  getMemberChampionId,
   getPhase,
   getPendingLabel,
   getPlannedPickThreatStats,
   getSummonerName,
+  normalizePosition,
   normalizeChampionPool,
   positionLabel,
   collectUnavailableChampionReasons,
@@ -156,6 +171,32 @@ function logDebug(message, details) {
 
 function logWarn(message, details) {
   window.lcuApi?.log?.('warn', message, details);
+}
+
+function normalizeThemeMode(themeMode) {
+  return ['system', 'light', 'dark'].includes(themeMode) ? themeMode : 'system';
+}
+
+function applyThemeMode(themeMode) {
+  const normalizedThemeMode = normalizeThemeMode(themeMode);
+  if (normalizedThemeMode === 'system') {
+    document.documentElement.removeAttribute('data-theme');
+    return;
+  }
+
+  document.documentElement.dataset.theme = normalizedThemeMode;
+}
+
+function describeThemeMode(themeMode) {
+  const normalizedThemeMode = normalizeThemeMode(themeMode);
+  if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
+  if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
+  return 'OSの表示モードに合わせます。';
+}
+
+function renderWindowMaximizedState(isMaximized) {
+  elements.windowMaximizeButton.textContent = isMaximized ? '❐' : '□';
+  elements.windowMaximizeButton.setAttribute('aria-label', isMaximized ? '元に戻す' : '最大化');
 }
 
 function formatDate(value) {
@@ -241,19 +282,22 @@ function appendLowSampleBadge(container, games) {
   container.append(sample);
 }
 
-function createChampionStatsElement(stats, className = 'pool-champion-stats') {
+function createChampionStatsElement(stats, className = 'pool-champion-stats', options = {}) {
   const container = document.createElement('div');
   container.className = className;
+  const includeGames = options.includeGames !== false;
 
   if (!stats || !stats.games) {
-    container.append(createPickPoolStatChip('Games', 'No games'));
+    if (includeGames) {
+      container.append(createPickPoolStatChip('Games', 'No games'));
+    }
     return container;
   }
 
   const wins = Number(stats.wins || 0);
   const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
   [
-    ['Games', `${stats.games}`],
+    ...(includeGames ? [['Games', `${stats.games}`]] : []),
     ['W-L', `${wins}-${losses}`],
     ['WR', formatPercent(stats.winRate)],
     ['KDA', formatAverageKda(stats)]
@@ -487,11 +531,18 @@ function getMatchHistoryButtonText(status) {
 function renderSettings(settings) {
   if (!settings) return;
 
+  const themeMode = normalizeThemeMode(settings.themeMode);
+  applyThemeMode(themeMode);
+
   if (settings.lolInstallDir && document.activeElement !== elements.lolInstallDirInput) {
     elements.lolInstallDirInput.value = settings.lolInstallDir;
   }
 
   renderRiotPlatformRegions(settings);
+  if (document.activeElement !== elements.themeModeSelect) {
+    elements.themeModeSelect.value = themeMode;
+  }
+  elements.themeModeStatus.textContent = describeThemeMode(themeMode);
   elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
 }
 
@@ -1409,6 +1460,7 @@ function renderDraft(state) {
   if (!inChampSelect) {
     elements.champSelectView.classList.remove('local-turn');
     markedLaneOpponentCellId = null;
+    resetDraftAiAnalysis();
   }
 
   if (!loggedIn) return;
@@ -1574,6 +1626,8 @@ function renderChampSelect(champSelect) {
   const activeAction = getActiveAction(champSelect, localCellId);
   const localMember = allyTeam.find((member) => member.cellId === localCellId);
   const isLocalTurn = activeAction?.actorCellId === localCellId;
+  const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
+  const isLocalPickTurn = isDraftActionPhase && Boolean(activeAction?.isInProgress) && isLocalTurn && activeAction?.type === 'pick';
   if (markedLaneOpponentCellId !== null && !enemyTeam.some((member) => member.cellId === markedLaneOpponentCellId)) {
     markedLaneOpponentCellId = null;
   }
@@ -1589,6 +1643,222 @@ function renderChampSelect(champSelect) {
     markedLaneOpponentCellId
   });
   renderDraftFocus(champSelect, activeAction);
+  if (isLocalPickTurn) {
+    requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction);
+  }
+  renderDraftAiAnalysis(draftAiAnalysisStatus);
+}
+
+function resetDraftAiAnalysis() {
+  draftAiAnalysisStatus = 'idle';
+  draftAiAnalysisNotes = [];
+  draftAiAnalysisRequestKey = null;
+  draftAiAnalysisError = '';
+}
+
+function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) {
+  if (!window.lcuApi?.requestPickPhaseAnalysis) return;
+  if (draftAiAnalysisStatus === 'ready') return;
+
+  const draftContext = createPickPhaseDraftContext(champSelect, localMember);
+  if (!draftContext) return;
+
+  const requestKey = createDraftAiAnalysisRequestKey(activeAction, draftContext);
+  if (draftAiAnalysisStatus === 'requesting' && draftAiAnalysisRequestKey === requestKey) return;
+  if (draftAiAnalysisStatus === 'error' && draftAiAnalysisRequestKey === requestKey) return;
+
+  draftAiAnalysisStatus = 'requesting';
+  draftAiAnalysisNotes = [];
+  draftAiAnalysisError = '';
+  draftAiAnalysisRequestKey = requestKey;
+  logDebug('Draft AI analysis request started', { requestKey, draftContext });
+
+  window.lcuApi.requestPickPhaseAnalysis(draftContext)
+    .then((response) => {
+      if (draftAiAnalysisRequestKey !== requestKey) return;
+      draftAiAnalysisNotes = parseDraftAiAnalysisNotes(response);
+      draftAiAnalysisStatus = draftAiAnalysisNotes.length ? 'ready' : 'error';
+      draftAiAnalysisError = draftAiAnalysisNotes.length ? '' : 'AI分析を表示できませんでした。';
+      logDebug('Draft AI analysis response received', { requestKey, notes: draftAiAnalysisNotes.length });
+      renderDraftAiAnalysis(draftAiAnalysisStatus);
+    })
+    .catch((error) => {
+      if (draftAiAnalysisRequestKey !== requestKey) return;
+      draftAiAnalysisStatus = 'error';
+      draftAiAnalysisError = createDraftAiAnalysisErrorMessage(error);
+      logDebug('Draft AI analysis request failed', {
+        requestKey,
+        error: error?.message || String(error)
+      });
+      renderDraftAiAnalysis(draftAiAnalysisStatus);
+    });
+}
+
+function createPickPhaseDraftContext(champSelect, localMember) {
+  const localRole = normalizePosition(localMember?.assignedPosition);
+  if (!localRole) return null;
+
+  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+
+  return {
+    phase: 'own_pick',
+    localPlayer: {
+      role: localRole,
+      intendedPick: createDraftChampionEntry(localMember, { preferIntent: true, includeRole: false })
+    },
+    allyTeam: {
+      intendedPicks: allyTeam
+        .filter((member) => member?.cellId !== localMember?.cellId && !getMemberChampionId(member))
+        .map((member) => createDraftChampionEntry(member, { preferIntent: true }))
+        .filter(Boolean),
+      lockedPicks: allyTeam
+        .filter((member) => member?.cellId !== localMember?.cellId)
+        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
+        .filter(Boolean)
+    },
+    enemyTeam: {
+      lockedPicks: enemyTeam
+        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
+        .filter(Boolean)
+    },
+    ownChampionPool: createOwnChampionPoolEntries(localRole)
+  };
+}
+
+function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, includeRole = true } = {}) {
+  const role = normalizePosition(member?.assignedPosition);
+  const championId = preferLocked
+    ? Number(member?.championId)
+    : preferIntent
+      ? Number(member?.championPickIntent)
+      : getMemberChampionId(member);
+  if (includeRole && !role) return null;
+  if (!Number.isInteger(championId) || championId <= 0) return null;
+
+  const entry = {
+    championId,
+    championName: championLabel(championId)
+  };
+  if (includeRole) {
+    entry.role = role;
+  }
+  return entry;
+}
+
+function createOwnChampionPoolEntries(role) {
+  const lane = CHAMPION_POOL_LANES.find((entry) => CHAMPION_POOL_LANE_TO_POSITION[entry.id] === role);
+  if (!lane) return [];
+
+  return (championPool[lane.id] || [])
+    .map((championId) => Number(championId))
+    .filter((championId) => Number.isInteger(championId) && championId > 0)
+    .map((championId) => ({
+      role,
+      championId,
+      championName: championLabel(championId)
+    }));
+}
+
+function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
+  return JSON.stringify({
+    actionId: activeAction?.id ?? null,
+    actorCellId: activeAction?.actorCellId ?? null,
+    draftContext
+  });
+}
+
+function createDraftAiAnalysisErrorMessage(error) {
+  const message = String(error?.message || '');
+  if (message.includes('429')) return 'AI分析のリクエストが混み合っています。少し待ってから再度お試しください。';
+  if (message.includes('400')) return 'AI分析に必要なドラフト情報が不足しています。';
+  return 'AI分析を取得できませんでした。';
+}
+
+function renderDraftAiAnalysis(status) {
+  if (!elements.draftAiAnalysisPanel) return;
+
+  const panel = elements.draftAiAnalysisPanel;
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'draft-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Analysis';
+  const title = document.createElement('h3');
+  title.textContent = 'バンピック分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  badge.className = `draft-ai-analysis-badge ${status}`;
+  badge.textContent = status === 'ready' ? 'DONE' : status === 'requesting' ? 'ASKING' : status === 'error' ? 'ERROR' : 'WAITING';
+  header.append(titleBlock, badge);
+  panel.append(header);
+
+  if (status === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIに分析を依頼中・・'));
+    return;
+  }
+
+  if (status === 'error') {
+    panel.append(createDraftAiAnalysisStatus(draftAiAnalysisError || 'AI分析を取得できませんでした。'));
+    return;
+  }
+
+  if (status !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('AI分析を待機中・・'));
+    return;
+  }
+
+  const notes = draftAiAnalysisNotes;
+  if (!notes.length) {
+    panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'draft-ai-analysis-notes';
+  notes.forEach((note) => {
+    const item = document.createElement('article');
+    item.className = 'draft-ai-analysis-note';
+
+    const noteTitle = document.createElement('strong');
+    noteTitle.textContent = note.title;
+
+    const body = document.createElement('p');
+    body.textContent = note.body;
+
+    item.append(noteTitle, body);
+    list.append(item);
+  });
+  panel.append(list);
+}
+
+function createDraftAiAnalysisStatus(text) {
+  const message = document.createElement('p');
+  message.className = 'draft-ai-analysis-status';
+  message.textContent = text;
+  return message;
+}
+
+function parseDraftAiAnalysisNotes(response) {
+  try {
+    const parsed = typeof response === 'string' ? JSON.parse(response) : response;
+    return (Array.isArray(parsed?.notes) ? parsed.notes : [])
+      .filter((note) => note && typeof note === 'object')
+      .slice(0, 3)
+      .map((note) => ({
+        title: String(note.title || '').trim(),
+        body: String(note.body || '').trim()
+      }))
+      .filter((note) => note.title || note.body);
+  } catch (error) {
+    logDebug('Failed to parse draft AI analysis response', { error: error?.message || String(error) });
+    return [];
+  }
 }
 
 function renderBanList(container, bans) {
@@ -1660,16 +1930,22 @@ function renderTeam(container, team, side, turnState = {}) {
       portrait.textContent = '?';
     }
 
+    const portraitStack = document.createElement('div');
+    portraitStack.className = 'pick-portrait-stack';
+
+    const roleBadge = document.createElement('span');
+    roleBadge.className = 'pick-role-badge';
+    roleBadge.textContent = positionLabel(member.assignedPosition);
+
+    portraitStack.append(portrait, roleBadge);
+
     const meta = document.createElement('div');
     meta.className = 'pick-meta';
 
     const champion = document.createElement('strong');
     champion.textContent = selected ? championLabel(member.championId) : getPendingLabel(member, championLabel);
 
-    const detail = document.createElement('span');
-    detail.textContent = `${positionLabel(member.assignedPosition)} / Summoner ${index + 1}`;
-
-    meta.append(champion, detail);
+    meta.append(champion);
     if (isMarkedLaneOpponent) {
       const marker = document.createElement('span');
       marker.className = 'lane-opponent-marker';
@@ -1678,13 +1954,7 @@ function renderTeam(container, team, side, turnState = {}) {
         : 'LANE OPPONENT';
       meta.append(marker);
     }
-    if (side === 'ally' && isLocalMember && portraitChampionId > 0) {
-      meta.append(createChampionStatsElement(
-        getChampionRoleDisplayStats(portraitChampionId, member.assignedPosition),
-        'draft-champion-stats'
-      ));
-    }
-    row.append(portrait, meta);
+    row.append(portraitStack, meta);
     return row;
   }));
 }
@@ -1704,6 +1974,7 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   const localCellId = champSelect?.localPlayerCellId;
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
   const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
+  renderDraftSelfSummary(localMember);
   renderDraftInsights(null, { champSelect, localMember });
 
   if (activeAction) {
@@ -1721,6 +1992,33 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
 
   elements.currentAction.textContent = localMember?.championId ? championLabel(localMember.championId) : '待機中';
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
+}
+
+function renderDraftSelfSummary(localMember) {
+  if (!elements.draftSelfSummary) return;
+
+  const championId = getMemberChampionId(localMember);
+  elements.draftSelfSummary.replaceChildren();
+  elements.draftSelfSummary.hidden = !championId;
+  if (!championId) return;
+
+  const header = document.createElement('div');
+  header.className = 'draft-self-summary-header';
+
+  const label = document.createElement('span');
+  label.className = 'draft-self-summary-label';
+  label.textContent = 'Your';
+
+  const champion = createInlineChampionName(championId, 'inline-champion-name draft-self-summary-name');
+  header.append(label, champion);
+
+  const stats = createChampionStatsElement(
+    getChampionRoleDisplayStats(championId, localMember?.assignedPosition),
+    'draft-self-summary-stats',
+    { includeGames: false }
+  );
+
+  elements.draftSelfSummary.append(header, stats);
 }
 
 function renderDraftInsights(type, context = {}) {
@@ -2285,6 +2583,24 @@ async function saveRiotPlatformRegion() {
   }
 }
 
+async function saveThemeMode() {
+  const themeMode = normalizeThemeMode(elements.themeModeSelect.value);
+  elements.saveThemeModeButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.updateThemeMode(themeMode);
+    renderSettings(settings);
+    logDebug('Theme mode saved', { themeMode: settings.themeMode });
+    elements.settingsMessage.textContent = '表示テーマを保存しました。';
+  } catch (error) {
+    logWarn('Theme mode save failed', { message: error.message, stack: error.stack });
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveThemeModeButton.disabled = false;
+  }
+}
+
 async function refresh() {
   elements.refreshButton.disabled = true;
   elements.refreshButton.textContent = '取得中...';
@@ -2332,6 +2648,16 @@ async function collectRiotMatchHistory(mode = 'recent') {
 
 window.lcuApi.onState(renderState);
 elements.refreshButton.addEventListener('click', refresh);
+elements.windowMinimizeButton.addEventListener('click', () => window.lcuApi.minimizeWindow());
+elements.windowMaximizeButton.addEventListener('click', async () => {
+  const isMaximized = await window.lcuApi.toggleMaximizeWindow();
+  renderWindowMaximizedState(isMaximized);
+});
+elements.windowCloseButton.addEventListener('click', () => window.lcuApi.closeWindow());
+elements.windowTitlebar.addEventListener('dblclick', (event) => {
+  if (event.target.closest('.window-titlebar-controls')) return;
+  window.lcuApi.toggleMaximizeWindow().then(renderWindowMaximizedState);
+});
 elements.collectRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('recent'));
 elements.matchDataMenuButton.addEventListener('click', toggleMatchDataMenu);
 elements.collectSeasonRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('season'));
@@ -2350,6 +2676,7 @@ elements.statsSubtabButtons.forEach((button) => {
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
 elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
+elements.saveThemeModeButton.addEventListener('click', saveThemeMode);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 elements.playedStatsSampleSelect.addEventListener('change', () => {
@@ -2382,6 +2709,7 @@ elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
 setActiveView(activeView);
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
+window.lcuApi.onWindowMaximized(renderWindowMaximizedState);
 window.lcuApi.getChampionPool().then((savedChampionPool) => {
   championPool = normalizeChampionPool(savedChampionPool);
   championPoolDirty = false;

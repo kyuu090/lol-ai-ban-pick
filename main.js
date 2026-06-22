@@ -50,6 +50,7 @@ const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
+const THEME_MODES = ['system', 'light', 'dark'];
 
 let mainWindow;
 let lcuConnection = null;
@@ -80,8 +81,13 @@ if (process.platform === 'win32') {
 function createDefaultSettings() {
   return {
     lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
-    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION
+    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION,
+    themeMode: 'system'
   };
+}
+
+function normalizeThemeMode(themeMode) {
+  return THEME_MODES.includes(themeMode) ? themeMode : 'system';
 }
 
 function normalizeSettings(sourceSettings = {}) {
@@ -90,7 +96,8 @@ function normalizeSettings(sourceSettings = {}) {
     lolInstallDir: typeof sourceSettings.lolInstallDir === 'string' && sourceSettings.lolInstallDir.trim()
       ? sourceSettings.lolInstallDir
       : defaults.lolInstallDir,
-    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion)
+    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion),
+    themeMode: normalizeThemeMode(sourceSettings.themeMode)
   };
 }
 
@@ -163,7 +170,9 @@ function createPublicSettings(sourceSettings = settings) {
     lolInstallDir: sourceSettings.lolInstallDir,
     riotPlatformRegion,
     riotRegionalRoute: riotHosts.regionalRoute,
-    riotPlatformRegions: RIOT_PLATFORM_REGIONS
+    riotPlatformRegions: RIOT_PLATFORM_REGIONS,
+    themeMode: normalizeThemeMode(sourceSettings.themeMode),
+    themeModes: THEME_MODES
   };
 }
 
@@ -338,11 +347,13 @@ function createWindow() {
   log.debug('Creating main window');
   mainWindow = new BrowserWindow({
     width: 1180,
-    height: 820,
+    height: 900,
     minWidth: 980,
     minHeight: 680,
-    title: 'LoL AI Draft Coach',
+    title: 'BanPick.AI',
     icon: APP_ICON_PATH,
+    frame: false,
+    backgroundColor: '#f5f4ff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -350,6 +361,9 @@ function createWindow() {
     }
   });
 
+  mainWindow.setMenu(null);
+  mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximized', true));
+  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized', false));
   mainWindow.loadFile('index.html');
 }
 
@@ -432,12 +446,25 @@ function createRiotBffPath(region, segments, query = null) {
   return queryString ? `${path}?${queryString}` : path;
 }
 
-function requestBffJson({ path, onRetry = null, maxRetries = undefined }) {
+function requestBffJson({ path, method = 'GET', body = null, timeoutMs = undefined, onRetry = null, maxRetries = undefined }) {
   return requestRiotBffJson({
     baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
     path,
+    method,
+    body,
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
     onRetry,
     ...(maxRetries === undefined ? {} : { maxRetries })
+  });
+}
+
+function requestPickPhaseAnalysis(_event, draftContext) {
+  return requestBffJson({
+    path: '/api/openai/pick-phase',
+    method: 'POST',
+    body: draftContext,
+    timeoutMs: 30000,
+    maxRetries: 0
   });
 }
 
@@ -1070,6 +1097,36 @@ async function updateRiotPlatformRegion(_event, riotPlatformRegion) {
   return createPublicSettings(settings);
 }
 
+async function updateThemeMode(_event, themeMode) {
+  await saveSettings({ themeMode: normalizeThemeMode(themeMode) });
+  return createPublicSettings(settings);
+}
+
+function getWindowForEvent(event) {
+  return BrowserWindow.fromWebContents(event.sender);
+}
+
+function minimizeWindow(event) {
+  getWindowForEvent(event)?.minimize();
+}
+
+function toggleMaximizeWindow(event) {
+  const window = getWindowForEvent(event);
+  if (!window) return false;
+
+  if (window.isMaximized()) {
+    window.unmaximize();
+  } else {
+    window.maximize();
+  }
+
+  return window.isMaximized();
+}
+
+function closeWindow(event) {
+  getWindowForEvent(event)?.close();
+}
+
 async function reconnectWithCurrentSettings() {
   log.debug('Reconnecting with current settings');
   closeWebSocket();
@@ -1425,7 +1482,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
   ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
+  ipcMain.handle('settings:update-theme-mode', updateThemeMode);
+  ipcMain.handle('window:minimize', minimizeWindow);
+  ipcMain.handle('window:toggle-maximize', toggleMaximizeWindow);
+  ipcMain.handle('window:close', closeWindow);
   ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
+  ipcMain.handle('openai:pick-phase', requestPickPhaseAnalysis);
   ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();

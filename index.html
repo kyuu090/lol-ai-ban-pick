@@ -7,9 +7,21 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <header class="window-titlebar" id="windowTitlebar">
+      <div class="window-titlebar-brand">
+        <span>BanPick.AI</span>
+      </div>
+      <div class="window-titlebar-controls" aria-label="window controls">
+        <button id="windowMinimizeButton" class="window-control-button" type="button" aria-label="最小化">−</button>
+        <button id="windowMaximizeButton" class="window-control-button" type="button" aria-label="最大化">□</button>
+        <button id="windowCloseButton" class="window-control-button close" type="button" aria-label="閉じる">×</button>
+      </div>
+    </header>
+
     <main class="app-shell">
       <header class="app-header">
         <div class="match-data-header">
+          <img class="app-logo" src="./assets/icon.png" alt="BanPick.AI" />
           <div class="match-data-summary">
             <span class="label">5v5 SR match data</span>
             <strong id="matchDataCount">No data</strong>
@@ -109,6 +121,7 @@
             </section>
 
             <section class="draft-focus">
+              <div id="draftSelfSummary" class="draft-self-summary" hidden></div>
               <div class="champion-focus">
                 <p class="eyebrow">CURRENT STATE</p>
                 <h3 id="currentAction">待機中</h3>
@@ -122,6 +135,8 @@
               <div id="enemyTeam" class="pick-list"></div>
             </section>
           </section>
+
+          <section id="draftAiAnalysisPanel" class="draft-ai-analysis-panel" aria-live="polite"></section>
         </section>
       </section>
 
@@ -312,6 +327,21 @@
               <button id="saveRiotPlatformRegionButton" type="button">保存</button>
             </div>
             <small id="riotRegionalRouteStatus" class="settings-help">ログイン先サーバ: JP1 / Match-V5 route: ASIA</small>
+          </label>
+
+          <div class="settings-divider"></div>
+
+          <label class="settings-field" for="themeModeSelect">
+            <span>表示テーマ</span>
+            <div class="token-input-row">
+              <select id="themeModeSelect">
+                <option value="system">システムと同期</option>
+                <option value="light">ライト</option>
+                <option value="dark">ダーク</option>
+              </select>
+              <button id="saveThemeModeButton" type="button">保存</button>
+            </div>
+            <small id="themeModeStatus" class="settings-help">OSの表示モードに合わせます。</small>
           </label>
 
           <p id="settingsMessage" class="settings-message" role="status"></p>

@@ -1,17 +1,20 @@
-:root {
-  color-scheme: dark;
-  --bg: #080c12;
-  --panel: #111821;
-  --panel-soft: #1a2330;
-  --text: #f4f7fb;
-  --muted: #9aa7b8;
-  --border: #2b3749;
-  --line: #5d4a22;
-  --accent: #d4af37;
-  --accent-soft: #2d2818;
-  --blue: #24b6d9;
-  --red: #c63b48;
-  --danger: #ff6b6b;
+﻿:root {
+  color-scheme: light;
+  --bg: #f5f4ff;
+  --panel: rgba(255, 255, 255, 0.84);
+  --panel-solid: #ffffff;
+  --panel-soft: rgba(238, 235, 255, 0.82);
+  --text: #041029;
+  --muted: #687184;
+  --border: rgba(102, 85, 178, 0.18);
+  --line: rgba(120, 95, 255, 0.36);
+  --accent: #6136ff;
+  --accent-strong: #2574ff;
+  --accent-soft: rgba(110, 78, 255, 0.12);
+  --blue: #2574ff;
+  --red: #ec486a;
+  --danger: #e5485c;
+  --shadow: 0 18px 50px rgba(25, 18, 88, 0.13);
 }
 
 * {
@@ -26,8 +29,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 50% 0%, rgba(36, 182, 217, 0.12), transparent 36%),
-    linear-gradient(135deg, rgba(15, 28, 42, 0.95), rgba(8, 12, 18, 1) 48%, rgba(18, 13, 9, 0.96));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(246, 244, 255, 0.94) 42%, rgba(234, 229, 255, 0.96)),
+    radial-gradient(circle at 18% 8%, rgba(37, 116, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 22%, rgba(97, 54, 255, 0.2), transparent 32%);
   color: var(--text);
   font-family:
     "Bahnschrift",
@@ -37,13 +41,97 @@ body {
     sans-serif;
   font-size: 14px;
   line-height: 1.45;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+
+body::before {
+  background:
+    linear-gradient(135deg, transparent 0 42%, rgba(125, 98, 255, 0.18) 42% 62%, transparent 62%),
+    linear-gradient(45deg, transparent 0 56%, rgba(37, 116, 255, 0.12) 56% 72%, transparent 72%);
+  inset: 0;
+}
+
+body::after {
+  background: linear-gradient(140deg, rgba(97, 54, 255, 0.14), rgba(37, 116, 255, 0.05));
+  bottom: -80px;
+  height: 42vh;
+  right: -120px;
+  transform: skewX(-18deg);
+  width: 44vw;
+}
+
+.window-titlebar {
+  -webkit-app-region: drag;
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(238, 235, 255, 0.82)),
+    rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(25, 18, 88, 0.08);
+  display: flex;
+  height: 38px;
+  justify-content: space-between;
+  padding-left: 12px;
+  user-select: none;
+}
+
+.window-titlebar-brand {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 8px;
+  min-width: 0;
+}
+
+.window-titlebar-controls {
+  -webkit-app-region: no-drag;
+  align-items: stretch;
+  align-self: stretch;
+  display: flex;
+}
+
+.window-control-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text);
+  display: grid;
+  font-size: 15px;
+  font-weight: 400;
+  height: 38px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0;
+  width: 46px;
+}
+
+.window-control-button:hover {
+  background: rgba(97, 54, 255, 0.12);
+}
+
+.window-control-button.close:hover {
+  background: var(--danger);
+  color: #ffffff;
 }
 
 button {
-  border: 1px solid color-mix(in srgb, var(--accent), white 12%);
+  border: 1px solid color-mix(in srgb, var(--accent), white 28%);
   border-radius: 6px;
-  background: var(--accent);
-  color: #17150c;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 8px 22px rgba(97, 54, 255, 0.18);
+  color: #ffffff;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -69,17 +157,19 @@ select {
 }
 
 code {
-  color: #f1ddb0;
+  color: var(--accent);
 }
 
 .app-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+  height: calc(100vh - 38px);
   margin: 0 auto;
   max-width: 1280px;
-  min-height: 100vh;
-  padding: 24px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 20px 10px;
 }
 
 .app-header {
@@ -102,6 +192,17 @@ code {
   min-width: 0;
 }
 
+.app-logo {
+  background: #ffffff;
+  border: 1px solid rgba(4, 16, 41, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(38, 25, 111, 0.14);
+  flex: 0 0 auto;
+  height: 48px;
+  object-fit: cover;
+  width: 48px;
+}
+
 .match-data-summary {
   display: flex;
   flex-direction: column;
@@ -111,7 +212,7 @@ code {
 
 .match-data-summary strong {
   color: var(--text);
-  font-size: 21px;
+  font-size: 20px;
   line-height: 1.15;
 }
 
@@ -126,9 +227,9 @@ code {
 
 .match-data-season-hint {
   align-self: start;
-  background: rgba(212, 175, 55, 0.1);
-  border-color: rgba(212, 175, 55, 0.38);
-  color: #f1ddb0;
+  background: rgba(97, 54, 255, 0.09);
+  border-color: rgba(97, 54, 255, 0.24);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
   min-height: 26px;
@@ -136,12 +237,12 @@ code {
 }
 
 .match-data-season-hint:hover:not(:disabled) {
-  background: rgba(212, 175, 55, 0.18);
-  border-color: rgba(212, 175, 55, 0.62);
+  background: rgba(97, 54, 255, 0.14);
+  border-color: rgba(97, 54, 255, 0.4);
 }
 
 .match-data-progress {
-  color: #f1ddb0;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   min-height: 14px;
@@ -158,10 +259,11 @@ code {
 
 .match-data-update-button,
 .match-data-menu-button {
-  background: rgba(212, 175, 55, 0.12);
-  border-color: rgba(212, 175, 55, 0.54);
-  color: #f1ddb0;
-  min-height: 34px;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(97, 54, 255, 0.28);
+  box-shadow: 0 8px 22px rgba(97, 54, 255, 0.1);
+  color: var(--accent);
+  min-height: 30px;
   padding: 0 12px;
   white-space: nowrap;
 }
@@ -179,15 +281,15 @@ code {
 
 .match-data-update-button:hover:not(:disabled),
 .match-data-menu-button:hover:not(:disabled) {
-  background: rgba(212, 175, 55, 0.22);
-  border-color: rgba(212, 175, 55, 0.78);
+  background: rgba(97, 54, 255, 0.1);
+  border-color: rgba(97, 54, 255, 0.46);
 }
 
 .match-data-menu {
-  background: rgba(17, 24, 33, 0.98);
-  border: 1px solid rgba(212, 175, 55, 0.38);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(97, 54, 255, 0.2);
   border-radius: 6px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--shadow);
   min-width: 238px;
   padding: 5px;
   position: absolute;
@@ -210,14 +312,15 @@ code {
 }
 
 .match-data-menu button:hover:not(:disabled) {
-  background: rgba(212, 175, 55, 0.14);
-  color: #f1ddb0;
+  background: rgba(97, 54, 255, 0.1);
+  color: var(--accent);
 }
 
 .view-tabs {
-  background: rgba(8, 12, 18, 0.72);
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(25, 18, 88, 0.08);
   display: flex;
   padding: 2px;
 }
@@ -226,31 +329,38 @@ code {
   background: transparent;
   border: 0;
   color: var(--muted);
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 12px;
 }
 
 .tab-button.active {
-  background: var(--panel-soft);
+  background: linear-gradient(135deg, #ffffff, rgba(238, 235, 255, 0.96));
+  box-shadow: 0 7px 16px rgba(97, 54, 255, 0.12);
   color: var(--text);
 }
 
 #draftTabButton.draft-live {
-  background: rgba(255, 107, 107, 0.18);
-  color: #ffd0d0;
+  background: linear-gradient(135deg, #e5485c, #6136ff);
+  border: 1px solid rgba(4, 16, 41, 0.08);
+  box-shadow: 0 8px 20px rgba(229, 72, 92, 0.22);
+  color: #ffffff;
   font-weight: 900;
   padding-left: 24px;
   position: relative;
 }
 
 #draftTabButton.draft-live.active {
-  box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.5);
+  background: linear-gradient(135deg, #e5485c, #6136ff);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 8px 20px rgba(229, 72, 92, 0.26);
+  color: #ffffff;
 }
 
 #draftTabButton.draft-live::before {
-  background: var(--danger);
+  background: #ffffff;
   border-radius: 999px;
-  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.14);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22);
   content: "";
   height: 6px;
   left: 8px;
@@ -298,9 +408,11 @@ h2 {
 .panel,
 .center-state,
 .draft-board {
-  background: rgba(17, 24, 33, 0.9);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
 }
 
 .status-card {
@@ -321,6 +433,13 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+#draftView {
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .debug-toolbar {
@@ -332,9 +451,11 @@ h2 {
 .settings-panel,
 .champion-pool-panel,
 .stats-panel {
-  background: rgba(17, 24, 33, 0.9);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -370,7 +491,7 @@ h2 {
 }
 
 .stats-subtabs {
-  background: rgba(8, 12, 18, 0.5);
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
@@ -390,7 +511,8 @@ h2 {
 }
 
 .stats-subtab.active {
-  background: var(--panel-soft);
+  background: #ffffff;
+  box-shadow: 0 7px 16px rgba(97, 54, 255, 0.1);
   color: var(--text);
 }
 
@@ -417,8 +539,9 @@ h2 {
 }
 
 .lane-tab.active {
-  background: var(--panel-soft);
-  border-color: rgba(212, 175, 55, 0.58);
+  background: #ffffff;
+  border-color: rgba(97, 54, 255, 0.36);
+  box-shadow: 0 7px 16px rgba(97, 54, 255, 0.1);
   color: var(--text);
 }
 
@@ -437,7 +560,7 @@ h2 {
 
 .weak-champion-section,
 .strong-champion-section {
-  background: rgba(8, 18, 28, 0.48);
+  background: rgba(255, 255, 255, 0.54);
   border: 1px solid var(--border);
   border-radius: 8px;
   min-width: 0;
@@ -446,7 +569,7 @@ h2 {
 
 .weak-champion-section h3,
 .strong-champion-section h3 {
-  color: #f1ddb0;
+  color: var(--text);
   font-size: 15px;
   line-height: 1.2;
   margin: 0;
@@ -471,7 +594,7 @@ h2 {
 }
 
 .stats-table-section {
-  background: rgba(8, 18, 28, 0.48);
+  background: rgba(255, 255, 255, 0.54);
   border: 1px solid var(--border);
   border-radius: 8px;
   min-width: 0;
@@ -479,7 +602,7 @@ h2 {
 }
 
 .stats-table-section h3 {
-  color: #f1ddb0;
+  color: var(--text);
   font-size: 15px;
   line-height: 1.2;
   margin: 0 0 10px;
@@ -517,7 +640,7 @@ h2 {
 }
 
 .stats-table tbody tr:hover {
-  background: rgba(26, 35, 48, 0.38);
+  background: rgba(97, 54, 255, 0.08);
 }
 
 .stats-table tbody tr:last-child th,
@@ -536,7 +659,7 @@ h2 {
 }
 
 .stats-sort-button.active {
-  color: #d7efff;
+  color: var(--accent);
 }
 
 .stats-sort-button.active[data-sort-direction="desc"]::after {
@@ -576,7 +699,7 @@ h2 {
 
 .stats-table-clickable-row:hover td:last-child::after,
 .stats-table-clickable-row.expanded td:last-child::after {
-  color: #a9ecfb;
+  color: var(--accent);
 }
 
 .stats-table-clickable-row.expanded td:last-child::after {
@@ -584,11 +707,11 @@ h2 {
 }
 
 .stats-table-clickable-row.expanded {
-  background: rgba(26, 35, 48, 0.5);
+  background: rgba(97, 54, 255, 0.08);
 }
 
 .stats-opponent-detail-row td {
-  background: rgba(8, 18, 28, 0.36);
+  background: rgba(97, 54, 255, 0.06);
   padding: 10px;
 }
 
@@ -608,27 +731,28 @@ h2 {
 }
 
 .stats-opponent-detail-group.won {
-  background: rgba(41, 154, 204, 0.1);
-  border-color: rgba(95, 216, 255, 0.28);
+  background: rgba(37, 116, 255, 0.12);
+  border-color: rgba(37, 116, 255, 0.24);
 }
 
 .stats-opponent-detail-group.lost {
-  background: rgba(212, 72, 72, 0.1);
-  border-color: rgba(255, 145, 145, 0.28);
+  background: rgba(236, 72, 106, 0.12);
+  border-color: rgba(236, 72, 106, 0.24);
 }
 
 .stats-opponent-detail-group h4 {
   font-size: 11px;
+  font-weight: 900;
   line-height: 1.1;
   margin: 0;
 }
 
 .stats-opponent-detail-group.won h4 {
-  color: #a9ecfb;
+  color: #1559d6;
 }
 
 .stats-opponent-detail-group.lost h4 {
-  color: #ffb0b0;
+  color: #c92550;
 }
 
 .stats-opponent-detail-empty {
@@ -647,7 +771,7 @@ h2 {
 
 .stats-opponent-detail-pick {
   align-items: center;
-  background: rgba(8, 18, 28, 0.62);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(154, 167, 184, 0.18);
   border-radius: 5px;
   display: inline-flex;
@@ -658,21 +782,21 @@ h2 {
 }
 
 .stats-opponent-detail-pick.won {
-  border-color: rgba(95, 216, 255, 0.28);
+  border-color: rgba(37, 116, 255, 0.22);
 }
 
 .stats-opponent-detail-pick.lost {
-  border-color: rgba(255, 145, 145, 0.28);
+  border-color: rgba(236, 72, 106, 0.22);
 }
 
 .stats-opponent-detail-pick b {
-  color: #d9e4f2;
+  color: var(--text);
   font-size: 10px;
   line-height: 1;
 }
 
 .stats-opponent-detail-pick small {
-  color: var(--muted);
+  color: #4f5b70;
   font-size: 10px;
   font-weight: 900;
   line-height: 1;
@@ -689,7 +813,7 @@ h2 {
 
 .weak-champion-item,
 .strong-champion-item {
-  background: rgba(26, 35, 48, 0.62);
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid rgba(154, 167, 184, 0.2);
   border-radius: 8px;
   display: grid;
@@ -724,15 +848,15 @@ h2 {
 }
 
 .stats-side-badge.you {
-  background: rgba(41, 154, 204, 0.14);
-  border-color: rgba(95, 216, 255, 0.38);
-  color: #9fe9ff;
+  background: rgba(37, 116, 255, 0.12);
+  border-color: rgba(37, 116, 255, 0.28);
+  color: #1559d6;
 }
 
 .stats-side-badge.enemy {
-  background: rgba(212, 72, 72, 0.12);
-  border-color: rgba(255, 145, 145, 0.34);
-  color: #ffb0b0;
+  background: rgba(236, 72, 106, 0.12);
+  border-color: rgba(236, 72, 106, 0.28);
+  color: #c92550;
 }
 
 .weak-champion-name,
@@ -747,7 +871,7 @@ h2 {
 
 .weak-champion-item .pick-pool-stat-chip,
 .strong-champion-item .pick-pool-stat-chip {
-  background: rgba(8, 18, 28, 0.72);
+  background: rgba(255, 255, 255, 0.7);
   border-color: rgba(154, 167, 184, 0.24);
 }
 
@@ -789,13 +913,13 @@ h2 {
 }
 
 .weak-self-pick-row.lost {
-  background: rgba(212, 72, 72, 0.1);
-  border-color: rgba(255, 145, 145, 0.28);
+  background: rgba(236, 72, 106, 0.12);
+  border-color: rgba(236, 72, 106, 0.24);
 }
 
 .weak-self-pick-row.won {
-  background: rgba(41, 154, 204, 0.1);
-  border-color: rgba(95, 216, 255, 0.28);
+  background: rgba(37, 116, 255, 0.12);
+  border-color: rgba(37, 116, 255, 0.24);
 }
 
 .weak-self-pick-group-title {
@@ -805,11 +929,11 @@ h2 {
 }
 
 .weak-self-pick-row.lost .weak-self-pick-group-title {
-  color: #ffb0b0;
+  color: #c92550;
 }
 
 .weak-self-pick-row.won .weak-self-pick-group-title {
-  color: #a9ecfb;
+  color: #1559d6;
 }
 
 .weak-self-pick-group-tokens {
@@ -822,7 +946,7 @@ h2 {
 
 .weak-self-pick-token {
   align-items: center;
-  background: rgba(8, 18, 28, 0.62);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(154, 167, 184, 0.18);
   border-radius: 5px;
   display: inline-flex;
@@ -843,7 +967,7 @@ h2 {
 }
 
 .weak-self-pick-token b {
-  color: #d9e4f2;
+  color: var(--text);
   font-size: 10px;
   line-height: 1;
 }
@@ -881,7 +1005,7 @@ h2 {
 
 .champion-picker-card {
   align-items: center;
-  background: rgba(26, 35, 48, 0.72);
+  background: rgba(255, 255, 255, 0.62);
   border-color: var(--border);
   color: var(--text);
   display: grid;
@@ -894,13 +1018,13 @@ h2 {
 }
 
 .champion-picker-card:hover {
-  border-color: rgba(212, 175, 55, 0.58);
+  border-color: rgba(97, 54, 255, 0.36);
 }
 
 .champion-picker-card.selected {
-  background: rgba(212, 175, 55, 0.14);
-  border-color: rgba(212, 175, 55, 0.72);
-  color: #f8e7bd;
+  background: rgba(97, 54, 255, 0.12);
+  border-color: rgba(97, 54, 255, 0.42);
+  color: var(--accent);
 }
 
 .champion-picker-card .champion-portrait {
@@ -923,7 +1047,7 @@ h2 {
 
 .pool-champion {
   align-items: center;
-  background: rgba(26, 35, 48, 0.72);
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: grid;
@@ -954,7 +1078,7 @@ h2 {
 }
 
 .pool-champion-stats .pick-pool-stat-chip {
-  background: rgba(8, 18, 28, 0.72);
+  background: rgba(255, 255, 255, 0.7);
   border-color: rgba(154, 167, 184, 0.24);
   min-height: 21px;
   padding: 2px 7px;
@@ -975,7 +1099,7 @@ h2 {
 }
 
 .pool-stat-line.games {
-  color: #f1ddb0;
+  color: var(--accent);
   font-weight: 800;
 }
 
@@ -985,7 +1109,7 @@ h2 {
 
 .pool-remove-button {
   align-items: center;
-  background: rgba(8, 12, 18, 0.28);
+  background: rgba(255, 255, 255, 0.58);
   border-color: rgba(154, 167, 184, 0.28);
   border-radius: 6px;
   color: rgba(154, 167, 184, 0.86);
@@ -1103,16 +1227,18 @@ h2 {
 
 .in-game-hero,
 .in-game-card {
-  background: rgba(17, 24, 33, 0.9);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
 }
 
 .in-game-hero {
   align-items: center;
   background:
-    linear-gradient(100deg, rgba(212, 175, 55, 0.18), rgba(17, 24, 33, 0.92) 44%, rgba(36, 182, 217, 0.12)),
-    rgba(17, 24, 33, 0.92);
+    linear-gradient(100deg, rgba(97, 54, 255, 0.18), rgba(255, 255, 255, 0.88) 44%, rgba(37, 116, 255, 0.14)),
+    var(--panel);
   display: grid;
   gap: 18px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1123,11 +1249,11 @@ h2 {
 
 .in-game-portrait {
   align-items: center;
-  background: rgba(8, 12, 18, 0.42);
-  border: 2px solid rgba(212, 175, 55, 0.56);
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid rgba(97, 54, 255, 0.34);
   border-radius: 8px;
-  box-shadow: 0 0 34px rgba(212, 175, 55, 0.16);
-  color: rgba(244, 247, 251, 0.62);
+  box-shadow: 0 16px 38px rgba(97, 54, 255, 0.16);
+  color: rgba(4, 16, 41, 0.38);
   display: flex;
   font-size: 54px;
   font-weight: 800;
@@ -1150,14 +1276,14 @@ h2 {
 }
 
 .in-game-main h2 {
-  color: #f7e7bb;
+  color: var(--text);
   font-size: 34px;
   line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
 .in-game-main p:not(.eyebrow) {
-  color: rgba(217, 228, 242, 0.78);
+  color: var(--muted);
 }
 
 .in-game-stat-row,
@@ -1169,14 +1295,14 @@ h2 {
 }
 
 .in-game-self-stats .pick-pool-stat-chip {
-  background: rgba(8, 12, 18, 0.36);
-  border-color: rgba(212, 175, 55, 0.28);
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(97, 54, 255, 0.22);
   min-height: 28px;
   padding: 4px 7px;
 }
 
 .in-game-self-stats .pick-pool-stat-chip b {
-  color: #f1ddb0;
+  color: var(--accent);
   font-size: 12px;
 }
 
@@ -1205,7 +1331,7 @@ h2 {
 }
 
 .in-game-matchup-title {
-  color: #f1ddb0;
+  color: var(--text);
   font-size: 13px;
   line-height: 1.2;
   width: 100%;
@@ -1226,8 +1352,8 @@ h2 {
 }
 
 .low-sample-badge {
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: rgba(97, 54, 255, 0.1);
+  border: 1px solid rgba(97, 54, 255, 0.24);
   border-radius: 999px;
   color: var(--accent);
   font-size: 10px;
@@ -1259,7 +1385,7 @@ h2 {
 
 .in-game-champion-chip {
   align-items: center;
-  background: rgba(8, 12, 18, 0.28);
+  background: rgba(255, 255, 255, 0.56);
   border: 1px solid rgba(154, 167, 184, 0.18);
   border-radius: 6px;
   display: inline-flex;
@@ -1271,7 +1397,7 @@ h2 {
 }
 
 .in-game-champion-chip img {
-  border: 1px solid rgba(212, 175, 55, 0.34);
+  border: 1px solid rgba(97, 54, 255, 0.28);
   border-radius: 4px;
   flex: 0 0 auto;
   height: 22px;
@@ -1280,7 +1406,7 @@ h2 {
 }
 
 .in-game-champion-chip span {
-  color: rgba(217, 228, 242, 0.92);
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
   overflow: hidden;
@@ -1297,22 +1423,24 @@ h2 {
 }
 
 .draft-board {
-  border-color: color-mix(in srgb, var(--line), white 12%);
+  border-color: var(--line);
   display: flex;
   flex-direction: column;
-  min-height: 540px;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 .draft-board.local-turn {
-  border-color: rgba(245, 214, 131, 0.82);
-  box-shadow: 0 0 0 1px rgba(245, 214, 131, 0.24), 0 0 28px rgba(212, 175, 55, 0.22);
+  border-color: rgba(37, 116, 255, 0.56);
+  box-shadow: 0 0 0 1px rgba(37, 116, 255, 0.18), 0 18px 52px rgba(97, 54, 255, 0.2);
 }
 
 .draft-header {
   align-items: center;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  border-bottom: 1px solid rgba(97, 54, 255, 0.2);
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: 1fr minmax(220px, 340px) 1fr;
   gap: 16px;
   padding: 14px 16px;
@@ -1355,10 +1483,10 @@ h2 {
 
 .ban-token {
   align-items: center;
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.42);
+  background: rgba(97, 54, 255, 0.1);
+  border: 1px solid rgba(97, 54, 255, 0.26);
   border-radius: 999px;
-  color: #f1ddb0;
+  color: var(--accent);
   display: inline-flex;
   font-size: 12px;
   gap: 5px;
@@ -1380,17 +1508,135 @@ h2 {
 }
 
 .teams-layout {
+  align-items: stretch;
   display: grid;
-  flex: 1;
-  grid-template-columns: minmax(220px, 280px) minmax(420px, 1fr) minmax(220px, 280px);
+  flex: 1 1 auto;
+  grid-template-columns: minmax(230px, 270px) minmax(460px, 1fr) minmax(230px, 270px);
   min-height: 0;
+  overflow: hidden;
+}
+
+.draft-ai-analysis-panel {
+  background:
+    linear-gradient(135deg, rgba(37, 116, 255, 0.16), rgba(97, 54, 255, 0.16)),
+    var(--panel-solid);
+  border: 1px solid rgba(97, 54, 255, 0.3);
+  border-left-width: 0;
+  border-right-width: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 -14px 34px rgba(97, 54, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 150px;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 20px 14px;
+  position: relative;
+}
+
+.draft-ai-analysis-panel::before {
+  background: linear-gradient(180deg, var(--accent), var(--blue));
+  border-radius: 999px;
+  bottom: 12px;
+  content: "";
+  left: 10px;
+  position: absolute;
+  top: 12px;
+  width: 4px;
+}
+
+.draft-ai-analysis-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+.draft-ai-analysis-header h3 {
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.draft-ai-analysis-badge {
+  border: 1px solid rgba(154, 167, 184, 0.42);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.draft-ai-analysis-badge.ready {
+  background: rgba(37, 116, 255, 0.12);
+  border-color: rgba(37, 116, 255, 0.32);
+  color: var(--blue);
+}
+
+.draft-ai-analysis-badge.requesting {
+  background: rgba(97, 54, 255, 0.12);
+  border-color: rgba(97, 54, 255, 0.32);
+  color: var(--accent);
+}
+
+.draft-ai-analysis-badge.error {
+  background: rgba(236, 72, 106, 0.12);
+  border-color: rgba(236, 72, 106, 0.32);
+  color: var(--red);
+}
+
+.draft-ai-analysis-status {
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-ai-analysis-notes {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.draft-ai-analysis-note {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(97, 54, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(97, 54, 255, 0.12);
+  min-width: 0;
+  overflow: hidden;
+  padding: 9px 12px;
+}
+
+.draft-ai-analysis-note strong {
+  color: var(--accent);
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.draft-ai-analysis-note p {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 78px;
+  overflow: auto;
 }
 
 .team-column {
+  align-self: start;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 12px;
+  gap: 9px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
 }
 
 .team-column h3 {
@@ -1405,16 +1651,21 @@ h2 {
 .pick-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .pick-row {
   align-items: center;
-  background: rgba(26, 35, 48, 0.72);
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--border);
+  border-radius: 8px;
   display: flex;
-  gap: 8px;
-  min-height: 64px;
+  flex: 0 0 72px;
+  gap: 7px;
+  min-height: 0;
+  overflow: hidden;
   padding: 8px;
 }
 
@@ -1434,35 +1685,35 @@ h2 {
 
 .pick-row.lane-opponent-target:hover,
 .pick-row.lane-opponent-target:focus-visible {
-  border-color: rgba(245, 214, 131, 0.62);
+  border-color: rgba(97, 54, 255, 0.42);
   outline: 0;
 }
 
 .pick-row.selected {
-  background: linear-gradient(90deg, rgba(36, 182, 217, 0.16), rgba(26, 35, 48, 0.8));
+  background: linear-gradient(90deg, rgba(37, 116, 255, 0.14), rgba(255, 255, 255, 0.78));
 }
 
 .pick-row.enemy.selected {
-  background: linear-gradient(270deg, rgba(198, 59, 72, 0.18), rgba(26, 35, 48, 0.8));
+  background: linear-gradient(270deg, rgba(236, 72, 106, 0.14), rgba(255, 255, 255, 0.78));
 }
 
 .pick-row.intent {
-  background: rgba(26, 35, 48, 0.78);
+  background: rgba(238, 235, 255, 0.72);
 }
 
 .pick-row.local-player {
-  background: linear-gradient(90deg, rgba(36, 182, 217, 0.24), rgba(26, 35, 48, 0.84));
-  border-color: rgba(36, 182, 217, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(36, 182, 217, 0.14);
+  background: linear-gradient(90deg, rgba(37, 116, 255, 0.18), rgba(255, 255, 255, 0.84));
+  border-color: rgba(37, 116, 255, 0.46);
+  box-shadow: inset 0 0 0 1px rgba(37, 116, 255, 0.1);
   padding-right: 42px;
   position: relative;
 }
 
 .pick-row.local-player::after {
-  background: rgba(36, 182, 217, 0.16);
-  border: 1px solid rgba(36, 182, 217, 0.42);
+  background: rgba(37, 116, 255, 0.12);
+  border: 1px solid rgba(37, 116, 255, 0.3);
   border-radius: 999px;
-  color: #a9ecfb;
+  color: var(--blue);
   content: "YOU";
   font-size: 10px;
   font-weight: 900;
@@ -1475,57 +1726,80 @@ h2 {
 }
 
 .pick-row.local-player .champion-portrait {
-  border-color: rgba(36, 182, 217, 0.86);
+  border-color: rgba(37, 116, 255, 0.66);
 }
 
 .pick-row.active-turn {
-  background: linear-gradient(90deg, rgba(245, 214, 131, 0.14), rgba(26, 35, 48, 0.82));
-  border-color: rgba(245, 214, 131, 0.54);
-  box-shadow: inset 0 0 0 1px rgba(245, 214, 131, 0.12);
+  background: linear-gradient(90deg, rgba(97, 54, 255, 0.12), rgba(255, 255, 255, 0.82));
+  border-color: rgba(97, 54, 255, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(97, 54, 255, 0.1);
 }
 
 .pick-row.enemy.active-turn {
-  background: linear-gradient(270deg, rgba(245, 214, 131, 0.14), rgba(26, 35, 48, 0.82));
+  background: linear-gradient(270deg, rgba(97, 54, 255, 0.12), rgba(255, 255, 255, 0.82));
 }
 
 .pick-row.enemy.marked-lane-opponent {
-  background: linear-gradient(270deg, rgba(212, 175, 55, 0.22), rgba(26, 35, 48, 0.84));
-  border-color: rgba(245, 214, 131, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(245, 214, 131, 0.2), 0 0 16px rgba(212, 175, 55, 0.16);
+  background: linear-gradient(270deg, rgba(97, 54, 255, 0.16), rgba(255, 255, 255, 0.84));
+  border-color: rgba(97, 54, 255, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(97, 54, 255, 0.12), 0 12px 24px rgba(97, 54, 255, 0.12);
 }
 
 .pick-row.local-active-turn {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.26), rgba(26, 35, 48, 0.84));
-  border-color: rgba(245, 214, 131, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(245, 214, 131, 0.22), 0 0 18px rgba(212, 175, 55, 0.2);
+  background: linear-gradient(90deg, rgba(97, 54, 255, 0.2), rgba(255, 255, 255, 0.84));
+  border-color: rgba(97, 54, 255, 0.56);
+  box-shadow: inset 0 0 0 1px rgba(97, 54, 255, 0.12), 0 12px 26px rgba(97, 54, 255, 0.14);
 }
 
 .pick-row.local-active-turn::after {
-  background: rgba(212, 175, 55, 0.22);
-  border-color: rgba(245, 214, 131, 0.76);
-  color: #f9e5a8;
+  background: rgba(97, 54, 255, 0.16);
+  border-color: rgba(97, 54, 255, 0.34);
+  color: var(--accent);
 }
 
 .pick-row.local-active-turn .champion-portrait {
-  border-color: rgba(245, 214, 131, 0.96);
+  border-color: rgba(97, 54, 255, 0.7);
+}
+
+.pick-portrait-stack {
+  align-items: center;
+  display: flex;
+  flex: 0 0 44px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .champion-portrait {
   align-items: center;
   aspect-ratio: 1;
   background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.18), transparent 32%),
-    linear-gradient(135deg, rgba(36, 182, 217, 0.26), rgba(212, 175, 55, 0.14));
-  border: 2px solid rgba(212, 175, 55, 0.58);
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.62), transparent 32%),
+    linear-gradient(135deg, rgba(37, 116, 255, 0.22), rgba(97, 54, 255, 0.16));
+  border: 2px solid rgba(97, 54, 255, 0.28);
   border-radius: 50%;
-  color: #f8e7bd;
+  color: var(--accent);
   display: grid;
-  flex: 0 0 40px;
   font-size: 12px;
   font-weight: 800;
   justify-content: center;
   overflow: hidden;
   width: 40px;
+}
+
+.pick-role-badge {
+  background: rgba(97, 54, 255, 0.12);
+  border: 1px solid rgba(97, 54, 255, 0.26);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  max-width: 46px;
+  overflow: hidden;
+  padding: 2px 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pick-row.empty .champion-portrait {
@@ -1547,6 +1821,7 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -1557,6 +1832,10 @@ h2 {
   white-space: nowrap;
 }
 
+.pick-meta strong {
+  font-size: 13px;
+}
+
 .pick-meta span {
   color: var(--muted);
   font-size: 12px;
@@ -1564,10 +1843,10 @@ h2 {
 
 .pick-meta .lane-opponent-marker {
   align-self: flex-end;
-  background: rgba(212, 175, 55, 0.16);
-  border: 1px solid rgba(212, 175, 55, 0.48);
+  background: rgba(97, 54, 255, 0.12);
+  border: 1px solid rgba(97, 54, 255, 0.3);
   border-radius: 999px;
-  color: #f9e5a8;
+  color: var(--accent);
   font-size: 10px;
   font-weight: 900;
   line-height: 1;
@@ -1578,65 +1857,132 @@ h2 {
 .draft-champion-stats {
   border-top: 1px solid rgba(154, 167, 184, 0.18);
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 4px;
   margin-top: 3px;
+  max-height: 22px;
+  overflow: hidden;
   padding-top: 5px;
 }
 
-.draft-champion-stats .pool-stat-line {
-  color: rgba(217, 228, 242, 0.76);
-  font-size: 11px;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.draft-champion-stats .pick-pool-stat-chip {
+  flex: 0 1 auto;
+  min-height: 17px;
+  min-width: 0;
+  padding: 1px 4px;
 }
 
-.draft-champion-stats .pool-stat-line.games {
-  color: #f1ddb0;
+.draft-champion-stats .pick-pool-stat-chip small {
+  font-size: 8px;
 }
 
-.draft-champion-stats .pool-stat-line.muted {
-  color: rgba(154, 167, 184, 0.66);
+.draft-champion-stats .pick-pool-stat-chip b {
+  font-size: 9px;
+}
+
+.draft-self-summary {
+  align-items: center;
+  align-self: center;
+  background: rgba(97, 54, 255, 0.12);
+  border: 1px solid rgba(97, 54, 255, 0.28);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  max-width: 560px;
+  padding: 7px 9px;
+  text-align: left;
+  width: min(96%, 560px);
+}
+
+.draft-self-summary[hidden] {
+  display: none;
+}
+
+.draft-self-summary-header {
+  align-items: center;
+  display: flex;
+  flex: 1 1 170px;
+  gap: 7px;
+  min-width: 0;
+}
+
+.draft-self-summary-label {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.draft-self-summary-name {
+  font-size: 13px;
+  min-width: 0;
+}
+
+.draft-self-summary-name span {
+  min-width: 0;
+}
+
+.draft-self-summary-stats {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.draft-self-summary-stats .pick-pool-stat-chip {
+  min-height: 20px;
+  padding: 2px 5px;
 }
 
 .draft-focus {
   align-items: center;
   background:
-    radial-gradient(circle at 50% 42%, rgba(212, 175, 55, 0.18), transparent 28%),
-    radial-gradient(circle at 50% 44%, rgba(36, 182, 217, 0.14), transparent 44%);
-  border-left: 1px solid rgba(212, 175, 55, 0.18);
-  border-right: 1px solid rgba(212, 175, 55, 0.18);
+    linear-gradient(135deg, transparent 0 38%, rgba(97, 54, 255, 0.08) 38% 58%, transparent 58%),
+    radial-gradient(circle at 50% 42%, rgba(97, 54, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 50% 44%, rgba(37, 116, 255, 0.1), transparent 44%);
+  border-left: 1px solid rgba(97, 54, 255, 0.12);
+  border-right: 1px solid rgba(97, 54, 255, 0.12);
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
 .champion-focus {
   align-items: center;
   aspect-ratio: 1;
-  border: 2px solid rgba(212, 175, 55, 0.5);
+  background: rgba(255, 255, 255, 0.52);
+  border: 2px solid rgba(97, 54, 255, 0.24);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   gap: 8px;
   justify-content: center;
+  min-height: 0;
   max-width: 360px;
+  overflow: hidden;
   padding: 28px;
   text-align: center;
   width: 82%;
 }
 
 .draft-board.local-turn .champion-focus {
-  background: rgba(212, 175, 55, 0.12);
-  border-color: rgba(245, 214, 131, 0.96);
-  box-shadow: 0 0 0 8px rgba(212, 175, 55, 0.08), 0 0 34px rgba(212, 175, 55, 0.28);
+  background: rgba(97, 54, 255, 0.1);
+  border-color: rgba(97, 54, 255, 0.56);
+  box-shadow: 0 0 0 8px rgba(97, 54, 255, 0.06), 0 18px 40px rgba(97, 54, 255, 0.18);
 }
 
 .draft-board.local-turn .champion-focus h3 {
-  color: #f9e5a8;
+  color: var(--accent);
 }
 
 .champion-focus.has-ban-insights {
@@ -1644,6 +1990,7 @@ h2 {
   aspect-ratio: auto;
   border-radius: 8px;
   gap: 10px;
+  max-height: 100%;
   max-width: 560px;
   padding: 14px 16px;
   width: min(96%, 560px);
@@ -1660,7 +2007,7 @@ h2 {
 }
 
 .draft-board.local-turn .champion-focus p:last-child {
-  color: #f8e7bd;
+  color: var(--accent);
   font-weight: 800;
 }
 
@@ -1677,6 +2024,9 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
   text-align: left;
 }
 
@@ -1709,14 +2059,14 @@ h2 {
 }
 
 .ban-insight-sample-filter select {
-  background: rgba(8, 18, 28, 0.72);
+  background: rgba(255, 255, 255, 0.7);
   font-size: 12px;
   min-height: 30px;
   padding: 0 8px;
 }
 
 .ban-insight-section {
-  border-top: 1px solid rgba(212, 175, 55, 0.22);
+  border-top: 1px solid rgba(97, 54, 255, 0.16);
   padding-top: 8px;
 }
 
@@ -1732,7 +2082,7 @@ h2 {
 }
 
 .ban-insight-section h4 {
-  color: #f1ddb0;
+  color: var(--text);
   font-size: 12px;
   line-height: 1.2;
   margin: 0 0 7px;
@@ -1773,7 +2123,7 @@ h2 {
 }
 
 .inline-champion-icon {
-  border: 1px solid rgba(212, 175, 55, 0.42);
+  border: 1px solid rgba(97, 54, 255, 0.28);
   border-radius: 50%;
   flex: 0 0 auto;
   height: 18px;
@@ -1807,7 +2157,7 @@ h2 {
 }
 
 .ban-insight-section span {
-  color: #d9e4f2;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -1832,7 +2182,7 @@ h2 {
 }
 
 .ban-insight-details {
-  border-top: 1px solid rgba(212, 175, 55, 0.16);
+  border-top: 1px solid rgba(97, 54, 255, 0.12);
   color: var(--muted);
   padding-top: 7px;
 }
@@ -1846,7 +2196,7 @@ h2 {
 }
 
 .ban-insight-details[open] summary {
-  color: #f1ddb0;
+  color: var(--accent);
   margin-bottom: 7px;
 }
 
@@ -1856,7 +2206,7 @@ h2 {
 }
 
 .pick-pool-header {
-  border-top: 1px solid rgba(212, 175, 55, 0.22);
+  border-top: 1px solid rgba(97, 54, 255, 0.16);
   display: flex;
   gap: 6px;
   justify-content: space-between;
@@ -1868,7 +2218,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  color: #f1ddb0;
+  color: var(--text);
   font-size: 13px;
   line-height: 1.2;
   margin: 0;
@@ -1890,14 +2240,14 @@ h2 {
 }
 
 .marked-opponent-list {
-  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
+  border-bottom: 1px solid rgba(97, 54, 255, 0.12);
   padding-bottom: 6px;
 }
 
 .marked-opponent-candidate {
   background:
-    linear-gradient(90deg, rgba(212, 175, 55, 0.14), rgba(26, 35, 48, 0.72));
-  border-color: rgba(212, 175, 55, 0.28);
+    linear-gradient(90deg, rgba(97, 54, 255, 0.12), rgba(255, 255, 255, 0.76));
+  border-color: rgba(97, 54, 255, 0.24);
 }
 
 .pick-pool-list {
@@ -1911,8 +2261,8 @@ h2 {
 .pick-pool-candidate {
   align-items: center;
   background:
-    linear-gradient(90deg, rgba(36, 182, 217, 0.12), rgba(26, 35, 48, 0.72));
-  border: 1px solid rgba(36, 182, 217, 0.24);
+    linear-gradient(90deg, rgba(37, 116, 255, 0.1), rgba(255, 255, 255, 0.76));
+  border: 1px solid rgba(37, 116, 255, 0.18);
   border-radius: 6px;
   display: grid;
   gap: 6px;
@@ -1943,7 +2293,7 @@ h2 {
 }
 
 .pick-pool-candidate span {
-  color: rgba(217, 228, 242, 0.88);
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -1956,7 +2306,7 @@ h2 {
 
 .pick-pool-stat-chip {
   align-items: center;
-  background: rgba(8, 12, 18, 0.24);
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid rgba(154, 167, 184, 0.18);
   border-radius: 5px;
   display: inline-flex;
@@ -1974,7 +2324,7 @@ h2 {
 }
 
 .pick-pool-stat-chip b {
-  color: #d9e4f2;
+  color: var(--text);
   font-size: 10px;
   line-height: 1;
 }
@@ -1993,8 +2343,8 @@ h2 {
 }
 
 .pick-pool-candidate em {
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: rgba(97, 54, 255, 0.1);
+  border: 1px solid rgba(97, 54, 255, 0.24);
   border-radius: 999px;
   color: var(--accent);
   font-size: 10px;
@@ -2006,7 +2356,7 @@ h2 {
 }
 
 .pick-pool-candidate.unavailable {
-  background: rgba(26, 35, 48, 0.46);
+  background: rgba(238, 235, 255, 0.52);
   border-color: rgba(154, 167, 184, 0.18);
   opacity: 0.66;
 }
@@ -2039,7 +2389,7 @@ pre {
   background: var(--panel-soft);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: #d9e4f2;
+  color: var(--text);
   font-family: Consolas, "Courier New", monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -2051,9 +2401,470 @@ pre {
   word-break: break-word;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #070a18;
+    --panel: rgba(13, 18, 39, 0.86);
+    --panel-solid: #10162d;
+    --panel-soft: rgba(27, 25, 57, 0.88);
+    --text: #f5f7ff;
+    --muted: #a9b0c5;
+    --border: rgba(166, 151, 255, 0.2);
+    --line: rgba(132, 104, 255, 0.42);
+    --accent: #9b7cff;
+    --accent-strong: #4f91ff;
+    --accent-soft: rgba(155, 124, 255, 0.16);
+    --blue: #62a2ff;
+    --red: #ff6a8d;
+    --danger: #ff6a8d;
+    --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+  }
+  :root:not([data-theme]) body {
+    background:
+      linear-gradient(135deg, rgba(8, 11, 25, 0.96), rgba(15, 15, 42, 0.96) 44%, rgba(24, 18, 55, 0.98)),
+      radial-gradient(circle at 18% 8%, rgba(79, 145, 255, 0.2), transparent 34%),
+      radial-gradient(circle at 82% 22%, rgba(155, 124, 255, 0.22), transparent 32%);
+  }
+
+  :root:not([data-theme]) body::before {
+    background:
+      linear-gradient(135deg, transparent 0 42%, rgba(155, 124, 255, 0.14) 42% 62%, transparent 62%),
+      linear-gradient(45deg, transparent 0 56%, rgba(79, 145, 255, 0.1) 56% 72%, transparent 72%);
+  }
+
+  :root:not([data-theme]) body::after {
+    background: linear-gradient(140deg, rgba(155, 124, 255, 0.16), rgba(79, 145, 255, 0.08));
+  }
+
+  :root:not([data-theme]) input,
+  :root:not([data-theme]) select,
+  :root:not([data-theme]) pre {
+    background: rgba(20, 24, 50, 0.9);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .app-logo {
+    background: #f7f5ff;
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  :root:not([data-theme]) .match-data-update-button,
+  :root:not([data-theme]) .match-data-menu-button,
+  :root:not([data-theme]) .stats-subtabs,
+  :root:not([data-theme]) .view-tabs,
+  :root:not([data-theme]) .window-titlebar {
+    background: rgba(16, 20, 44, 0.72);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .window-control-button:hover {
+    background: rgba(155, 124, 255, 0.18);
+  }
+
+  :root:not([data-theme]) .match-data-menu {
+    background: rgba(16, 20, 44, 0.98);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .match-data-update-button:hover:not(:disabled),
+  :root:not([data-theme]) .match-data-menu-button:hover:not(:disabled),
+  :root:not([data-theme]) .match-data-menu button:hover:not(:disabled) {
+    background: rgba(155, 124, 255, 0.16);
+  }
+
+  :root:not([data-theme]) .tab-button.active,
+  :root:not([data-theme]) .stats-subtab.active,
+  :root:not([data-theme]) .lane-tab.active {
+    background: linear-gradient(135deg, rgba(42, 39, 82, 0.96), rgba(26, 31, 64, 0.96));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    color: var(--text);
+  }
+
+  :root:not([data-theme]) .weak-champion-section,
+  :root:not([data-theme]) .strong-champion-section,
+  :root:not([data-theme]) .stats-table-section,
+  :root:not([data-theme]) .stats-opponent-detail-row td,
+  :root:not([data-theme]) .champion-picker-card,
+  :root:not([data-theme]) .pool-champion,
+  :root:not([data-theme]) .pick-row {
+    background: rgba(18, 22, 47, 0.72);
+  }
+
+  :root:not([data-theme]) .weak-champion-item,
+  :root:not([data-theme]) .strong-champion-item,
+  :root:not([data-theme]) .weak-self-pick-token,
+  :root:not([data-theme]) .stats-opponent-detail-pick,
+  :root:not([data-theme]) .pool-champion-stats .pick-pool-stat-chip,
+  :root:not([data-theme]) .weak-champion-item .pick-pool-stat-chip,
+  :root:not([data-theme]) .strong-champion-item .pick-pool-stat-chip,
+  :root:not([data-theme]) .pick-pool-stat-chip,
+  :root:not([data-theme]) .in-game-self-stats .pick-pool-stat-chip,
+  :root:not([data-theme]) .in-game-champion-chip,
+  :root:not([data-theme]) .pool-remove-button {
+    background: rgba(24, 29, 59, 0.88);
+    border-color: rgba(166, 151, 255, 0.18);
+  }
+
+  :root:not([data-theme]) .champion-picker-card.selected,
+  :root:not([data-theme]) .match-data-season-hint,
+  :root:not([data-theme]) .low-sample-badge,
+  :root:not([data-theme]) .ban-token,
+  :root:not([data-theme]) .pick-meta .lane-opponent-marker,
+  :root:not([data-theme]) .pick-pool-candidate em {
+    background: rgba(155, 124, 255, 0.18);
+    border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.won,
+  :root:not([data-theme]) .weak-self-pick-row.won {
+    background: rgba(79, 145, 255, 0.18);
+    border-color: rgba(98, 162, 255, 0.34);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.lost,
+  :root:not([data-theme]) .weak-self-pick-row.lost {
+    background: rgba(255, 106, 141, 0.17);
+    border-color: rgba(255, 106, 141, 0.34);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.won h4,
+  :root:not([data-theme]) .weak-self-pick-row.won .weak-self-pick-group-title,
+  :root:not([data-theme]) .stats-side-badge.you {
+    color: #9bc3ff;
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.lost h4,
+  :root:not([data-theme]) .weak-self-pick-row.lost .weak-self-pick-group-title,
+  :root:not([data-theme]) .stats-side-badge.enemy {
+    color: #ff9cb3;
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-pick small,
+  :root:not([data-theme]) .pick-pool-stat-chip small {
+    color: #b5bed4;
+  }
+
+  :root:not([data-theme]) .in-game-hero {
+    background:
+      linear-gradient(100deg, rgba(155, 124, 255, 0.2), rgba(13, 18, 39, 0.88) 44%, rgba(79, 145, 255, 0.14)),
+      var(--panel);
+  }
+
+  :root:not([data-theme]) .in-game-portrait,
+  :root:not([data-theme]) .champion-focus,
+  :root:not([data-theme]) .ban-insight-sample-filter select {
+    background: rgba(19, 23, 49, 0.76);
+  }
+
+  :root:not([data-theme]) .pick-row.selected {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.2), rgba(18, 22, 47, 0.84));
+  }
+
+  :root:not([data-theme]) .pick-row.enemy.selected {
+    background: linear-gradient(270deg, rgba(255, 106, 141, 0.18), rgba(18, 22, 47, 0.84));
+  }
+
+  :root:not([data-theme]) .pick-row.intent {
+    background: rgba(35, 32, 70, 0.78);
+  }
+
+  :root:not([data-theme]) .pick-row.local-player {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .pick-row.active-turn,
+  :root:not([data-theme]) .pick-row.local-active-turn {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .pick-row.enemy.active-turn,
+  :root:not([data-theme]) .pick-row.enemy.marked-lane-opponent {
+    background: linear-gradient(270deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .champion-portrait {
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.2), transparent 32%),
+      linear-gradient(135deg, rgba(79, 145, 255, 0.3), rgba(155, 124, 255, 0.22));
+  }
+
+  :root:not([data-theme]) .draft-focus {
+    background:
+      linear-gradient(135deg, transparent 0 38%, rgba(155, 124, 255, 0.1) 38% 58%, transparent 58%),
+      radial-gradient(circle at 50% 42%, rgba(155, 124, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-panel {
+    background:
+      linear-gradient(135deg, rgba(79, 145, 255, 0.22), rgba(155, 124, 255, 0.2)),
+      rgba(12, 16, 36, 0.96);
+    border-color: rgba(155, 124, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 -14px 36px rgba(0, 0, 0, 0.28);
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note {
+    background: rgba(16, 22, 48, 0.94);
+    border-color: rgba(166, 151, 255, 0.36);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note strong {
+    color: #c9bbff;
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note p {
+    color: #eef2ff;
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-status {
+    color: #c9bbff;
+  }
+
+  :root:not([data-theme]) .marked-opponent-candidate,
+  :root:not([data-theme]) .pick-pool-candidate {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
+  }
+
+  :root:not([data-theme]) .pick-pool-candidate.unavailable {
+    background: rgba(31, 32, 62, 0.64);
+  }
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #070a18;
+    --panel: rgba(13, 18, 39, 0.86);
+    --panel-solid: #10162d;
+    --panel-soft: rgba(27, 25, 57, 0.88);
+    --text: #f5f7ff;
+    --muted: #a9b0c5;
+    --border: rgba(166, 151, 255, 0.2);
+    --line: rgba(132, 104, 255, 0.42);
+    --accent: #9b7cff;
+    --accent-strong: #4f91ff;
+    --accent-soft: rgba(155, 124, 255, 0.16);
+    --blue: #62a2ff;
+    --red: #ff6a8d;
+    --danger: #ff6a8d;
+    --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+}
+  :root[data-theme="dark"] body {
+    background:
+      linear-gradient(135deg, rgba(8, 11, 25, 0.96), rgba(15, 15, 42, 0.96) 44%, rgba(24, 18, 55, 0.98)),
+      radial-gradient(circle at 18% 8%, rgba(79, 145, 255, 0.2), transparent 34%),
+      radial-gradient(circle at 82% 22%, rgba(155, 124, 255, 0.22), transparent 32%);
+  }
+
+  :root[data-theme="dark"] body::before {
+    background:
+      linear-gradient(135deg, transparent 0 42%, rgba(155, 124, 255, 0.14) 42% 62%, transparent 62%),
+      linear-gradient(45deg, transparent 0 56%, rgba(79, 145, 255, 0.1) 56% 72%, transparent 72%);
+  }
+
+  :root[data-theme="dark"] body::after {
+    background: linear-gradient(140deg, rgba(155, 124, 255, 0.16), rgba(79, 145, 255, 0.08));
+  }
+
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] pre {
+    background: rgba(20, 24, 50, 0.9);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .app-logo {
+    background: #f7f5ff;
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  :root[data-theme="dark"] .match-data-update-button,
+  :root[data-theme="dark"] .match-data-menu-button,
+  :root[data-theme="dark"] .stats-subtabs,
+  :root[data-theme="dark"] .view-tabs,
+  :root[data-theme="dark"] .window-titlebar {
+    background: rgba(16, 20, 44, 0.72);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .window-control-button:hover {
+    background: rgba(155, 124, 255, 0.18);
+  }
+
+  :root[data-theme="dark"] .match-data-menu {
+    background: rgba(16, 20, 44, 0.98);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .match-data-update-button:hover:not(:disabled),
+  :root[data-theme="dark"] .match-data-menu-button:hover:not(:disabled),
+  :root[data-theme="dark"] .match-data-menu button:hover:not(:disabled) {
+    background: rgba(155, 124, 255, 0.16);
+  }
+
+  :root[data-theme="dark"] .tab-button.active,
+  :root[data-theme="dark"] .stats-subtab.active,
+  :root[data-theme="dark"] .lane-tab.active {
+    background: linear-gradient(135deg, rgba(42, 39, 82, 0.96), rgba(26, 31, 64, 0.96));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    color: var(--text);
+  }
+
+  :root[data-theme="dark"] .weak-champion-section,
+  :root[data-theme="dark"] .strong-champion-section,
+  :root[data-theme="dark"] .stats-table-section,
+  :root[data-theme="dark"] .stats-opponent-detail-row td,
+  :root[data-theme="dark"] .champion-picker-card,
+  :root[data-theme="dark"] .pool-champion,
+  :root[data-theme="dark"] .pick-row {
+    background: rgba(18, 22, 47, 0.72);
+  }
+
+  :root[data-theme="dark"] .weak-champion-item,
+  :root[data-theme="dark"] .strong-champion-item,
+  :root[data-theme="dark"] .weak-self-pick-token,
+  :root[data-theme="dark"] .stats-opponent-detail-pick,
+  :root[data-theme="dark"] .pool-champion-stats .pick-pool-stat-chip,
+  :root[data-theme="dark"] .weak-champion-item .pick-pool-stat-chip,
+  :root[data-theme="dark"] .strong-champion-item .pick-pool-stat-chip,
+  :root[data-theme="dark"] .pick-pool-stat-chip,
+  :root[data-theme="dark"] .in-game-self-stats .pick-pool-stat-chip,
+  :root[data-theme="dark"] .in-game-champion-chip,
+  :root[data-theme="dark"] .pool-remove-button {
+    background: rgba(24, 29, 59, 0.88);
+    border-color: rgba(166, 151, 255, 0.18);
+  }
+
+  :root[data-theme="dark"] .champion-picker-card.selected,
+  :root[data-theme="dark"] .match-data-season-hint,
+  :root[data-theme="dark"] .low-sample-badge,
+  :root[data-theme="dark"] .ban-token,
+  :root[data-theme="dark"] .pick-meta .lane-opponent-marker,
+  :root[data-theme="dark"] .pick-pool-candidate em {
+    background: rgba(155, 124, 255, 0.18);
+    border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.won,
+  :root[data-theme="dark"] .weak-self-pick-row.won {
+    background: rgba(79, 145, 255, 0.18);
+    border-color: rgba(98, 162, 255, 0.34);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.lost,
+  :root[data-theme="dark"] .weak-self-pick-row.lost {
+    background: rgba(255, 106, 141, 0.17);
+    border-color: rgba(255, 106, 141, 0.34);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.won h4,
+  :root[data-theme="dark"] .weak-self-pick-row.won .weak-self-pick-group-title,
+  :root[data-theme="dark"] .stats-side-badge.you {
+    color: #9bc3ff;
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.lost h4,
+  :root[data-theme="dark"] .weak-self-pick-row.lost .weak-self-pick-group-title,
+  :root[data-theme="dark"] .stats-side-badge.enemy {
+    color: #ff9cb3;
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-pick small,
+  :root[data-theme="dark"] .pick-pool-stat-chip small {
+    color: #b5bed4;
+  }
+
+  :root[data-theme="dark"] .in-game-hero {
+    background:
+      linear-gradient(100deg, rgba(155, 124, 255, 0.2), rgba(13, 18, 39, 0.88) 44%, rgba(79, 145, 255, 0.14)),
+      var(--panel);
+  }
+
+  :root[data-theme="dark"] .in-game-portrait,
+  :root[data-theme="dark"] .champion-focus,
+  :root[data-theme="dark"] .ban-insight-sample-filter select {
+    background: rgba(19, 23, 49, 0.76);
+  }
+
+  :root[data-theme="dark"] .pick-row.selected {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.2), rgba(18, 22, 47, 0.84));
+  }
+
+  :root[data-theme="dark"] .pick-row.enemy.selected {
+    background: linear-gradient(270deg, rgba(255, 106, 141, 0.18), rgba(18, 22, 47, 0.84));
+  }
+
+  :root[data-theme="dark"] .pick-row.intent {
+    background: rgba(35, 32, 70, 0.78);
+  }
+
+  :root[data-theme="dark"] .pick-row.local-player {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .pick-row.active-turn,
+  :root[data-theme="dark"] .pick-row.local-active-turn {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .pick-row.enemy.active-turn,
+  :root[data-theme="dark"] .pick-row.enemy.marked-lane-opponent {
+    background: linear-gradient(270deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .champion-portrait {
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.2), transparent 32%),
+      linear-gradient(135deg, rgba(79, 145, 255, 0.3), rgba(155, 124, 255, 0.22));
+  }
+
+  :root[data-theme="dark"] .draft-focus {
+    background:
+      linear-gradient(135deg, transparent 0 38%, rgba(155, 124, 255, 0.1) 38% 58%, transparent 58%),
+      radial-gradient(circle at 50% 42%, rgba(155, 124, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-panel {
+    background:
+      linear-gradient(135deg, rgba(79, 145, 255, 0.22), rgba(155, 124, 255, 0.2)),
+      rgba(12, 16, 36, 0.96);
+    border-color: rgba(155, 124, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 -14px 36px rgba(0, 0, 0, 0.28);
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note {
+    background: rgba(16, 22, 48, 0.94);
+    border-color: rgba(166, 151, 255, 0.36);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note strong {
+    color: #c9bbff;
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note p {
+    color: #eef2ff;
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-status {
+    color: #c9bbff;
+  }
+
+  :root[data-theme="dark"] .marked-opponent-candidate,
+  :root[data-theme="dark"] .pick-pool-candidate {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
+  }
+
+  :root[data-theme="dark"] .pick-pool-candidate.unavailable {
+    background: rgba(31, 32, 62, 0.64);
+  }
 @media (max-width: 1000px) {
   .app-shell {
-    padding: 16px;
+    padding: 12px;
   }
 
   .app-header,
@@ -2133,17 +2944,51 @@ pre {
     text-align: left;
   }
 
+  .draft-board {
+    height: auto;
+    min-height: calc(100vh - 120px);
+    overflow: visible;
+  }
+
+  .teams-layout {
+    overflow: visible;
+  }
+
   .pick-row.enemy {
     border-left: 4px solid var(--red);
     border-right: 1px solid var(--border);
     flex-direction: row;
   }
 
+  .pick-row {
+    flex-basis: 72px;
+  }
+
   .draft-focus {
-    min-height: 260px;
+    min-height: 300px;
+  }
+
+  .champion-focus.has-ban-insights {
+    max-height: 360px;
+  }
+
+  .draft-ai-analysis-panel {
+    flex-basis: 220px;
+  }
+
+  .draft-ai-analysis-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .draft-ai-analysis-notes {
+    grid-template-columns: 1fr;
   }
 
   .ban-insight-panel {
     grid-template-columns: 1fr;
   }
 }
+
+
+

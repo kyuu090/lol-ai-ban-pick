@@ -126,6 +126,9 @@ async function requestRiotBffJson(options) {
   const {
     baseUrl = DEFAULT_RIOT_BFF_BASE_URL,
     path,
+    method = 'GET',
+    body = null,
+    timeoutMs = 10000,
     maxRetries = DEFAULT_MAX_RETRIES,
     requestFn = requestHttpJson,
     wait = delay,
@@ -141,9 +144,13 @@ async function requestRiotBffJson(options) {
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const response = await requestFn({
       url,
+      method,
       headers: {
-        Accept: 'application/json'
-      }
+        Accept: 'application/json',
+        ...(body === null || body === undefined ? {} : { 'Content-Type': 'application/json' })
+      },
+      body: body === null || body === undefined ? null : JSON.stringify(body),
+      timeoutMs
     });
 
     if (response.statusCode === 429 && attempt < maxRetries) {
@@ -169,15 +176,15 @@ async function requestRiotBffJson(options) {
   throw new Error(`Riot BFF ${path} retry limit exceeded`);
 }
 
-function requestHttpJson({ url, headers }) {
+function requestHttpJson({ url, method = 'GET', headers, body = null, timeoutMs = 10000 }) {
   return new Promise((resolve, reject) => {
     const client = url.protocol === 'https:' ? https : http;
     const request = client.request(
       url,
       {
-        method: 'GET',
+        method,
         headers,
-        timeout: 10000
+        timeout: timeoutMs
       },
       (response) => {
         const chunks = [];
@@ -198,6 +205,9 @@ function requestHttpJson({ url, headers }) {
     });
 
     request.on('error', reject);
+    if (body !== null && body !== undefined) {
+      request.write(body);
+    }
     request.end();
   });
 }

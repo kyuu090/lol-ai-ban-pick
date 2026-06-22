@@ -67,3 +67,29 @@ test('requestRiotBffJson exposes BFF non-2xx failures', async () => {
     }
   );
 });
+
+test('requestRiotBffJson posts JSON request bodies', async () => {
+  const body = await requestRiotBffJson({
+    baseUrl: 'https://bff.example.test',
+    path: '/api/openai/pick-phase',
+    method: 'POST',
+    body: {
+      phase: 'own_pick',
+      ownChampionPool: []
+    },
+    timeoutMs: 30000,
+    requestFn: async ({ url, method, headers, body: requestBody, timeoutMs }) => {
+      assert.equal(url.toString(), 'https://bff.example.test/api/openai/pick-phase');
+      assert.equal(method, 'POST');
+      assert.deepEqual(headers, {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      });
+      assert.equal(requestBody, '{"phase":"own_pick","ownChampionPool":[]}');
+      assert.equal(timeoutMs, 30000);
+      return { statusCode: 200, headers: {}, body: '{"notes":[]}' };
+    }
+  });
+
+  assert.deepEqual(body, { notes: [] });
+});
