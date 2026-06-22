@@ -73,6 +73,7 @@ const elements = {
   enemyTeam: document.querySelector('#enemyTeam'),
   currentAction: document.querySelector('#currentAction'),
   currentPick: document.querySelector('#currentPick'),
+  draftSelfSummary: document.querySelector('#draftSelfSummary'),
   banInsightPanel: document.querySelector('#banInsightPanel'),
   draftAiAnalysisPanel: document.querySelector('#draftAiAnalysisPanel'),
   lcuStatus: document.querySelector('#lcuStatus'),
@@ -281,19 +282,22 @@ function appendLowSampleBadge(container, games) {
   container.append(sample);
 }
 
-function createChampionStatsElement(stats, className = 'pool-champion-stats') {
+function createChampionStatsElement(stats, className = 'pool-champion-stats', options = {}) {
   const container = document.createElement('div');
   container.className = className;
+  const includeGames = options.includeGames !== false;
 
   if (!stats || !stats.games) {
-    container.append(createPickPoolStatChip('Games', 'No games'));
+    if (includeGames) {
+      container.append(createPickPoolStatChip('Games', 'No games'));
+    }
     return container;
   }
 
   const wins = Number(stats.wins || 0);
   const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
   [
-    ['Games', `${stats.games}`],
+    ...(includeGames ? [['Games', `${stats.games}`]] : []),
     ['W-L', `${wins}-${losses}`],
     ['WR', formatPercent(stats.winRate)],
     ['KDA', formatAverageKda(stats)]
@@ -1926,16 +1930,22 @@ function renderTeam(container, team, side, turnState = {}) {
       portrait.textContent = '?';
     }
 
+    const portraitStack = document.createElement('div');
+    portraitStack.className = 'pick-portrait-stack';
+
+    const roleBadge = document.createElement('span');
+    roleBadge.className = 'pick-role-badge';
+    roleBadge.textContent = positionLabel(member.assignedPosition);
+
+    portraitStack.append(portrait, roleBadge);
+
     const meta = document.createElement('div');
     meta.className = 'pick-meta';
 
     const champion = document.createElement('strong');
     champion.textContent = selected ? championLabel(member.championId) : getPendingLabel(member, championLabel);
 
-    const detail = document.createElement('span');
-    detail.textContent = `${positionLabel(member.assignedPosition)} / Summoner ${index + 1}`;
-
-    meta.append(champion, detail);
+    meta.append(champion);
     if (isMarkedLaneOpponent) {
       const marker = document.createElement('span');
       marker.className = 'lane-opponent-marker';
@@ -1944,13 +1954,7 @@ function renderTeam(container, team, side, turnState = {}) {
         : 'LANE OPPONENT';
       meta.append(marker);
     }
-    if (side === 'ally' && isLocalMember && portraitChampionId > 0) {
-      meta.append(createChampionStatsElement(
-        getChampionRoleDisplayStats(portraitChampionId, member.assignedPosition),
-        'draft-champion-stats'
-      ));
-    }
-    row.append(portrait, meta);
+    row.append(portraitStack, meta);
     return row;
   }));
 }
@@ -1970,6 +1974,7 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
   const localCellId = champSelect?.localPlayerCellId;
   const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
   const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
+  renderDraftSelfSummary(localMember);
   renderDraftInsights(null, { champSelect, localMember });
 
   if (activeAction) {
@@ -1987,6 +1992,33 @@ function renderDraftFocus(champSelect, activeAction = getActiveAction(champSelec
 
   elements.currentAction.textContent = localMember?.championId ? championLabel(localMember.championId) : '待機中';
   elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
+}
+
+function renderDraftSelfSummary(localMember) {
+  if (!elements.draftSelfSummary) return;
+
+  const championId = getMemberChampionId(localMember);
+  elements.draftSelfSummary.replaceChildren();
+  elements.draftSelfSummary.hidden = !championId;
+  if (!championId) return;
+
+  const header = document.createElement('div');
+  header.className = 'draft-self-summary-header';
+
+  const label = document.createElement('span');
+  label.className = 'draft-self-summary-label';
+  label.textContent = 'Your';
+
+  const champion = createInlineChampionName(championId, 'inline-champion-name draft-self-summary-name');
+  header.append(label, champion);
+
+  const stats = createChampionStatsElement(
+    getChampionRoleDisplayStats(championId, localMember?.assignedPosition),
+    'draft-self-summary-stats',
+    { includeGames: false }
+  );
+
+  elements.draftSelfSummary.append(header, stats);
 }
 
 function renderDraftInsights(type, context = {}) {

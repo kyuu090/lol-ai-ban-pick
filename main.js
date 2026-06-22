@@ -347,7 +347,7 @@ function createWindow() {
   log.debug('Creating main window');
   mainWindow = new BrowserWindow({
     width: 1180,
-    height: 820,
+    height: 900,
     minWidth: 980,
     minHeight: 680,
     title: 'BanPick.AI',
