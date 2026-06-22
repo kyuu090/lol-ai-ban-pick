@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
     };
   },
   collectRiotMatchHistory: (options) => ipcRenderer.invoke('riot-match-history:collect', options),
+  requestPickPhaseAnalysis: (draftContext) => ipcRenderer.invoke('openai:pick-phase', draftContext),
   onState: (callback) => {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('lcu:state', listener);

@@ -446,12 +446,25 @@ function createRiotBffPath(region, segments, query = null) {
   return queryString ? `${path}?${queryString}` : path;
 }
 
-function requestBffJson({ path, onRetry = null, maxRetries = undefined }) {
+function requestBffJson({ path, method = 'GET', body = null, timeoutMs = undefined, onRetry = null, maxRetries = undefined }) {
   return requestRiotBffJson({
     baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
     path,
+    method,
+    body,
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
     onRetry,
     ...(maxRetries === undefined ? {} : { maxRetries })
+  });
+}
+
+function requestPickPhaseAnalysis(_event, draftContext) {
+  return requestBffJson({
+    path: '/api/openai/pick-phase',
+    method: 'POST',
+    body: draftContext,
+    timeoutMs: 30000,
+    maxRetries: 0
   });
 }
 
@@ -1474,6 +1487,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('window:toggle-maximize', toggleMaximizeWindow);
   ipcMain.handle('window:close', closeWindow);
   ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
+  ipcMain.handle('openai:pick-phase', requestPickPhaseAnalysis);
   ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();

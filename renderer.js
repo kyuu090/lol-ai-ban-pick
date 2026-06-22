@@ -115,11 +115,13 @@ let lastRenderedState = null;
 let lastChampSelectSnapshot = null;
 let wasInChampSelect = false;
 let draftAiAnalysisStatus = 'idle';
+let draftAiAnalysisNotes = [];
+let draftAiAnalysisRequestKey = null;
+let draftAiAnalysisError = '';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
 let activeChampionIconRequests = 0;
-const DRAFT_AI_ANALYSIS_SAMPLE_RESPONSE = '{"notes":[{"title":"相手はポーク","body":"Ziggs/Varus/Luxで射程が長く、視界とオブジェクト前が強い。"},{"title":"味方はバースト","body":"K\'Sante/Viego/Akali/MFで短時間の集団戦とキャッチに火力がある。"},{"title":"味方はフロント不足","body":"前に出て受ける役はK\'Santeに寄りやすく、耐える手段は少なめ。"}]}';
 const championIconObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
   : null;
@@ -132,10 +134,12 @@ const {
   getActiveAction,
   getBestIntoOpponentStats,
   getDraftPanelState,
+  getMemberChampionId,
   getPhase,
   getPendingLabel,
   getPlannedPickThreatStats,
   getSummonerName,
+  normalizePosition,
   normalizeChampionPool,
   positionLabel,
   collectUnavailableChampionReasons,
@@ -1452,7 +1456,7 @@ function renderDraft(state) {
   if (!inChampSelect) {
     elements.champSelectView.classList.remove('local-turn');
     markedLaneOpponentCellId = null;
-    draftAiAnalysisStatus = 'idle';
+    resetDraftAiAnalysis();
   }
 
   if (!loggedIn) return;
@@ -1636,9 +1640,135 @@ function renderChampSelect(champSelect) {
   });
   renderDraftFocus(champSelect, activeAction);
   if (isLocalPickTurn) {
-    draftAiAnalysisStatus = 'ready';
+    requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction);
   }
   renderDraftAiAnalysis(draftAiAnalysisStatus);
+}
+
+function resetDraftAiAnalysis() {
+  draftAiAnalysisStatus = 'idle';
+  draftAiAnalysisNotes = [];
+  draftAiAnalysisRequestKey = null;
+  draftAiAnalysisError = '';
+}
+
+function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) {
+  if (!window.lcuApi?.requestPickPhaseAnalysis) return;
+  if (draftAiAnalysisStatus === 'ready') return;
+
+  const draftContext = createPickPhaseDraftContext(champSelect, localMember);
+  if (!draftContext) return;
+
+  const requestKey = createDraftAiAnalysisRequestKey(activeAction, draftContext);
+  if (draftAiAnalysisStatus === 'requesting' && draftAiAnalysisRequestKey === requestKey) return;
+  if (draftAiAnalysisStatus === 'error' && draftAiAnalysisRequestKey === requestKey) return;
+
+  draftAiAnalysisStatus = 'requesting';
+  draftAiAnalysisNotes = [];
+  draftAiAnalysisError = '';
+  draftAiAnalysisRequestKey = requestKey;
+  logDebug('Draft AI analysis request started', { requestKey, draftContext });
+
+  window.lcuApi.requestPickPhaseAnalysis(draftContext)
+    .then((response) => {
+      if (draftAiAnalysisRequestKey !== requestKey) return;
+      draftAiAnalysisNotes = parseDraftAiAnalysisNotes(response);
+      draftAiAnalysisStatus = draftAiAnalysisNotes.length ? 'ready' : 'error';
+      draftAiAnalysisError = draftAiAnalysisNotes.length ? '' : 'AI分析を表示できませんでした。';
+      logDebug('Draft AI analysis response received', { requestKey, notes: draftAiAnalysisNotes.length });
+      renderDraftAiAnalysis(draftAiAnalysisStatus);
+    })
+    .catch((error) => {
+      if (draftAiAnalysisRequestKey !== requestKey) return;
+      draftAiAnalysisStatus = 'error';
+      draftAiAnalysisError = createDraftAiAnalysisErrorMessage(error);
+      logDebug('Draft AI analysis request failed', {
+        requestKey,
+        error: error?.message || String(error)
+      });
+      renderDraftAiAnalysis(draftAiAnalysisStatus);
+    });
+}
+
+function createPickPhaseDraftContext(champSelect, localMember) {
+  const localRole = normalizePosition(localMember?.assignedPosition);
+  if (!localRole) return null;
+
+  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+
+  return {
+    phase: 'own_pick',
+    localPlayer: {
+      role: localRole,
+      intendedPick: createDraftChampionEntry(localMember, { preferIntent: true, includeRole: false })
+    },
+    allyTeam: {
+      intendedPicks: allyTeam
+        .filter((member) => member?.cellId !== localMember?.cellId && !getMemberChampionId(member))
+        .map((member) => createDraftChampionEntry(member, { preferIntent: true }))
+        .filter(Boolean),
+      lockedPicks: allyTeam
+        .filter((member) => member?.cellId !== localMember?.cellId)
+        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
+        .filter(Boolean)
+    },
+    enemyTeam: {
+      lockedPicks: enemyTeam
+        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
+        .filter(Boolean)
+    },
+    ownChampionPool: createOwnChampionPoolEntries(localRole)
+  };
+}
+
+function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, includeRole = true } = {}) {
+  const role = normalizePosition(member?.assignedPosition);
+  const championId = preferLocked
+    ? Number(member?.championId)
+    : preferIntent
+      ? Number(member?.championPickIntent)
+      : getMemberChampionId(member);
+  if (includeRole && !role) return null;
+  if (!Number.isInteger(championId) || championId <= 0) return null;
+
+  const entry = {
+    championId,
+    championName: championLabel(championId)
+  };
+  if (includeRole) {
+    entry.role = role;
+  }
+  return entry;
+}
+
+function createOwnChampionPoolEntries(role) {
+  const lane = CHAMPION_POOL_LANES.find((entry) => CHAMPION_POOL_LANE_TO_POSITION[entry.id] === role);
+  if (!lane) return [];
+
+  return (championPool[lane.id] || [])
+    .map((championId) => Number(championId))
+    .filter((championId) => Number.isInteger(championId) && championId > 0)
+    .map((championId) => ({
+      role,
+      championId,
+      championName: championLabel(championId)
+    }));
+}
+
+function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
+  return JSON.stringify({
+    actionId: activeAction?.id ?? null,
+    actorCellId: activeAction?.actorCellId ?? null,
+    draftContext
+  });
+}
+
+function createDraftAiAnalysisErrorMessage(error) {
+  const message = String(error?.message || '');
+  if (message.includes('429')) return 'AI分析のリクエストが混み合っています。少し待ってから再度お試しください。';
+  if (message.includes('400')) return 'AI分析に必要なドラフト情報が不足しています。';
+  return 'AI分析を取得できませんでした。';
 }
 
 function renderDraftAiAnalysis(status) {
@@ -1660,7 +1790,7 @@ function renderDraftAiAnalysis(status) {
 
   const badge = document.createElement('span');
   badge.className = `draft-ai-analysis-badge ${status}`;
-  badge.textContent = status === 'ready' ? 'DONE' : status === 'requesting' ? 'ASKING' : 'WAITING';
+  badge.textContent = status === 'ready' ? 'DONE' : status === 'requesting' ? 'ASKING' : status === 'error' ? 'ERROR' : 'WAITING';
   header.append(titleBlock, badge);
   panel.append(header);
 
@@ -1669,12 +1799,17 @@ function renderDraftAiAnalysis(status) {
     return;
   }
 
+  if (status === 'error') {
+    panel.append(createDraftAiAnalysisStatus(draftAiAnalysisError || 'AI分析を取得できませんでした。'));
+    return;
+  }
+
   if (status !== 'ready') {
     panel.append(createDraftAiAnalysisStatus('AI分析を待機中・・'));
     return;
   }
 
-  const notes = parseDraftAiAnalysisNotes(DRAFT_AI_ANALYSIS_SAMPLE_RESPONSE);
+  const notes = draftAiAnalysisNotes;
   if (!notes.length) {
     panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
     return;
@@ -1705,9 +1840,9 @@ function createDraftAiAnalysisStatus(text) {
   return message;
 }
 
-function parseDraftAiAnalysisNotes(responseText) {
+function parseDraftAiAnalysisNotes(response) {
   try {
-    const parsed = JSON.parse(responseText);
+    const parsed = typeof response === 'string' ? JSON.parse(response) : response;
     return (Array.isArray(parsed?.notes) ? parsed.notes : [])
       .filter((note) => note && typeof note === 'object')
       .slice(0, 3)

@@ -1563,6 +1563,12 @@ h2 {
   color: var(--accent);
 }
 
+.draft-ai-analysis-badge.error {
+  background: rgba(236, 72, 106, 0.12);
+  border-color: rgba(236, 72, 106, 0.32);
+  color: var(--red);
+}
+
 .draft-ai-analysis-status {
   color: var(--accent);
   font-size: 15px;
