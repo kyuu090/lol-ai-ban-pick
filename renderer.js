@@ -1,4 +1,8 @@
 const elements = {
+  windowTitlebar: document.querySelector('#windowTitlebar'),
+  windowMinimizeButton: document.querySelector('#windowMinimizeButton'),
+  windowMaximizeButton: document.querySelector('#windowMaximizeButton'),
+  windowCloseButton: document.querySelector('#windowCloseButton'),
   refreshButton: document.querySelector('#refreshButton'),
   collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
   matchDataMenuButton: document.querySelector('#matchDataMenuButton'),
@@ -180,6 +184,11 @@ function describeThemeMode(themeMode) {
   if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
   if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
   return 'OSの表示モードに合わせます。';
+}
+
+function renderWindowMaximizedState(isMaximized) {
+  elements.windowMaximizeButton.textContent = isMaximized ? '❐' : '□';
+  elements.windowMaximizeButton.setAttribute('aria-label', isMaximized ? '元に戻す' : '最大化');
 }
 
 function formatDate(value) {
@@ -2381,6 +2390,16 @@ async function collectRiotMatchHistory(mode = 'recent') {
 
 window.lcuApi.onState(renderState);
 elements.refreshButton.addEventListener('click', refresh);
+elements.windowMinimizeButton.addEventListener('click', () => window.lcuApi.minimizeWindow());
+elements.windowMaximizeButton.addEventListener('click', async () => {
+  const isMaximized = await window.lcuApi.toggleMaximizeWindow();
+  renderWindowMaximizedState(isMaximized);
+});
+elements.windowCloseButton.addEventListener('click', () => window.lcuApi.closeWindow());
+elements.windowTitlebar.addEventListener('dblclick', (event) => {
+  if (event.target.closest('.window-titlebar-controls')) return;
+  window.lcuApi.toggleMaximizeWindow().then(renderWindowMaximizedState);
+});
 elements.collectRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('recent'));
 elements.matchDataMenuButton.addEventListener('click', toggleMatchDataMenu);
 elements.collectSeasonRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('season'));
@@ -2432,6 +2451,7 @@ elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
 setActiveView(activeView);
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
+window.lcuApi.onWindowMaximized(renderWindowMaximizedState);
 window.lcuApi.getChampionPool().then((savedChampionPool) => {
   championPool = normalizeChampionPool(savedChampionPool);
   championPoolDirty = false;

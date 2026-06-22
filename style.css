@@ -68,6 +68,64 @@ body::after {
   width: 44vw;
 }
 
+.window-titlebar {
+  -webkit-app-region: drag;
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(238, 235, 255, 0.82)),
+    rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(25, 18, 88, 0.08);
+  display: flex;
+  height: 38px;
+  justify-content: space-between;
+  padding-left: 12px;
+  user-select: none;
+}
+
+.window-titlebar-brand {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 8px;
+  min-width: 0;
+}
+
+.window-titlebar-controls {
+  -webkit-app-region: no-drag;
+  align-items: stretch;
+  align-self: stretch;
+  display: flex;
+}
+
+.window-control-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text);
+  display: grid;
+  font-size: 15px;
+  font-weight: 400;
+  height: 38px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0;
+  width: 46px;
+}
+
+.window-control-button:hover {
+  background: rgba(97, 54, 255, 0.12);
+}
+
+.window-control-button.close:hover {
+  background: var(--danger);
+  color: #ffffff;
+}
+
 button {
   border: 1px solid color-mix(in srgb, var(--accent), white 28%);
   border-radius: 6px;
@@ -108,7 +166,7 @@ code {
   gap: 16px;
   margin: 0 auto;
   max-width: 1280px;
-  min-height: 100vh;
+  min-height: calc(100vh - 38px);
   padding: 24px;
 }
 
@@ -2165,9 +2223,14 @@ pre {
   :root:not([data-theme]) .match-data-update-button,
   :root:not([data-theme]) .match-data-menu-button,
   :root:not([data-theme]) .stats-subtabs,
-  :root:not([data-theme]) .view-tabs {
+  :root:not([data-theme]) .view-tabs,
+  :root:not([data-theme]) .window-titlebar {
     background: rgba(16, 20, 44, 0.72);
     border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .window-control-button:hover {
+    background: rgba(155, 124, 255, 0.18);
   }
 
   :root:not([data-theme]) .match-data-menu {
@@ -2365,9 +2428,14 @@ pre {
   :root[data-theme="dark"] .match-data-update-button,
   :root[data-theme="dark"] .match-data-menu-button,
   :root[data-theme="dark"] .stats-subtabs,
-  :root[data-theme="dark"] .view-tabs {
+  :root[data-theme="dark"] .view-tabs,
+  :root[data-theme="dark"] .window-titlebar {
     background: rgba(16, 20, 44, 0.72);
     border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .window-control-button:hover {
+    background: rgba(155, 124, 255, 0.18);
   }
 
   :root[data-theme="dark"] .match-data-menu {

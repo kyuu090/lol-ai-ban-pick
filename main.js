@@ -350,8 +350,10 @@ function createWindow() {
     height: 820,
     minWidth: 980,
     minHeight: 680,
-    title: 'LoL AI Draft Coach',
+    title: 'BanPick.AI',
     icon: APP_ICON_PATH,
+    frame: false,
+    backgroundColor: '#f5f4ff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -359,6 +361,9 @@ function createWindow() {
     }
   });
 
+  mainWindow.setMenu(null);
+  mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximized', true));
+  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized', false));
   mainWindow.loadFile('index.html');
 }
 
@@ -1084,6 +1089,31 @@ async function updateThemeMode(_event, themeMode) {
   return createPublicSettings(settings);
 }
 
+function getWindowForEvent(event) {
+  return BrowserWindow.fromWebContents(event.sender);
+}
+
+function minimizeWindow(event) {
+  getWindowForEvent(event)?.minimize();
+}
+
+function toggleMaximizeWindow(event) {
+  const window = getWindowForEvent(event);
+  if (!window) return false;
+
+  if (window.isMaximized()) {
+    window.unmaximize();
+  } else {
+    window.maximize();
+  }
+
+  return window.isMaximized();
+}
+
+function closeWindow(event) {
+  getWindowForEvent(event)?.close();
+}
+
 async function reconnectWithCurrentSettings() {
   log.debug('Reconnecting with current settings');
   closeWebSocket();
@@ -1440,6 +1470,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
   ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
   ipcMain.handle('settings:update-theme-mode', updateThemeMode);
+  ipcMain.handle('window:minimize', minimizeWindow);
+  ipcMain.handle('window:toggle-maximize', toggleMaximizeWindow);
+  ipcMain.handle('window:close', closeWindow);
   ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
   ipcMain.on('log:renderer', logRendererMessage);
 
