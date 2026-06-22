@@ -44,9 +44,12 @@ const elements = {
   lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
   riotPlatformRegionSelect: document.querySelector('#riotPlatformRegionSelect'),
   riotRegionalRouteStatus: document.querySelector('#riotRegionalRouteStatus'),
+  themeModeSelect: document.querySelector('#themeModeSelect'),
+  themeModeStatus: document.querySelector('#themeModeStatus'),
   chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
   saveLolDirButton: document.querySelector('#saveLolDirButton'),
   saveRiotPlatformRegionButton: document.querySelector('#saveRiotPlatformRegionButton'),
+  saveThemeModeButton: document.querySelector('#saveThemeModeButton'),
   settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
@@ -156,6 +159,27 @@ function logDebug(message, details) {
 
 function logWarn(message, details) {
   window.lcuApi?.log?.('warn', message, details);
+}
+
+function normalizeThemeMode(themeMode) {
+  return ['system', 'light', 'dark'].includes(themeMode) ? themeMode : 'system';
+}
+
+function applyThemeMode(themeMode) {
+  const normalizedThemeMode = normalizeThemeMode(themeMode);
+  if (normalizedThemeMode === 'system') {
+    document.documentElement.removeAttribute('data-theme');
+    return;
+  }
+
+  document.documentElement.dataset.theme = normalizedThemeMode;
+}
+
+function describeThemeMode(themeMode) {
+  const normalizedThemeMode = normalizeThemeMode(themeMode);
+  if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
+  if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
+  return 'OSの表示モードに合わせます。';
 }
 
 function formatDate(value) {
@@ -487,11 +511,18 @@ function getMatchHistoryButtonText(status) {
 function renderSettings(settings) {
   if (!settings) return;
 
+  const themeMode = normalizeThemeMode(settings.themeMode);
+  applyThemeMode(themeMode);
+
   if (settings.lolInstallDir && document.activeElement !== elements.lolInstallDirInput) {
     elements.lolInstallDirInput.value = settings.lolInstallDir;
   }
 
   renderRiotPlatformRegions(settings);
+  if (document.activeElement !== elements.themeModeSelect) {
+    elements.themeModeSelect.value = themeMode;
+  }
+  elements.themeModeStatus.textContent = describeThemeMode(themeMode);
   elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
 }
 
@@ -2285,6 +2316,24 @@ async function saveRiotPlatformRegion() {
   }
 }
 
+async function saveThemeMode() {
+  const themeMode = normalizeThemeMode(elements.themeModeSelect.value);
+  elements.saveThemeModeButton.disabled = true;
+  elements.settingsMessage.textContent = '';
+
+  try {
+    const settings = await window.lcuApi.updateThemeMode(themeMode);
+    renderSettings(settings);
+    logDebug('Theme mode saved', { themeMode: settings.themeMode });
+    elements.settingsMessage.textContent = '表示テーマを保存しました。';
+  } catch (error) {
+    logWarn('Theme mode save failed', { message: error.message, stack: error.stack });
+    elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+  } finally {
+    elements.saveThemeModeButton.disabled = false;
+  }
+}
+
 async function refresh() {
   elements.refreshButton.disabled = true;
   elements.refreshButton.textContent = '取得中...';
@@ -2350,6 +2399,7 @@ elements.statsSubtabButtons.forEach((button) => {
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
 elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
+elements.saveThemeModeButton.addEventListener('click', saveThemeMode);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 elements.playedStatsSampleSelect.addEventListener('change', () => {

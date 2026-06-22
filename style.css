@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   --bg: #f5f4ff;
   --panel: rgba(255, 255, 255, 0.84);
@@ -2113,6 +2113,405 @@ pre {
   word-break: break-word;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #070a18;
+    --panel: rgba(13, 18, 39, 0.86);
+    --panel-solid: #10162d;
+    --panel-soft: rgba(27, 25, 57, 0.88);
+    --text: #f5f7ff;
+    --muted: #a9b0c5;
+    --border: rgba(166, 151, 255, 0.2);
+    --line: rgba(132, 104, 255, 0.42);
+    --accent: #9b7cff;
+    --accent-strong: #4f91ff;
+    --accent-soft: rgba(155, 124, 255, 0.16);
+    --blue: #62a2ff;
+    --red: #ff6a8d;
+    --danger: #ff6a8d;
+    --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+  }
+  :root:not([data-theme]) body {
+    background:
+      linear-gradient(135deg, rgba(8, 11, 25, 0.96), rgba(15, 15, 42, 0.96) 44%, rgba(24, 18, 55, 0.98)),
+      radial-gradient(circle at 18% 8%, rgba(79, 145, 255, 0.2), transparent 34%),
+      radial-gradient(circle at 82% 22%, rgba(155, 124, 255, 0.22), transparent 32%);
+  }
+
+  :root:not([data-theme]) body::before {
+    background:
+      linear-gradient(135deg, transparent 0 42%, rgba(155, 124, 255, 0.14) 42% 62%, transparent 62%),
+      linear-gradient(45deg, transparent 0 56%, rgba(79, 145, 255, 0.1) 56% 72%, transparent 72%);
+  }
+
+  :root:not([data-theme]) body::after {
+    background: linear-gradient(140deg, rgba(155, 124, 255, 0.16), rgba(79, 145, 255, 0.08));
+  }
+
+  :root:not([data-theme]) input,
+  :root:not([data-theme]) select,
+  :root:not([data-theme]) pre {
+    background: rgba(20, 24, 50, 0.9);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .app-logo {
+    background: #f7f5ff;
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  :root:not([data-theme]) .match-data-update-button,
+  :root:not([data-theme]) .match-data-menu-button,
+  :root:not([data-theme]) .stats-subtabs,
+  :root:not([data-theme]) .view-tabs {
+    background: rgba(16, 20, 44, 0.72);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .match-data-menu {
+    background: rgba(16, 20, 44, 0.98);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root:not([data-theme]) .match-data-update-button:hover:not(:disabled),
+  :root:not([data-theme]) .match-data-menu-button:hover:not(:disabled),
+  :root:not([data-theme]) .match-data-menu button:hover:not(:disabled) {
+    background: rgba(155, 124, 255, 0.16);
+  }
+
+  :root:not([data-theme]) .tab-button.active,
+  :root:not([data-theme]) .stats-subtab.active,
+  :root:not([data-theme]) .lane-tab.active {
+    background: linear-gradient(135deg, rgba(42, 39, 82, 0.96), rgba(26, 31, 64, 0.96));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    color: var(--text);
+  }
+
+  :root:not([data-theme]) .weak-champion-section,
+  :root:not([data-theme]) .strong-champion-section,
+  :root:not([data-theme]) .stats-table-section,
+  :root:not([data-theme]) .stats-opponent-detail-row td,
+  :root:not([data-theme]) .champion-picker-card,
+  :root:not([data-theme]) .pool-champion,
+  :root:not([data-theme]) .pick-row {
+    background: rgba(18, 22, 47, 0.72);
+  }
+
+  :root:not([data-theme]) .weak-champion-item,
+  :root:not([data-theme]) .strong-champion-item,
+  :root:not([data-theme]) .weak-self-pick-token,
+  :root:not([data-theme]) .stats-opponent-detail-pick,
+  :root:not([data-theme]) .pool-champion-stats .pick-pool-stat-chip,
+  :root:not([data-theme]) .weak-champion-item .pick-pool-stat-chip,
+  :root:not([data-theme]) .strong-champion-item .pick-pool-stat-chip,
+  :root:not([data-theme]) .pick-pool-stat-chip,
+  :root:not([data-theme]) .in-game-self-stats .pick-pool-stat-chip,
+  :root:not([data-theme]) .in-game-champion-chip,
+  :root:not([data-theme]) .pool-remove-button {
+    background: rgba(24, 29, 59, 0.88);
+    border-color: rgba(166, 151, 255, 0.18);
+  }
+
+  :root:not([data-theme]) .champion-picker-card.selected,
+  :root:not([data-theme]) .match-data-season-hint,
+  :root:not([data-theme]) .low-sample-badge,
+  :root:not([data-theme]) .ban-token,
+  :root:not([data-theme]) .pick-meta .lane-opponent-marker,
+  :root:not([data-theme]) .pick-pool-candidate em {
+    background: rgba(155, 124, 255, 0.18);
+    border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.won,
+  :root:not([data-theme]) .weak-self-pick-row.won {
+    background: rgba(79, 145, 255, 0.18);
+    border-color: rgba(98, 162, 255, 0.34);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.lost,
+  :root:not([data-theme]) .weak-self-pick-row.lost {
+    background: rgba(255, 106, 141, 0.17);
+    border-color: rgba(255, 106, 141, 0.34);
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.won h4,
+  :root:not([data-theme]) .weak-self-pick-row.won .weak-self-pick-group-title,
+  :root:not([data-theme]) .stats-side-badge.you {
+    color: #9bc3ff;
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-group.lost h4,
+  :root:not([data-theme]) .weak-self-pick-row.lost .weak-self-pick-group-title,
+  :root:not([data-theme]) .stats-side-badge.enemy {
+    color: #ff9cb3;
+  }
+
+  :root:not([data-theme]) .stats-opponent-detail-pick small,
+  :root:not([data-theme]) .pick-pool-stat-chip small {
+    color: #b5bed4;
+  }
+
+  :root:not([data-theme]) .in-game-hero {
+    background:
+      linear-gradient(100deg, rgba(155, 124, 255, 0.2), rgba(13, 18, 39, 0.88) 44%, rgba(79, 145, 255, 0.14)),
+      var(--panel);
+  }
+
+  :root:not([data-theme]) .in-game-portrait,
+  :root:not([data-theme]) .champion-focus,
+  :root:not([data-theme]) .ban-insight-sample-filter select {
+    background: rgba(19, 23, 49, 0.76);
+  }
+
+  :root:not([data-theme]) .pick-row.selected {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.2), rgba(18, 22, 47, 0.84));
+  }
+
+  :root:not([data-theme]) .pick-row.enemy.selected {
+    background: linear-gradient(270deg, rgba(255, 106, 141, 0.18), rgba(18, 22, 47, 0.84));
+  }
+
+  :root:not([data-theme]) .pick-row.intent {
+    background: rgba(35, 32, 70, 0.78);
+  }
+
+  :root:not([data-theme]) .pick-row.local-player {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .pick-row.active-turn,
+  :root:not([data-theme]) .pick-row.local-active-turn {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .pick-row.enemy.active-turn,
+  :root:not([data-theme]) .pick-row.enemy.marked-lane-opponent {
+    background: linear-gradient(270deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root:not([data-theme]) .champion-portrait {
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.2), transparent 32%),
+      linear-gradient(135deg, rgba(79, 145, 255, 0.3), rgba(155, 124, 255, 0.22));
+  }
+
+  :root:not([data-theme]) .draft-focus {
+    background:
+      linear-gradient(135deg, transparent 0 38%, rgba(155, 124, 255, 0.1) 38% 58%, transparent 58%),
+      radial-gradient(circle at 50% 42%, rgba(155, 124, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
+  }
+
+  :root:not([data-theme]) .marked-opponent-candidate,
+  :root:not([data-theme]) .pick-pool-candidate {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
+  }
+
+  :root:not([data-theme]) .pick-pool-candidate.unavailable {
+    background: rgba(31, 32, 62, 0.64);
+  }
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #070a18;
+    --panel: rgba(13, 18, 39, 0.86);
+    --panel-solid: #10162d;
+    --panel-soft: rgba(27, 25, 57, 0.88);
+    --text: #f5f7ff;
+    --muted: #a9b0c5;
+    --border: rgba(166, 151, 255, 0.2);
+    --line: rgba(132, 104, 255, 0.42);
+    --accent: #9b7cff;
+    --accent-strong: #4f91ff;
+    --accent-soft: rgba(155, 124, 255, 0.16);
+    --blue: #62a2ff;
+    --red: #ff6a8d;
+    --danger: #ff6a8d;
+    --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+}
+  :root[data-theme="dark"] body {
+    background:
+      linear-gradient(135deg, rgba(8, 11, 25, 0.96), rgba(15, 15, 42, 0.96) 44%, rgba(24, 18, 55, 0.98)),
+      radial-gradient(circle at 18% 8%, rgba(79, 145, 255, 0.2), transparent 34%),
+      radial-gradient(circle at 82% 22%, rgba(155, 124, 255, 0.22), transparent 32%);
+  }
+
+  :root[data-theme="dark"] body::before {
+    background:
+      linear-gradient(135deg, transparent 0 42%, rgba(155, 124, 255, 0.14) 42% 62%, transparent 62%),
+      linear-gradient(45deg, transparent 0 56%, rgba(79, 145, 255, 0.1) 56% 72%, transparent 72%);
+  }
+
+  :root[data-theme="dark"] body::after {
+    background: linear-gradient(140deg, rgba(155, 124, 255, 0.16), rgba(79, 145, 255, 0.08));
+  }
+
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] pre {
+    background: rgba(20, 24, 50, 0.9);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .app-logo {
+    background: #f7f5ff;
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  :root[data-theme="dark"] .match-data-update-button,
+  :root[data-theme="dark"] .match-data-menu-button,
+  :root[data-theme="dark"] .stats-subtabs,
+  :root[data-theme="dark"] .view-tabs {
+    background: rgba(16, 20, 44, 0.72);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .match-data-menu {
+    background: rgba(16, 20, 44, 0.98);
+    border-color: rgba(166, 151, 255, 0.22);
+  }
+
+  :root[data-theme="dark"] .match-data-update-button:hover:not(:disabled),
+  :root[data-theme="dark"] .match-data-menu-button:hover:not(:disabled),
+  :root[data-theme="dark"] .match-data-menu button:hover:not(:disabled) {
+    background: rgba(155, 124, 255, 0.16);
+  }
+
+  :root[data-theme="dark"] .tab-button.active,
+  :root[data-theme="dark"] .stats-subtab.active,
+  :root[data-theme="dark"] .lane-tab.active {
+    background: linear-gradient(135deg, rgba(42, 39, 82, 0.96), rgba(26, 31, 64, 0.96));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    color: var(--text);
+  }
+
+  :root[data-theme="dark"] .weak-champion-section,
+  :root[data-theme="dark"] .strong-champion-section,
+  :root[data-theme="dark"] .stats-table-section,
+  :root[data-theme="dark"] .stats-opponent-detail-row td,
+  :root[data-theme="dark"] .champion-picker-card,
+  :root[data-theme="dark"] .pool-champion,
+  :root[data-theme="dark"] .pick-row {
+    background: rgba(18, 22, 47, 0.72);
+  }
+
+  :root[data-theme="dark"] .weak-champion-item,
+  :root[data-theme="dark"] .strong-champion-item,
+  :root[data-theme="dark"] .weak-self-pick-token,
+  :root[data-theme="dark"] .stats-opponent-detail-pick,
+  :root[data-theme="dark"] .pool-champion-stats .pick-pool-stat-chip,
+  :root[data-theme="dark"] .weak-champion-item .pick-pool-stat-chip,
+  :root[data-theme="dark"] .strong-champion-item .pick-pool-stat-chip,
+  :root[data-theme="dark"] .pick-pool-stat-chip,
+  :root[data-theme="dark"] .in-game-self-stats .pick-pool-stat-chip,
+  :root[data-theme="dark"] .in-game-champion-chip,
+  :root[data-theme="dark"] .pool-remove-button {
+    background: rgba(24, 29, 59, 0.88);
+    border-color: rgba(166, 151, 255, 0.18);
+  }
+
+  :root[data-theme="dark"] .champion-picker-card.selected,
+  :root[data-theme="dark"] .match-data-season-hint,
+  :root[data-theme="dark"] .low-sample-badge,
+  :root[data-theme="dark"] .ban-token,
+  :root[data-theme="dark"] .pick-meta .lane-opponent-marker,
+  :root[data-theme="dark"] .pick-pool-candidate em {
+    background: rgba(155, 124, 255, 0.18);
+    border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.won,
+  :root[data-theme="dark"] .weak-self-pick-row.won {
+    background: rgba(79, 145, 255, 0.18);
+    border-color: rgba(98, 162, 255, 0.34);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.lost,
+  :root[data-theme="dark"] .weak-self-pick-row.lost {
+    background: rgba(255, 106, 141, 0.17);
+    border-color: rgba(255, 106, 141, 0.34);
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.won h4,
+  :root[data-theme="dark"] .weak-self-pick-row.won .weak-self-pick-group-title,
+  :root[data-theme="dark"] .stats-side-badge.you {
+    color: #9bc3ff;
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-group.lost h4,
+  :root[data-theme="dark"] .weak-self-pick-row.lost .weak-self-pick-group-title,
+  :root[data-theme="dark"] .stats-side-badge.enemy {
+    color: #ff9cb3;
+  }
+
+  :root[data-theme="dark"] .stats-opponent-detail-pick small,
+  :root[data-theme="dark"] .pick-pool-stat-chip small {
+    color: #b5bed4;
+  }
+
+  :root[data-theme="dark"] .in-game-hero {
+    background:
+      linear-gradient(100deg, rgba(155, 124, 255, 0.2), rgba(13, 18, 39, 0.88) 44%, rgba(79, 145, 255, 0.14)),
+      var(--panel);
+  }
+
+  :root[data-theme="dark"] .in-game-portrait,
+  :root[data-theme="dark"] .champion-focus,
+  :root[data-theme="dark"] .ban-insight-sample-filter select {
+    background: rgba(19, 23, 49, 0.76);
+  }
+
+  :root[data-theme="dark"] .pick-row.selected {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.2), rgba(18, 22, 47, 0.84));
+  }
+
+  :root[data-theme="dark"] .pick-row.enemy.selected {
+    background: linear-gradient(270deg, rgba(255, 106, 141, 0.18), rgba(18, 22, 47, 0.84));
+  }
+
+  :root[data-theme="dark"] .pick-row.intent {
+    background: rgba(35, 32, 70, 0.78);
+  }
+
+  :root[data-theme="dark"] .pick-row.local-player {
+    background: linear-gradient(90deg, rgba(79, 145, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .pick-row.active-turn,
+  :root[data-theme="dark"] .pick-row.local-active-turn {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .pick-row.enemy.active-turn,
+  :root[data-theme="dark"] .pick-row.enemy.marked-lane-opponent {
+    background: linear-gradient(270deg, rgba(155, 124, 255, 0.24), rgba(18, 22, 47, 0.88));
+  }
+
+  :root[data-theme="dark"] .champion-portrait {
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.2), transparent 32%),
+      linear-gradient(135deg, rgba(79, 145, 255, 0.3), rgba(155, 124, 255, 0.22));
+  }
+
+  :root[data-theme="dark"] .draft-focus {
+    background:
+      linear-gradient(135deg, transparent 0 38%, rgba(155, 124, 255, 0.1) 38% 58%, transparent 58%),
+      radial-gradient(circle at 50% 42%, rgba(155, 124, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
+  }
+
+  :root[data-theme="dark"] .marked-opponent-candidate,
+  :root[data-theme="dark"] .pick-pool-candidate {
+    background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
+  }
+
+  :root[data-theme="dark"] .pick-pool-candidate.unavailable {
+    background: rgba(31, 32, 62, 0.64);
+  }
 @media (max-width: 1000px) {
   .app-shell {
     padding: 16px;
@@ -2209,3 +2608,6 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+
+
