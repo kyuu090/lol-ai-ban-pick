@@ -1503,6 +1503,100 @@ h2 {
   min-height: 0;
 }
 
+.draft-ai-analysis-panel {
+  background:
+    linear-gradient(135deg, rgba(37, 116, 255, 0.16), rgba(97, 54, 255, 0.16)),
+    var(--panel-solid);
+  border: 1px solid rgba(97, 54, 255, 0.3);
+  border-left-width: 0;
+  border-right-width: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 -14px 34px rgba(97, 54, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+  position: relative;
+}
+
+.draft-ai-analysis-panel::before {
+  background: linear-gradient(180deg, var(--accent), var(--blue));
+  border-radius: 999px;
+  bottom: 18px;
+  content: "";
+  left: 10px;
+  position: absolute;
+  top: 18px;
+  width: 4px;
+}
+
+.draft-ai-analysis-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.draft-ai-analysis-header h3 {
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.draft-ai-analysis-badge {
+  border: 1px solid rgba(154, 167, 184, 0.42);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.draft-ai-analysis-badge.ready {
+  background: rgba(37, 116, 255, 0.12);
+  border-color: rgba(37, 116, 255, 0.32);
+  color: var(--blue);
+}
+
+.draft-ai-analysis-badge.requesting {
+  background: rgba(97, 54, 255, 0.12);
+  border-color: rgba(97, 54, 255, 0.32);
+  color: var(--accent);
+}
+
+.draft-ai-analysis-status {
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.draft-ai-analysis-notes {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.draft-ai-analysis-note {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(97, 54, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(97, 54, 255, 0.12);
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.draft-ai-analysis-note strong {
+  color: var(--accent);
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.draft-ai-analysis-note p {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .team-column {
   display: flex;
   flex-direction: column;
@@ -2367,6 +2461,32 @@ pre {
       radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
   }
 
+  :root:not([data-theme]) .draft-ai-analysis-panel {
+    background:
+      linear-gradient(135deg, rgba(79, 145, 255, 0.22), rgba(155, 124, 255, 0.2)),
+      rgba(12, 16, 36, 0.96);
+    border-color: rgba(155, 124, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 -14px 36px rgba(0, 0, 0, 0.28);
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note {
+    background: rgba(16, 22, 48, 0.94);
+    border-color: rgba(166, 151, 255, 0.36);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note strong {
+    color: #c9bbff;
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-note p {
+    color: #eef2ff;
+  }
+
+  :root:not([data-theme]) .draft-ai-analysis-status {
+    color: #c9bbff;
+  }
+
   :root:not([data-theme]) .marked-opponent-candidate,
   :root:not([data-theme]) .pick-pool-candidate {
     background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
@@ -2572,6 +2692,32 @@ pre {
       radial-gradient(circle at 50% 44%, rgba(79, 145, 255, 0.12), transparent 44%);
   }
 
+  :root[data-theme="dark"] .draft-ai-analysis-panel {
+    background:
+      linear-gradient(135deg, rgba(79, 145, 255, 0.22), rgba(155, 124, 255, 0.2)),
+      rgba(12, 16, 36, 0.96);
+    border-color: rgba(155, 124, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 -14px 36px rgba(0, 0, 0, 0.28);
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note {
+    background: rgba(16, 22, 48, 0.94);
+    border-color: rgba(166, 151, 255, 0.36);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note strong {
+    color: #c9bbff;
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-note p {
+    color: #eef2ff;
+  }
+
+  :root[data-theme="dark"] .draft-ai-analysis-status {
+    color: #c9bbff;
+  }
+
   :root[data-theme="dark"] .marked-opponent-candidate,
   :root[data-theme="dark"] .pick-pool-candidate {
     background: linear-gradient(90deg, rgba(155, 124, 255, 0.16), rgba(24, 29, 59, 0.86));
@@ -2670,6 +2816,15 @@ pre {
 
   .draft-focus {
     min-height: 260px;
+  }
+
+  .draft-ai-analysis-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .draft-ai-analysis-notes {
+    grid-template-columns: 1fr;
   }
 
   .ban-insight-panel {

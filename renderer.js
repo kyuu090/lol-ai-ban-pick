@@ -74,6 +74,7 @@ const elements = {
   currentAction: document.querySelector('#currentAction'),
   currentPick: document.querySelector('#currentPick'),
   banInsightPanel: document.querySelector('#banInsightPanel'),
+  draftAiAnalysisPanel: document.querySelector('#draftAiAnalysisPanel'),
   lcuStatus: document.querySelector('#lcuStatus'),
   websocketStatus: document.querySelector('#websocketStatus'),
   gameflowPhase: document.querySelector('#gameflowPhase'),
@@ -113,10 +114,12 @@ let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
 let lastChampSelectSnapshot = null;
 let wasInChampSelect = false;
+let draftAiAnalysisStatus = 'idle';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
 let activeChampionIconRequests = 0;
+const DRAFT_AI_ANALYSIS_SAMPLE_RESPONSE = '{"notes":[{"title":"相手はポーク","body":"Ziggs/Varus/Luxで射程が長く、視界とオブジェクト前が強い。"},{"title":"味方はバースト","body":"K\'Sante/Viego/Akali/MFで短時間の集団戦とキャッチに火力がある。"},{"title":"味方はフロント不足","body":"前に出て受ける役はK\'Santeに寄りやすく、耐える手段は少なめ。"}]}';
 const championIconObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
   : null;
@@ -1449,6 +1452,7 @@ function renderDraft(state) {
   if (!inChampSelect) {
     elements.champSelectView.classList.remove('local-turn');
     markedLaneOpponentCellId = null;
+    draftAiAnalysisStatus = 'idle';
   }
 
   if (!loggedIn) return;
@@ -1614,6 +1618,8 @@ function renderChampSelect(champSelect) {
   const activeAction = getActiveAction(champSelect, localCellId);
   const localMember = allyTeam.find((member) => member.cellId === localCellId);
   const isLocalTurn = activeAction?.actorCellId === localCellId;
+  const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
+  const isLocalPickTurn = isDraftActionPhase && Boolean(activeAction?.isInProgress) && isLocalTurn && activeAction?.type === 'pick';
   if (markedLaneOpponentCellId !== null && !enemyTeam.some((member) => member.cellId === markedLaneOpponentCellId)) {
     markedLaneOpponentCellId = null;
   }
@@ -1629,6 +1635,91 @@ function renderChampSelect(champSelect) {
     markedLaneOpponentCellId
   });
   renderDraftFocus(champSelect, activeAction);
+  if (isLocalPickTurn) {
+    draftAiAnalysisStatus = 'ready';
+  }
+  renderDraftAiAnalysis(draftAiAnalysisStatus);
+}
+
+function renderDraftAiAnalysis(status) {
+  if (!elements.draftAiAnalysisPanel) return;
+
+  const panel = elements.draftAiAnalysisPanel;
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'draft-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Analysis';
+  const title = document.createElement('h3');
+  title.textContent = 'バンピック分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  badge.className = `draft-ai-analysis-badge ${status}`;
+  badge.textContent = status === 'ready' ? 'DONE' : status === 'requesting' ? 'ASKING' : 'WAITING';
+  header.append(titleBlock, badge);
+  panel.append(header);
+
+  if (status === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIに分析を依頼中・・'));
+    return;
+  }
+
+  if (status !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('AI分析を待機中・・'));
+    return;
+  }
+
+  const notes = parseDraftAiAnalysisNotes(DRAFT_AI_ANALYSIS_SAMPLE_RESPONSE);
+  if (!notes.length) {
+    panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'draft-ai-analysis-notes';
+  notes.forEach((note) => {
+    const item = document.createElement('article');
+    item.className = 'draft-ai-analysis-note';
+
+    const noteTitle = document.createElement('strong');
+    noteTitle.textContent = note.title;
+
+    const body = document.createElement('p');
+    body.textContent = note.body;
+
+    item.append(noteTitle, body);
+    list.append(item);
+  });
+  panel.append(list);
+}
+
+function createDraftAiAnalysisStatus(text) {
+  const message = document.createElement('p');
+  message.className = 'draft-ai-analysis-status';
+  message.textContent = text;
+  return message;
+}
+
+function parseDraftAiAnalysisNotes(responseText) {
+  try {
+    const parsed = JSON.parse(responseText);
+    return (Array.isArray(parsed?.notes) ? parsed.notes : [])
+      .filter((note) => note && typeof note === 'object')
+      .slice(0, 3)
+      .map((note) => ({
+        title: String(note.title || '').trim(),
+        body: String(note.body || '').trim()
+      }))
+      .filter((note) => note.title || note.body);
+  } catch (error) {
+    logDebug('Failed to parse draft AI analysis response', { error: error?.message || String(error) });
+    return [];
+  }
 }
 
 function renderBanList(container, bans) {
