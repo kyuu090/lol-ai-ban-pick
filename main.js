@@ -475,6 +475,16 @@ function requestPickPhaseAnalysis(_event, draftContext) {
   });
 }
 
+function requestFinalCompositionAnalysis(_event, draftContext) {
+  return requestBffJson({
+    path: '/api/openai/final-composition',
+    method: 'POST',
+    body: draftContext,
+    timeoutMs: 30000,
+    maxRetries: 0
+  });
+}
+
 function requestBffHealth({ onRetry = null } = {}) {
   return requestBffJson({
     path: '/health',
@@ -1495,6 +1505,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('window:close', closeWindow);
   ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
   ipcMain.handle('openai:pick-phase', requestPickPhaseAnalysis);
+  ipcMain.handle('openai:final-composition', requestFinalCompositionAnalysis);
   ipcMain.on('log:renderer', logRendererMessage);
 
   createWindow();

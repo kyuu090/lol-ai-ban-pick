@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   collectBans,
   collectUnavailableChampionReasons,
+  createFinalCompositionDraftContext,
   createInGameContext,
   createPickPhaseDraftContext,
   getBestIntoOpponentStats,
@@ -14,6 +15,7 @@ const {
   getPlannedPickChampionId,
   getPlannedPickThreatStats,
   getSummonerName,
+  isChampSelectFinalization,
   normalizePosition,
   normalizeChampionId,
   normalizeChampionPool,
@@ -416,6 +418,142 @@ test('createPickPhaseDraftContext includes unlocked ally pick intents only in in
       championName: 'Champion 202'
     }
   ]);
+});
+
+test('isChampSelectFinalization detects LCU finalization timer phase', () => {
+  assert.equal(isChampSelectFinalization({
+    timer: { phase: 'FINALIZATION' },
+    myTeam: [],
+    theirTeam: []
+  }, 'ChampSelect'), true);
+});
+
+test('isChampSelectFinalization detects all picks locked when pick actions are completed', () => {
+  const champSelect = {
+    timer: { phase: 'BAN_PICK' },
+    myTeam: [
+      { cellId: 1, championId: 122 },
+      { cellId: 2, championId: 64 },
+      { cellId: 3, championId: 103 },
+      { cellId: 4, championId: 202 },
+      { cellId: 5, championId: 412 }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 24 },
+      { cellId: 7, championId: 121 },
+      { cellId: 8, championId: 134 },
+      { cellId: 9, championId: 145 },
+      { cellId: 10, championId: 111 }
+    ],
+    actions: [
+      [
+        { type: 'pick', actorCellId: 1, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 2, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 3, completed: true, isInProgress: false }
+      ],
+      [
+        { type: 'pick', actorCellId: 4, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 5, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 6, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 7, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 8, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 9, completed: true, isInProgress: false },
+        { type: 'pick', actorCellId: 10, completed: true, isInProgress: false }
+      ]
+    ]
+  };
+
+  assert.equal(isChampSelectFinalization(champSelect, 'ChampSelect'), true);
+});
+
+test('isChampSelectFinalization rejects unfinished picks outside finalization timer phase', () => {
+  const champSelect = {
+    timer: { phase: 'BAN_PICK' },
+    myTeam: [
+      { cellId: 1, championId: 122 },
+      { cellId: 2, championId: 64 },
+      { cellId: 3, championId: 0 },
+      { cellId: 4, championId: 202 },
+      { cellId: 5, championId: 412 }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 24 },
+      { cellId: 7, championId: 121 },
+      { cellId: 8, championId: 134 },
+      { cellId: 9, championId: 145 },
+      { cellId: 10, championId: 111 }
+    ],
+    actions: [
+      [
+        { type: 'pick', actorCellId: 3, completed: false, isInProgress: true }
+      ]
+    ]
+  };
+
+  assert.equal(isChampSelectFinalization(champSelect, 'ChampSelect'), false);
+});
+
+test('createFinalCompositionDraftContext separates local locked pick from ally locked picks', () => {
+  const champSelect = {
+    localPlayerCellId: 3,
+    myTeam: [
+      { cellId: 1, championId: 122 },
+      { cellId: 2, championId: 64 },
+      { cellId: 3, championId: 103 },
+      { cellId: 4, championId: 202 },
+      { cellId: 5, championId: 412 }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 24 },
+      { cellId: 7, championId: 121 },
+      { cellId: 8, championId: 134 },
+      { cellId: 9, championId: 145 },
+      { cellId: 10, championId: 111 }
+    ]
+  };
+  const championNames = {
+    24: 'Jax',
+    64: 'Lee Sin',
+    103: 'Ahri',
+    111: 'Nautilus',
+    121: "Kha'Zix",
+    122: 'Darius',
+    134: 'Syndra',
+    145: "Kai'Sa",
+    202: 'Jhin',
+    412: 'Thresh'
+  };
+
+  assert.deepEqual(createFinalCompositionDraftContext({
+    champSelect,
+    localMember: champSelect.myTeam[2],
+    championLabel: (championId) => championNames[championId] || `Champion ${championId}`
+  }), {
+    phase: 'final_composition',
+    localPlayer: {
+      lockedPick: {
+        championId: 103,
+        championName: 'Ahri'
+      }
+    },
+    allyTeam: {
+      lockedPicks: [
+        { championId: 122, championName: 'Darius' },
+        { championId: 64, championName: 'Lee Sin' },
+        { championId: 202, championName: 'Jhin' },
+        { championId: 412, championName: 'Thresh' }
+      ]
+    },
+    enemyTeam: {
+      lockedPicks: [
+        { championId: 24, championName: 'Jax' },
+        { championId: 121, championName: "Kha'Zix" },
+        { championId: 134, championName: 'Syndra' },
+        { championId: 145, championName: "Kai'Sa" },
+        { championId: 111, championName: 'Nautilus' }
+      ]
+    }
+  });
 });
 
 test('getBestIntoOpponentStats filters by opponent and position then ranks best win rate', () => {

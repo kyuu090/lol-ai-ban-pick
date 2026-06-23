@@ -62,9 +62,9 @@ const elements = {
   inGameChampionName: document.querySelector('#inGameChampionName'),
   inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
   inGameSelfStats: document.querySelector('#inGameSelfStats'),
-  inGameMatchupBody: document.querySelector('#inGameMatchupBody'),
   inGameAllyTeam: document.querySelector('#inGameAllyTeam'),
   inGameEnemyTeam: document.querySelector('#inGameEnemyTeam'),
+  inGameFinalCompositionAnalysis: document.querySelector('#inGameFinalCompositionAnalysis'),
   champSelectView: document.querySelector('#champSelectView'),
   helloMessage: document.querySelector('#helloMessage'),
   allyBans: document.querySelector('#allyBans'),
@@ -119,6 +119,11 @@ let draftAiAnalysisStatus = 'idle';
 let draftAiAnalysisNotes = [];
 let draftAiAnalysisRequestKey = null;
 let draftAiAnalysisError = '';
+let draftAiAnalysisPhase = null;
+let finalCompositionAnalysisStatus = 'idle';
+let finalCompositionAnalysisNotes = [];
+let finalCompositionAnalysisRequestKey = null;
+let finalCompositionAnalysisError = '';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
@@ -131,6 +136,7 @@ let dismissedMatchHistoryButtonKey = null;
 let matchDataMenuOpen = false;
 const {
   collectBans,
+  createFinalCompositionDraftContext,
   createInGameContext,
   createPickPhaseDraftContext,
   getActiveAction,
@@ -141,6 +147,7 @@ const {
   getPendingLabel,
   getPlannedPickThreatStats,
   getSummonerName,
+  isChampSelectFinalization,
   normalizePosition,
   normalizeChampionPool,
   positionLabel,
@@ -429,6 +436,10 @@ function renderState(state) {
 function syncDraftAutoFocus(state) {
   const { inChampSelect } = getDraftPanelState(state);
   elements.draftTabButton.classList.toggle('draft-live', inChampSelect);
+
+  if (inChampSelect && !wasInChampSelect) {
+    resetFinalCompositionAnalysis();
+  }
 
   if (inChampSelect && !wasInChampSelect && activeView !== 'draft') {
     setActiveView('draft');
@@ -1470,7 +1481,7 @@ function renderDraft(state) {
 
   if (inChampSelect) {
     lastChampSelectSnapshot = champSelect;
-    renderChampSelect(champSelect);
+    renderChampSelect(champSelect, state.gameflowPhase);
   } else if (inGame) {
     renderInGame(state);
   }
@@ -1491,9 +1502,9 @@ function renderInGame(state) {
   });
 
   renderInGameSelfCard(context);
-  renderInGameMatchup(context);
   renderInGameTeamSnapshot(elements.inGameAllyTeam, context.allyChampionIds);
   renderInGameTeamSnapshot(elements.inGameEnemyTeam, context.enemyChampionIds);
+  renderInGameFinalCompositionAnalysis();
 }
 
 function renderInGameSelfCard({ championId, position, summonerName }) {
@@ -1542,51 +1553,6 @@ function createInGameStatsSummary(stats, position) {
   return container;
 }
 
-function renderInGameMatchup({ championId, position, opponentChampionId, directMatchupStats }) {
-  elements.inGameMatchupBody.replaceChildren();
-
-  if (!championId || !position) {
-    elements.inGameMatchupBody.append(createInGameEmptyNote('今回のロールとピックを確認できませんでした。'));
-    return;
-  }
-
-  if (!opponentChampionId) {
-    elements.inGameMatchupBody.append(createInGameEmptyNote('同じロールの対面チャンピオンは未確定です。'));
-    return;
-  }
-
-  if (!directMatchupStats || !directMatchupStats.games) {
-    elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
-    elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
-    elements.inGameMatchupBody.append(createInGameEmptyNote('No same-role matchup history'));
-    return;
-  }
-
-  elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
-  elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
-  elements.inGameMatchupBody.append(createWinRateStatsElement(directMatchupStats, { includeKda: true }));
-  if (Number(directMatchupStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
-    const badge = document.createElement('span');
-    badge.className = 'low-sample-badge';
-    badge.textContent = 'Low sample';
-    elements.inGameMatchupBody.append(badge);
-  }
-}
-
-function createInGameMatchupTitle(position, opponentChampionId) {
-  const title = document.createElement('strong');
-  title.className = 'in-game-matchup-title';
-  title.textContent = `${positionLabel(position)} vs ${championLabel(opponentChampionId)}`;
-  return title;
-}
-
-function createInGameMatchupNames(championId, opponentChampionId) {
-  const row = document.createElement('div');
-  row.className = 'in-game-matchup-names';
-  row.append(createInlineChampionName(championId), document.createTextNode(' into '), createInlineChampionName(opponentChampionId));
-  return row;
-}
-
 function createInGameEmptyNote(text) {
   const note = document.createElement('p');
   note.className = 'in-game-empty-note';
@@ -1619,7 +1585,7 @@ function createInGameChampionChip(championId) {
   return chip;
 }
 
-function renderChampSelect(champSelect) {
+function renderChampSelect(champSelect, gameflowPhase) {
   const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
   const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
   const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
@@ -1647,6 +1613,9 @@ function renderChampSelect(champSelect) {
   if (isLocalPickTurn) {
     requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction);
   }
+  if (isChampSelectFinalization(champSelect, gameflowPhase)) {
+    requestFinalCompositionAnalysisIfNeeded(champSelect, localMember);
+  }
   renderDraftAiAnalysis(draftAiAnalysisStatus);
 }
 
@@ -1655,53 +1624,111 @@ function resetDraftAiAnalysis() {
   draftAiAnalysisNotes = [];
   draftAiAnalysisRequestKey = null;
   draftAiAnalysisError = '';
+  draftAiAnalysisPhase = null;
+}
+
+function resetFinalCompositionAnalysis() {
+  finalCompositionAnalysisStatus = 'idle';
+  finalCompositionAnalysisNotes = [];
+  finalCompositionAnalysisRequestKey = null;
+  finalCompositionAnalysisError = '';
 }
 
 function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) {
-  if (!window.lcuApi?.requestPickPhaseAnalysis) return;
-  if (draftAiAnalysisStatus === 'ready') return;
-
   const draftContext = createPickPhaseDraftContext({
     champSelect,
     localMember,
     championPool,
     championLabel
   });
+  requestDraftAiAnalysis(draftContext, activeAction);
+}
+
+function requestFinalCompositionAnalysisIfNeeded(champSelect, localMember) {
+  const draftContext = createFinalCompositionDraftContext({
+    champSelect,
+    localMember,
+    championLabel
+  });
+  requestDraftAiAnalysis(draftContext);
+}
+
+function requestDraftAiAnalysis(draftContext, activeAction = null) {
   if (!draftContext) return;
 
+  const requestPhase = draftContext.phase || null;
+  const requestAnalysis = requestPhase === 'final_composition'
+    ? window.lcuApi?.requestFinalCompositionAnalysis
+    : window.lcuApi?.requestPickPhaseAnalysis;
+  if (!requestAnalysis) return;
+
   const requestKey = createDraftAiAnalysisRequestKey(activeAction, draftContext);
+  if (requestPhase === 'final_composition') {
+    if (finalCompositionAnalysisStatus === 'requesting' && finalCompositionAnalysisRequestKey === requestKey) return;
+    if (finalCompositionAnalysisStatus === 'ready' && finalCompositionAnalysisRequestKey === requestKey) return;
+    if (finalCompositionAnalysisStatus === 'error' && finalCompositionAnalysisRequestKey === requestKey) return;
+  } else if (draftAiAnalysisStatus === 'ready' && draftAiAnalysisPhase === requestPhase) {
+    return;
+  }
+
   if (draftAiAnalysisStatus === 'requesting' && draftAiAnalysisRequestKey === requestKey) return;
   if (draftAiAnalysisStatus === 'error' && draftAiAnalysisRequestKey === requestKey) return;
+
+  if (requestPhase === 'final_composition') {
+    finalCompositionAnalysisStatus = 'requesting';
+    finalCompositionAnalysisNotes = [];
+    finalCompositionAnalysisError = '';
+    finalCompositionAnalysisRequestKey = requestKey;
+    renderInGameFinalCompositionAnalysis();
+  }
 
   draftAiAnalysisStatus = 'requesting';
   draftAiAnalysisNotes = [];
   draftAiAnalysisError = '';
   draftAiAnalysisRequestKey = requestKey;
+  draftAiAnalysisPhase = requestPhase;
   logDebug('Draft AI analysis request started', { requestKey, draftContext });
 
-  window.lcuApi.requestPickPhaseAnalysis(draftContext)
+  requestAnalysis(draftContext)
     .then((response) => {
-      if (draftAiAnalysisRequestKey !== requestKey) return;
-      draftAiAnalysisNotes = parseDraftAiAnalysisNotes(response);
-      draftAiAnalysisStatus = draftAiAnalysisNotes.length ? 'ready' : 'error';
-      draftAiAnalysisError = draftAiAnalysisNotes.length ? '' : 'AI分析を表示できませんでした。';
-      logDebug('Draft AI analysis response received', { requestKey, notes: draftAiAnalysisNotes.length });
-      renderDraftAiAnalysis(draftAiAnalysisStatus);
+      const notes = parseDraftAiAnalysisNotes(response);
+      if (requestPhase === 'final_composition') {
+        if (finalCompositionAnalysisRequestKey !== requestKey) return;
+        finalCompositionAnalysisNotes = notes;
+        finalCompositionAnalysisStatus = notes.length ? 'ready' : 'error';
+        finalCompositionAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+        renderInGameFinalCompositionAnalysis();
+      }
+      if (draftAiAnalysisRequestKey === requestKey) {
+        draftAiAnalysisNotes = notes;
+        draftAiAnalysisStatus = notes.length ? 'ready' : 'error';
+        draftAiAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+        renderDraftAiAnalysis(draftAiAnalysisStatus);
+      }
+      logDebug('Draft AI analysis response received', { requestKey, notes: notes.length });
     })
     .catch((error) => {
-      if (draftAiAnalysisRequestKey !== requestKey) return;
-      draftAiAnalysisStatus = 'error';
-      draftAiAnalysisError = createDraftAiAnalysisErrorMessage(error);
+      const errorMessage = createDraftAiAnalysisErrorMessage(error);
+      if (requestPhase === 'final_composition' && finalCompositionAnalysisRequestKey === requestKey) {
+        finalCompositionAnalysisStatus = 'error';
+        finalCompositionAnalysisError = errorMessage;
+        renderInGameFinalCompositionAnalysis();
+      }
+      if (draftAiAnalysisRequestKey === requestKey) {
+        draftAiAnalysisStatus = 'error';
+        draftAiAnalysisError = errorMessage;
+        renderDraftAiAnalysis(draftAiAnalysisStatus);
+      }
       logDebug('Draft AI analysis request failed', {
         requestKey,
         error: error?.message || String(error)
       });
-      renderDraftAiAnalysis(draftAiAnalysisStatus);
     });
 }
 
 function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
   return JSON.stringify({
+    phase: draftContext?.phase ?? null,
     actionId: activeAction?.id ?? null,
     actorCellId: activeAction?.actorCellId ?? null,
     draftContext
@@ -1729,7 +1756,7 @@ function renderDraftAiAnalysis(status) {
   eyebrow.className = 'eyebrow';
   eyebrow.textContent = 'AI Analysis';
   const title = document.createElement('h3');
-  title.textContent = 'バンピック分析';
+  title.textContent = draftAiAnalysisPhase === 'final_composition' ? '最終構成分析' : 'バンピック分析';
   titleBlock.append(eyebrow, title);
 
   const badge = document.createElement('span');
@@ -1739,7 +1766,9 @@ function renderDraftAiAnalysis(status) {
   panel.append(header);
 
   if (status === 'requesting') {
-    panel.append(createDraftAiAnalysisStatus('AIに分析を依頼中・・'));
+    panel.append(createDraftAiAnalysisStatus(draftAiAnalysisPhase === 'final_composition'
+      ? 'AIに最終構成を分析依頼中・・'
+      : 'AIに分析を依頼中・・'));
     return;
   }
 
@@ -1762,6 +1791,73 @@ function renderDraftAiAnalysis(status) {
   const list = document.createElement('div');
   list.className = 'draft-ai-analysis-notes';
   notes.forEach((note) => {
+    const item = document.createElement('article');
+    item.className = 'draft-ai-analysis-note';
+
+    const noteTitle = document.createElement('strong');
+    noteTitle.textContent = note.title;
+
+    const body = document.createElement('p');
+    body.textContent = note.body;
+
+    item.append(noteTitle, body);
+    list.append(item);
+  });
+  panel.append(list);
+}
+
+function renderInGameFinalCompositionAnalysis() {
+  const panel = elements.inGameFinalCompositionAnalysis;
+  if (!panel) return;
+
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'in-game-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Analysis';
+  const title = document.createElement('h4');
+  title.textContent = '最終構成分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  badge.className = `draft-ai-analysis-badge ${finalCompositionAnalysisStatus}`;
+  badge.textContent = finalCompositionAnalysisStatus === 'ready'
+    ? 'DONE'
+    : finalCompositionAnalysisStatus === 'requesting'
+      ? 'ASKING'
+      : finalCompositionAnalysisStatus === 'error'
+        ? 'ERROR'
+        : 'WAITING';
+  header.append(titleBlock, badge);
+  panel.append(header);
+
+  if (finalCompositionAnalysisStatus === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIに最終構成を分析依頼中・・'));
+    return;
+  }
+
+  if (finalCompositionAnalysisStatus === 'error') {
+    panel.append(createDraftAiAnalysisStatus(finalCompositionAnalysisError || 'AI分析を取得できませんでした。'));
+    return;
+  }
+
+  if (finalCompositionAnalysisStatus !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('最終構成分析を待機中・・'));
+    return;
+  }
+
+  if (!finalCompositionAnalysisNotes.length) {
+    panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'in-game-ai-analysis-notes';
+  finalCompositionAnalysisNotes.forEach((note) => {
     const item = document.createElement('article');
     item.className = 'draft-ai-analysis-note';
 
