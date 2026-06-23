@@ -132,6 +132,7 @@ let matchDataMenuOpen = false;
 const {
   collectBans,
   createInGameContext,
+  createPickPhaseDraftContext,
   getActiveAction,
   getBestIntoOpponentStats,
   getDraftPanelState,
@@ -1660,7 +1661,12 @@ function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) 
   if (!window.lcuApi?.requestPickPhaseAnalysis) return;
   if (draftAiAnalysisStatus === 'ready') return;
 
-  const draftContext = createPickPhaseDraftContext(champSelect, localMember);
+  const draftContext = createPickPhaseDraftContext({
+    champSelect,
+    localMember,
+    championPool,
+    championLabel
+  });
   if (!draftContext) return;
 
   const requestKey = createDraftAiAnalysisRequestKey(activeAction, draftContext);
@@ -1692,72 +1698,6 @@ function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) 
       });
       renderDraftAiAnalysis(draftAiAnalysisStatus);
     });
-}
-
-function createPickPhaseDraftContext(champSelect, localMember) {
-  const localRole = normalizePosition(localMember?.assignedPosition);
-  if (!localRole) return null;
-
-  const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
-  const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
-
-  return {
-    phase: 'own_pick',
-    localPlayer: {
-      role: localRole,
-      intendedPick: createDraftChampionEntry(localMember, { preferIntent: true, includeRole: false })
-    },
-    allyTeam: {
-      intendedPicks: allyTeam
-        .filter((member) => member?.cellId !== localMember?.cellId && !getMemberChampionId(member))
-        .map((member) => createDraftChampionEntry(member, { preferIntent: true }))
-        .filter(Boolean),
-      lockedPicks: allyTeam
-        .filter((member) => member?.cellId !== localMember?.cellId)
-        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
-        .filter(Boolean)
-    },
-    enemyTeam: {
-      lockedPicks: enemyTeam
-        .map((member) => createDraftChampionEntry(member, { preferLocked: true }))
-        .filter(Boolean)
-    },
-    ownChampionPool: createOwnChampionPoolEntries(localRole)
-  };
-}
-
-function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, includeRole = true } = {}) {
-  const role = normalizePosition(member?.assignedPosition);
-  const championId = preferLocked
-    ? Number(member?.championId)
-    : preferIntent
-      ? Number(member?.championPickIntent)
-      : getMemberChampionId(member);
-  if (includeRole && !role) return null;
-  if (!Number.isInteger(championId) || championId <= 0) return null;
-
-  const entry = {
-    championId,
-    championName: championLabel(championId)
-  };
-  if (includeRole) {
-    entry.role = role;
-  }
-  return entry;
-}
-
-function createOwnChampionPoolEntries(role) {
-  const lane = CHAMPION_POOL_LANES.find((entry) => CHAMPION_POOL_LANE_TO_POSITION[entry.id] === role);
-  if (!lane) return [];
-
-  return (championPool[lane.id] || [])
-    .map((championId) => Number(championId))
-    .filter((championId) => Number.isInteger(championId) && championId > 0)
-    .map((championId) => ({
-      role,
-      championId,
-      championName: championLabel(championId)
-    }));
 }
 
 function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
