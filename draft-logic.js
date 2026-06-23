@@ -23,6 +23,13 @@
     { id: 'bottom', label: 'BOT' },
     { id: 'utility', label: 'SUP' }
   ];
+  const CHAMPION_POOL_LANE_TO_POSITION = {
+    top: 'TOP',
+    jungle: 'JUNGLE',
+    middle: 'MIDDLE',
+    bottom: 'BOTTOM',
+    utility: 'UTILITY'
+  };
 
   function hasUsableData(value) {
     return value && typeof value === 'object' && !value.error;
@@ -279,6 +286,68 @@
     };
   }
 
+  function createPickPhaseDraftContext({ champSelect, localMember, championPool = {}, championLabel = defaultChampionLabel } = {}) {
+    const localRole = normalizePosition(localMember?.assignedPosition);
+    if (!localRole) return null;
+
+    const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+    const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+
+    return {
+      phase: 'own_pick',
+      localPlayer: {
+        intendedPick: createDraftChampionEntry(localMember, { preferIntent: true, championLabel })
+      },
+      allyTeam: {
+        intendedPicks: allyTeam
+          .filter((member) => member?.cellId !== localMember?.cellId && !(Number(member?.championId) > 0))
+          .map((member) => createDraftChampionEntry(member, { preferIntent: true, championLabel }))
+          .filter(Boolean),
+        lockedPicks: allyTeam
+          .filter((member) => member?.cellId !== localMember?.cellId)
+          .map((member) => createDraftChampionEntry(member, { preferLocked: true, championLabel }))
+          .filter(Boolean)
+      },
+      enemyTeam: {
+        lockedPicks: enemyTeam
+          .map((member) => createDraftChampionEntry(member, { preferLocked: true, championLabel }))
+          .filter(Boolean)
+      },
+      ownChampionPool: createOwnChampionPoolEntries({ role: localRole, championPool, championLabel })
+    };
+  }
+
+  function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, championLabel = defaultChampionLabel } = {}) {
+    const championId = preferLocked
+      ? Number(member?.championId)
+      : preferIntent
+        ? Number(member?.championPickIntent)
+        : getMemberChampionId(member);
+    if (!Number.isInteger(championId) || championId <= 0) return null;
+
+    return {
+      championId,
+      championName: championLabel(championId)
+    };
+  }
+
+  function createOwnChampionPoolEntries({ role, championPool = {}, championLabel = defaultChampionLabel } = {}) {
+    const lane = CHAMPION_POOL_LANES.find((entry) => CHAMPION_POOL_LANE_TO_POSITION[entry.id] === role);
+    if (!lane) return [];
+
+    return (championPool[lane.id] || [])
+      .map((championId) => Number(championId))
+      .filter((championId) => Number.isInteger(championId) && championId > 0)
+      .map((championId) => ({
+        championId,
+        championName: championLabel(championId)
+      }));
+  }
+
+  function defaultChampionLabel(championId) {
+    return `Champion ${championId}`;
+  }
+
   return {
     POSITION_LABELS,
     CHAMPION_POOL_LANES,
@@ -305,6 +374,7 @@
     getBestIntoOpponentStats,
     sortPickPoolCandidates,
     getDraftPanelState,
-    createInGameContext
+    createInGameContext,
+    createPickPhaseDraftContext
   };
 });

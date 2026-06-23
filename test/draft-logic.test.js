@@ -4,6 +4,7 @@ const {
   collectBans,
   collectUnavailableChampionReasons,
   createInGameContext,
+  createPickPhaseDraftContext,
   getBestIntoOpponentStats,
   getActiveAction,
   getDraftPanelState,
@@ -287,6 +288,134 @@ test('createInGameContext ignores off-position opponents and caps team snapshots
     allyChampionIds: [103, 122, 64, 202, 412],
     enemyChampionIds: [24, 121, 145, 111, 134]
   });
+});
+
+test('createPickPhaseDraftContext omits role fields from BFF analysis payload', () => {
+  const champSelect = {
+    localPlayerCellId: 2,
+    myTeam: [
+      { cellId: 1, championId: 122, assignedPosition: 'TOP' },
+      { cellId: 2, championId: 0, championPickIntent: 103, assignedPosition: 'MIDDLE' },
+      { cellId: 3, championId: 0, championPickIntent: 64, assignedPosition: 'JUNGLE' },
+      { cellId: 4, championId: 202, assignedPosition: 'BOTTOM' },
+      { cellId: 5, championId: 412, assignedPosition: 'UTILITY' }
+    ],
+    theirTeam: [
+      { cellId: 6, championId: 134, assignedPosition: 'MIDDLE' },
+      { cellId: 7, championId: 121, assignedPosition: 'JUNGLE' }
+    ]
+  };
+  const championNames = {
+    13: 'Ryze',
+    64: 'Lee Sin',
+    103: 'Ahri',
+    112: 'Viktor',
+    121: "Kha'Zix",
+    122: 'Darius',
+    134: 'Syndra',
+    202: 'Jhin',
+    412: 'Thresh'
+  };
+
+  const context = createPickPhaseDraftContext({
+    champSelect,
+    localMember: champSelect.myTeam[1],
+    championPool: {
+      middle: [103, 112, 13]
+    },
+    championLabel: (championId) => championNames[championId] || `Champion ${championId}`
+  });
+
+  assert.deepEqual(context, {
+    phase: 'own_pick',
+    localPlayer: {
+      intendedPick: {
+        championId: 103,
+        championName: 'Ahri'
+      }
+    },
+    allyTeam: {
+      intendedPicks: [
+        {
+          championId: 64,
+          championName: 'Lee Sin'
+        }
+      ],
+      lockedPicks: [
+        {
+          championId: 122,
+          championName: 'Darius'
+        },
+        {
+          championId: 202,
+          championName: 'Jhin'
+        },
+        {
+          championId: 412,
+          championName: 'Thresh'
+        }
+      ]
+    },
+    enemyTeam: {
+      lockedPicks: [
+        {
+          championId: 134,
+          championName: 'Syndra'
+        },
+        {
+          championId: 121,
+          championName: "Kha'Zix"
+        }
+      ]
+    },
+    ownChampionPool: [
+      {
+        championId: 103,
+        championName: 'Ahri'
+      },
+      {
+        championId: 112,
+        championName: 'Viktor'
+      },
+      {
+        championId: 13,
+        championName: 'Ryze'
+      }
+    ]
+  });
+  assert.equal(JSON.stringify(context).includes('"role"'), false);
+});
+
+test('createPickPhaseDraftContext includes unlocked ally pick intents only in intendedPicks', () => {
+  const champSelect = {
+    myTeam: [
+      { cellId: 1, championId: 0, championPickIntent: 103, assignedPosition: 'MIDDLE' },
+      { cellId: 2, championId: 0, championPickIntent: 64, assignedPosition: 'JUNGLE' },
+      { cellId: 3, championId: 202, championPickIntent: 222, assignedPosition: 'BOTTOM' },
+      { cellId: 4, championId: 0, championPickIntent: 0, assignedPosition: 'UTILITY' }
+    ],
+    theirTeam: []
+  };
+
+  const context = createPickPhaseDraftContext({
+    champSelect,
+    localMember: champSelect.myTeam[0],
+    championPool: { middle: [103] },
+    championLabel: (championId) => `Champion ${championId}`
+  });
+
+  assert.deepEqual(context.allyTeam.intendedPicks, [
+    {
+      championId: 64,
+      championName: 'Champion 64'
+    }
+  ]);
+  assert.deepEqual(context.allyTeam.lockedPicks, [
+    {
+      championId: 202,
+      championName: 'Champion 202'
+    }
+  ]);
 });
 
 test('getBestIntoOpponentStats filters by opponent and position then ranks best win rate', () => {
