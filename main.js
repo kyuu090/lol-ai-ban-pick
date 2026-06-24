@@ -4,7 +4,12 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const WebSocket = require('ws');
-const { createAuthHeader, createChampionsById, parseLockfile } = require('./lcu-logic');
+const {
+  createAuthHeader,
+  createChampionsById,
+  createLaneMatchupAnalysisRequest,
+  parseLockfile
+} = require('./lcu-logic');
 const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
 const {
   RIOT_PLATFORM_REGIONS,
@@ -34,6 +39,7 @@ const LCU_ENDPOINTS = {
   champSelect: '/lol-champ-select/v1/session',
   summoner: '/lol-summoner/v1/current-summoner',
   gameflowPhase: '/lol-gameflow/v1/gameflow-phase',
+  gameflowSession: '/lol-gameflow/v1/session',
   championSummary: '/lol-game-data/assets/v1/champion-summary.json'
 };
 const LOCKFILE_RETRY_MS = 5000;
@@ -72,6 +78,8 @@ let startupMatchHistoryScheduled = false;
 let autoMatchHistoryTimer = null;
 let activeMatchHistoryPuuid = null;
 let riotRateLimitCountdownTimer = null;
+let laneMatchupAnalysisRequestKey = null;
+let laneMatchupAnalysisInFlightKey = null;
 
 configureAppUserDataPath();
 configureLogger();
@@ -125,9 +133,23 @@ function createInitialState() {
     matchHistoryEnemyChampionStats,
     matchHistoryLaneOpponentStats,
     matchHistorySelfVsLaneOpponentStats,
+    gameflowSession: null,
+    laneMatchupAnalysis: createLaneMatchupAnalysisState(),
     lastEvent: null,
     error: null,
     updatedAt: null
+  };
+}
+
+function createLaneMatchupAnalysisState(patch = {}) {
+  return {
+    status: 'idle',
+    requestKey: null,
+    request: null,
+    response: null,
+    error: null,
+    updatedAt: null,
+    ...patch
   };
 }
 
@@ -485,6 +507,16 @@ function requestFinalCompositionAnalysis(_event, draftContext) {
   });
 }
 
+function requestLaneMatchupAnalysis(laneMatchupPayload) {
+  return requestBffJson({
+    path: '/api/openai/lane-matchup',
+    method: 'POST',
+    body: laneMatchupPayload,
+    timeoutMs: 30000,
+    maxRetries: 0
+  });
+}
+
 function requestBffHealth({ onRetry = null } = {}) {
   return requestBffJson({
     path: '/health',
@@ -815,6 +847,120 @@ function scheduleStartupRiotMatchHistoryIfReady(reason) {
 
   startupMatchHistoryScheduled = true;
   scheduleAutoRiotMatchHistory(reason, AUTO_MATCH_HISTORY_STARTUP_DELAY_MS);
+}
+
+function resetLaneMatchupAnalysis(reason = 'reset') {
+  laneMatchupAnalysisRequestKey = null;
+  laneMatchupAnalysisInFlightKey = null;
+  updateState({
+    laneMatchupAnalysis: createLaneMatchupAnalysisState(),
+    gameflowSession: null
+  });
+  log.debug('Lane matchup analysis reset', { reason });
+}
+
+function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
+  if (!gameflowSession || gameflowSession.error) return;
+
+  const request = createLaneMatchupAnalysisRequest({
+    gameflowSession,
+    localPuuid: getPuuidFromSummoner(appState.summoner),
+    championsById: appState.championsById
+  });
+  if (!request) {
+    log.debug('Lane matchup analysis not ready', { reason, phase: gameflowSession?.phase });
+    return;
+  }
+
+  if (
+    request.requestKey === laneMatchupAnalysisRequestKey ||
+    request.requestKey === laneMatchupAnalysisInFlightKey ||
+    request.requestKey === appState.laneMatchupAnalysis?.requestKey
+  ) {
+    return;
+  }
+
+  laneMatchupAnalysisInFlightKey = request.requestKey;
+  updateState({
+    laneMatchupAnalysis: createLaneMatchupAnalysisState({
+      status: 'requesting',
+      requestKey: request.requestKey,
+      request,
+      updatedAt: new Date().toISOString()
+    })
+  });
+
+  log.info('Lane matchup analysis request started', {
+    reason,
+    gameId: request.gameId,
+    lane: request.payload.lane,
+    localPosition: request.localPosition
+  });
+
+  requestLaneMatchupAnalysis(request.payload)
+    .then((response) => {
+      if (laneMatchupAnalysisInFlightKey !== request.requestKey) return;
+
+      laneMatchupAnalysisRequestKey = request.requestKey;
+      laneMatchupAnalysisInFlightKey = null;
+      updateState({
+        laneMatchupAnalysis: createLaneMatchupAnalysisState({
+          status: 'ready',
+          requestKey: request.requestKey,
+          request,
+          response,
+          updatedAt: new Date().toISOString()
+        })
+      });
+      log.info('Lane matchup analysis response received', {
+        gameId: request.gameId,
+        lane: request.payload.lane
+      });
+    })
+    .catch((error) => {
+      if (laneMatchupAnalysisInFlightKey !== request.requestKey) return;
+
+      laneMatchupAnalysisRequestKey = request.requestKey;
+      laneMatchupAnalysisInFlightKey = null;
+      updateState({
+        laneMatchupAnalysis: createLaneMatchupAnalysisState({
+          status: 'error',
+          requestKey: request.requestKey,
+          request,
+          error: createLaneMatchupAnalysisErrorMessage(error),
+          updatedAt: new Date().toISOString()
+        })
+      });
+      log.warn('Lane matchup analysis request failed', {
+        gameId: request.gameId,
+        lane: request.payload.lane,
+        error: serializeForLog(error)
+      });
+    });
+}
+
+function createLaneMatchupAnalysisErrorMessage(error) {
+  const message = String(error?.message || '');
+  if (message.includes('429')) return 'AI対面分析のリクエストが混み合っています。少し待ってから再度お試しください。';
+  if (message.includes('400')) return 'AI対面分析に必要なチャンピオンまたはレーン情報が不足しています。';
+  return 'AI対面分析を取得できませんでした。';
+}
+
+async function refreshGameflowSessionForLaneMatchup(reason) {
+  if (!['GameStart', 'InProgress'].includes(appState.gameflowPhase)) return null;
+
+  try {
+    const gameflowSession = await lcuFetch(LCU_ENDPOINTS.gameflowSession);
+    updateState({ gameflowSession });
+    refreshLaneMatchupAnalysisFromSession(gameflowSession, reason);
+    return gameflowSession;
+  } catch (error) {
+    log.warn('Failed to refresh gameflow session for lane matchup', {
+      reason,
+      error: serializeForLog(error)
+    });
+    return null;
+  }
 }
 
 function estimateSeasonCollectionMinutes(detailRequestCount) {
@@ -1287,11 +1433,12 @@ async function refreshLcuState() {
     championIconUnavailableLogged = false;
     updateState({ lcuStatus: 'connecting', error: null });
 
-    const [lobby, champSelect, summoner, gameflowPhase, championSummary] = await Promise.all([
+    const [lobby, champSelect, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
       lcuFetch(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
+      lcuFetch(LCU_ENDPOINTS.gameflowSession).catch((error) => ({ error: error.message })),
       lcuFetch(LCU_ENDPOINTS.championSummary).catch(() => [])
     ]);
 
@@ -1305,6 +1452,7 @@ async function refreshLcuState() {
       hasChampSelect: Boolean(champSelect && !champSelect.error),
       hasSummoner: Boolean(summoner && !summoner.error),
       gameflowPhase,
+      hasGameflowSession: Boolean(gameflowSession && !gameflowSession.error),
       championCount: Object.keys(championsById).length
     });
 
@@ -1313,11 +1461,13 @@ async function refreshLcuState() {
       champSelect,
       summoner,
       gameflowPhase,
+      gameflowSession,
       championsById,
       lcuStatus: 'connected',
       error: null
     });
     await syncMatchHistoryForSummoner(summoner, 'lcu-refresh');
+    refreshLaneMatchupAnalysisFromSession(gameflowSession, 'lcu-refresh');
 
     connectWebSocket();
     scheduleStartupRiotMatchHistoryIfReady('startup');
@@ -1326,14 +1476,18 @@ async function refreshLcuState() {
     log.warn('Failed to refresh LCU state', serializeForLog(error));
     closeWebSocket();
     lcuConnection = null;
+    laneMatchupAnalysisRequestKey = null;
+    laneMatchupAnalysisInFlightKey = null;
     updateState({
       lcuStatus: 'disconnected',
       websocketStatus: 'disconnected',
       gameflowPhase: null,
+      gameflowSession: null,
       summoner: null,
       lobby: null,
       champSelect: null,
       championsById: {},
+      laneMatchupAnalysis: createLaneMatchupAnalysisState(),
       error: error.message
     });
     resetMatchHistoryData({ reason: 'lcu-disconnected' });
@@ -1479,9 +1633,18 @@ async function applyWebSocketEvent(event) {
       champSelect: data === 'ChampSelect' ? appState.champSelect : null
     });
 
+    if (['GameStart', 'InProgress'].includes(data)) {
+      await refreshGameflowSessionForLaneMatchup('gameflow-phase');
+    } else {
+      resetLaneMatchupAnalysis('gameflow-phase-left-game');
+    }
+
     if (['GameStart', 'InProgress'].includes(previousPhase) && !['GameStart', 'InProgress'].includes(data)) {
       scheduleAutoRiotMatchHistory('game-end', AUTO_MATCH_HISTORY_GAME_END_DELAY_MS);
     }
+  } else if (uri === LCU_ENDPOINTS.gameflowSession) {
+    updateState({ gameflowSession: data });
+    refreshLaneMatchupAnalysisFromSession(data, 'gameflow-session-event');
   }
 }
 

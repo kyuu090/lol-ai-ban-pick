@@ -62,8 +62,7 @@ const elements = {
   inGameChampionName: document.querySelector('#inGameChampionName'),
   inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
   inGameSelfStats: document.querySelector('#inGameSelfStats'),
-  inGameAllyTeam: document.querySelector('#inGameAllyTeam'),
-  inGameEnemyTeam: document.querySelector('#inGameEnemyTeam'),
+  inGameLaneMatchupAnalysis: document.querySelector('#inGameLaneMatchupAnalysis'),
   inGameFinalCompositionAnalysis: document.querySelector('#inGameFinalCompositionAnalysis'),
   champSelectView: document.querySelector('#champSelectView'),
   helloMessage: document.querySelector('#helloMessage'),
@@ -1502,8 +1501,7 @@ function renderInGame(state) {
   });
 
   renderInGameSelfCard(context);
-  renderInGameTeamSnapshot(elements.inGameAllyTeam, context.allyChampionIds);
-  renderInGameTeamSnapshot(elements.inGameEnemyTeam, context.enemyChampionIds);
+  renderInGameLaneMatchupAnalysis(state.laneMatchupAnalysis);
   renderInGameFinalCompositionAnalysis();
 }
 
@@ -1551,38 +1549,6 @@ function createInGameStatsSummary(stats, position) {
   });
 
   return container;
-}
-
-function createInGameEmptyNote(text) {
-  const note = document.createElement('p');
-  note.className = 'in-game-empty-note';
-  note.textContent = text;
-  return note;
-}
-
-function renderInGameTeamSnapshot(container, championIds) {
-  const chips = (Array.isArray(championIds) ? championIds : []).map(createInGameChampionChip);
-
-  container.replaceChildren(...chips);
-  if (!chips.length) {
-    container.append(createInGameEmptyNote('No champion snapshot'));
-  }
-}
-
-function createInGameChampionChip(championId) {
-  const chip = document.createElement('span');
-  chip.className = 'in-game-champion-chip';
-  chip.title = championTitle(championId);
-
-  const image = document.createElement('img');
-  image.alt = '';
-  loadChampionIcon(image, championId);
-
-  const label = document.createElement('span');
-  label.textContent = championLabel(championId);
-
-  chip.append(image, label);
-  return chip;
 }
 
 function renderChampSelect(champSelect, gameflowPhase) {
@@ -1871,6 +1837,134 @@ function renderInGameFinalCompositionAnalysis() {
     list.append(item);
   });
   panel.append(list);
+}
+
+function renderInGameLaneMatchupAnalysis(analysis) {
+  const panel = elements.inGameLaneMatchupAnalysis;
+  if (!panel) return;
+
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'in-game-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Matchup';
+  const title = document.createElement('h4');
+  title.textContent = 'レーン対面分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  const status = analysis?.status || 'idle';
+  badge.className = `draft-ai-analysis-badge ${status}`;
+  badge.textContent = status === 'ready'
+    ? 'DONE'
+    : status === 'requesting'
+      ? 'ASKING'
+      : status === 'error'
+        ? 'ERROR'
+        : 'WAITING';
+  header.append(titleBlock, badge);
+  panel.append(header);
+
+  if (status === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIにレーン対面分析を依頼中...'));
+    return;
+  }
+
+  if (status === 'error') {
+    panel.append(createDraftAiAnalysisStatus(analysis?.error || 'AI対面分析を取得できませんでした。'));
+    return;
+  }
+
+  if (status !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('GameStart / InProgress の対面情報を待っています。'));
+    return;
+  }
+
+  const response = analysis?.response || {};
+  const request = analysis?.request?.payload || {};
+  const summary = response.laneSummary || {};
+  const detail = Array.isArray(summary.detail) ? summary.detail : [];
+
+  const overview = document.createElement('article');
+  overview.className = 'draft-ai-analysis-note lane-matchup-overview';
+
+  const noteTitle = document.createElement('strong');
+  noteTitle.textContent = summary.title || `${request.myChampionName || '自分'} vs ${request.enemyChampionName || '相手'}`;
+
+  const opponentLabel = String(request.enemyChampionName || '').trim();
+  const opponent = document.createElement('span');
+  opponent.className = 'lane-matchup-opponent';
+  opponent.textContent = opponentLabel ? `vs ${opponentLabel}` : 'vs 相手';
+
+  const badges = document.createElement('div');
+  badges.className = 'lane-matchup-badges';
+  [
+    ['Difficulty', response.difficulty],
+    ['Style', response.laneStyle],
+    ['Scaler', response.scaler]
+  ].forEach(([label, value]) => {
+    const badge = createLaneMatchupBadge(label, value);
+    if (badge) badges.append(badge);
+  });
+
+  overview.append(noteTitle, opponent);
+  if (badges.children.length) {
+    overview.append(badges);
+  }
+  panel.append(overview);
+
+  const list = document.createElement('div');
+  list.className = 'in-game-ai-analysis-notes lane-matchup-notes';
+  detail.slice(0, 3).forEach((text, index) => {
+    const item = document.createElement('article');
+    item.className = 'draft-ai-analysis-note';
+
+    const itemTitle = document.createElement('strong');
+    itemTitle.textContent = index === 0 ? 'Plan' : `Point ${index + 1}`;
+
+    const body = document.createElement('p');
+    body.textContent = String(text || '').trim();
+    item.append(itemTitle, body);
+    list.append(item);
+  });
+
+  if (summary.goal) {
+    const goal = document.createElement('article');
+    goal.className = 'draft-ai-analysis-note';
+
+    const goalTitle = document.createElement('strong');
+    goalTitle.textContent = 'Goal';
+
+    const goalBody = document.createElement('p');
+    goalBody.textContent = String(summary.goal || '').trim();
+    goal.append(goalTitle, goalBody);
+    list.append(goal);
+  }
+
+  if (list.children.length) {
+    panel.append(list);
+  }
+}
+
+function createLaneMatchupBadge(label, value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+
+  const badge = document.createElement('span');
+  badge.className = 'lane-matchup-badge';
+
+  const badgeLabel = document.createElement('small');
+  badgeLabel.textContent = label;
+
+  const badgeValue = document.createElement('b');
+  badgeValue.textContent = text;
+
+  badge.append(badgeLabel, badgeValue);
+  return badge;
 }
 
 function createDraftAiAnalysisStatus(text) {
