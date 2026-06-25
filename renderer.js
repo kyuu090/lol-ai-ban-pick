@@ -801,7 +801,7 @@ function renderChampionPicker(championIds) {
     name.textContent = champion.name;
 
     button.append(portrait, name);
-    button.addEventListener('click', () => addChampionToPool(championId));
+    button.addEventListener('click', () => toggleChampionInPool(championId));
     return button;
   }));
 
@@ -2888,6 +2888,16 @@ function addChampionToPool(nextChampionId) {
   logDebug('Champion added to pool', { lane: lane.id, championId });
   elements.championPoolMessage.textContent = '';
   renderChampionPool();
+}
+
+function toggleChampionInPool(championId) {
+  championPool = normalizeChampionPool(championPool);
+  const lane = getActiveChampionPoolLane();
+  if ((championPool[lane.id] || []).includes(Number(championId))) {
+    removeChampionFromPool(championId);
+  } else {
+    addChampionToPool(championId);
+  }
 }
 
 function removeChampionFromPool(championId) {
