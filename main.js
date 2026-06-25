@@ -8,6 +8,7 @@ const {
   createAuthHeader,
   createChampionsById,
   createLaneMatchupAnalysisRequest,
+  describeLaneMatchupAnalysisReadiness,
   parseLockfile
 } = require('./lcu-logic');
 const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
@@ -53,6 +54,7 @@ const RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS = 0;
 const RIOT_ESTIMATED_REQUESTS_PER_TWO_MINUTES = 100;
 const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
+const LANE_MATCHUP_RETRY_DELAY_MS = 3000;
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
@@ -80,6 +82,7 @@ let activeMatchHistoryPuuid = null;
 let riotRateLimitCountdownTimer = null;
 let laneMatchupAnalysisRequestKey = null;
 let laneMatchupAnalysisInFlightKey = null;
+let laneMatchupAnalysisRetryTimer = null;
 
 configureAppUserDataPath();
 configureLogger();
@@ -850,6 +853,7 @@ function scheduleStartupRiotMatchHistoryIfReady(reason) {
 }
 
 function resetLaneMatchupAnalysis(reason = 'reset') {
+  clearLaneMatchupAnalysisRetry();
   laneMatchupAnalysisRequestKey = null;
   laneMatchupAnalysisInFlightKey = null;
   updateState({
@@ -859,16 +863,64 @@ function resetLaneMatchupAnalysis(reason = 'reset') {
   log.debug('Lane matchup analysis reset', { reason });
 }
 
+function clearLaneMatchupAnalysisRetry() {
+  if (!laneMatchupAnalysisRetryTimer) return;
+
+  clearTimeout(laneMatchupAnalysisRetryTimer);
+  laneMatchupAnalysisRetryTimer = null;
+}
+
+function scheduleLaneMatchupAnalysisRetry(reason) {
+  if (laneMatchupAnalysisRetryTimer) return;
+  if (appState.gameflowPhase !== 'GameStart') return;
+  if (laneMatchupAnalysisInFlightKey) return;
+  if (appState.laneMatchupAnalysis?.status === 'ready') return;
+
+  laneMatchupAnalysisRetryTimer = setTimeout(async () => {
+    laneMatchupAnalysisRetryTimer = null;
+    if (appState.gameflowPhase !== 'GameStart') {
+      log.debug('Lane matchup analysis retry skipped', {
+        reason,
+        gameflowPhase: appState.gameflowPhase
+      });
+      return;
+    }
+    await refreshGameflowSessionForLaneMatchup('retry');
+  }, LANE_MATCHUP_RETRY_DELAY_MS);
+
+  log.debug('Lane matchup analysis retry scheduled', {
+    reason,
+    delayMs: LANE_MATCHUP_RETRY_DELAY_MS
+  });
+}
+
 function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
-  if (!gameflowSession || gameflowSession.error) return;
+  const localPuuid = getPuuidFromSummoner(appState.summoner);
+  if (!gameflowSession || gameflowSession.error) {
+    log.debug('Lane matchup analysis session unavailable', {
+      reason,
+      error: gameflowSession?.error || null
+    });
+    scheduleLaneMatchupAnalysisRetry(reason);
+    return;
+  }
 
   const request = createLaneMatchupAnalysisRequest({
     gameflowSession,
-    localPuuid: getPuuidFromSummoner(appState.summoner),
-    championsById: appState.championsById
+    localPuuid,
+    championsById: appState.championsById,
+    champSelectSession: appState.champSelect
   });
   if (!request) {
-    log.debug('Lane matchup analysis not ready', { reason, phase: gameflowSession?.phase });
+    log.debug('Lane matchup analysis not ready', {
+      reason,
+      ...describeLaneMatchupAnalysisReadiness({
+        gameflowSession,
+        localPuuid,
+        champSelectSession: appState.champSelect
+      })
+    });
+    scheduleLaneMatchupAnalysisRetry(reason);
     return;
   }
 
@@ -877,10 +929,17 @@ function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
     request.requestKey === laneMatchupAnalysisInFlightKey ||
     request.requestKey === appState.laneMatchupAnalysis?.requestKey
   ) {
+    log.debug('Lane matchup analysis request skipped as duplicate', {
+      reason,
+      gameId: request.gameId,
+      lane: request.laneMatchupLane,
+      localPosition: request.localPosition
+    });
     return;
   }
 
   laneMatchupAnalysisInFlightKey = request.requestKey;
+  clearLaneMatchupAnalysisRetry();
   updateState({
     laneMatchupAnalysis: createLaneMatchupAnalysisState({
       status: 'requesting',
@@ -893,8 +952,9 @@ function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
   log.info('Lane matchup analysis request started', {
     reason,
     gameId: request.gameId,
-    lane: request.payload.lane,
-    localPosition: request.localPosition
+    lane: request.laneMatchupLane,
+    localPosition: request.localPosition,
+    payload: request.payload
   });
 
   requestLaneMatchupAnalysis(request.payload)
@@ -914,7 +974,7 @@ function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
       });
       log.info('Lane matchup analysis response received', {
         gameId: request.gameId,
-        lane: request.payload.lane
+        lane: request.laneMatchupLane
       });
     })
     .catch((error) => {
@@ -933,7 +993,7 @@ function refreshLaneMatchupAnalysisFromSession(gameflowSession, reason) {
       });
       log.warn('Lane matchup analysis request failed', {
         gameId: request.gameId,
-        lane: request.payload.lane,
+        lane: request.laneMatchupLane,
         error: serializeForLog(error)
       });
     });
@@ -959,6 +1019,7 @@ async function refreshGameflowSessionForLaneMatchup(reason) {
       reason,
       error: serializeForLog(error)
     });
+    scheduleLaneMatchupAnalysisRetry(reason);
     return null;
   }
 }

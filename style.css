@@ -1363,6 +1363,15 @@ h2 {
   line-height: 1.2;
 }
 
+.in-game-ai-analysis-header-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .in-game-ai-analysis .draft-ai-analysis-status {
   font-size: 13px;
   white-space: normal;
@@ -1384,24 +1393,84 @@ h2 {
   max-height: 96px;
 }
 
-.in-game-ai-analysis .lane-matchup-overview p {
+.lane-matchup-goal-text {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
   max-height: none;
+  overflow: visible;
 }
 
-.lane-matchup-badges {
+.lane-matchup-card-header {
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-bottom: 6px;
   min-width: 0;
 }
 
-.lane-matchup-opponent {
+.lane-matchup-card-header strong {
+  margin-bottom: 0;
+}
+
+.lane-matchup-card-badges {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.lane-matchup-title-opponent {
+  align-items: center;
   color: var(--muted);
-  display: block;
+  display: inline-flex;
+  gap: 5px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.lane-matchup-title-opponent-icon {
+  border: 1px solid rgba(97, 54, 255, 0.28);
+  border-radius: 999px;
+  height: 24px;
+  object-fit: cover;
+  width: 24px;
+}
+
+.lane-matchup-title-opponent-icon:not([src]),
+.lane-matchup-inline-champion-icon:not([src]) {
+  display: none;
+}
+
+.lane-matchup-inline-champion {
+  align-items: center;
+  background: rgba(97, 54, 255, 0.08);
+  border: 1px solid rgba(97, 54, 255, 0.18);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 2px;
+  max-width: 100%;
+  padding: 1px 6px 1px 2px;
+  vertical-align: -5px;
+}
+
+.lane-matchup-inline-champion-icon {
+  border-radius: 999px;
+  height: 18px;
+  object-fit: cover;
+  width: 18px;
+}
+
+.lane-matchup-inline-champion span {
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .lane-matchup-badge {
@@ -1432,8 +1501,20 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.in-game-ai-analysis-notes.lane-matchup-notes {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+.lane-matchup-detail-list {
+  color: var(--text);
+  display: grid;
+  font-size: 13px;
+  gap: 7px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 150px;
+  overflow: auto;
+  padding-left: 18px;
+}
+
+.lane-matchup-detail-list li {
+  padding-left: 2px;
 }
 
 .eyebrow {

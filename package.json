@@ -26,6 +26,7 @@
       "logger.js",
       "main.js",
       "match-history-workflow.js",
+      "mock-lcu-api.js",
       "preload.js",
       "renderer.js",
       "riot-api.js",

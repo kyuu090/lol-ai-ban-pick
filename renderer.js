@@ -126,6 +126,7 @@ let finalCompositionAnalysisError = '';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
+const CHAMPION_ICON_RETRY_DELAY_MS = 12000;
 let activeChampionIconRequests = 0;
 const championIconObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
@@ -333,7 +334,7 @@ function loadChampionIcon(img, championId) {
 
   const cached = championIconCache.get(id);
   if (typeof cached === 'string') {
-    img.src = cached;
+    setChampionIconSrc(img, id, cached);
     return;
   }
 
@@ -352,6 +353,23 @@ function loadChampionIcon(img, championId) {
   attachChampionIcon(img, id, enqueueChampionIconRequest(id));
 }
 
+function loadChampionIconEager(img, championId) {
+  const id = Number(championId);
+  if (!id || !window.lcuApi?.getChampionIcon) return;
+
+  img.dataset.championId = String(id);
+
+  const cached = championIconCache.get(id);
+  if (typeof cached === 'string') {
+    setChampionIconSrc(img, id, cached);
+    return;
+  }
+
+  if (cached === null) return;
+
+  attachChampionIcon(img, id, cached || enqueueChampionIconRequest(id));
+}
+
 function handleChampionIconIntersections(entries) {
   entries.forEach((entry) => {
     if (!entry.isIntersecting) return;
@@ -367,9 +385,28 @@ function handleChampionIconIntersections(entries) {
 function attachChampionIcon(img, id, iconPromise) {
   iconPromise.then((src) => {
     if (src && img.dataset.championId === String(id)) {
-      img.src = src;
+      setChampionIconSrc(img, id, src);
     }
   });
+}
+
+function setChampionIconSrc(img, id, src) {
+  img.onerror = () => {
+    if (img.dataset.championId !== String(id)) return;
+
+    markChampionIconMissing(id);
+    img.removeAttribute('src');
+  };
+  img.src = src;
+}
+
+function markChampionIconMissing(id) {
+  championIconCache.set(id, null);
+  setTimeout(() => {
+    if (championIconCache.get(id) === null) {
+      championIconCache.delete(id);
+    }
+  }, CHAMPION_ICON_RETRY_DELAY_MS);
 }
 
 function enqueueChampionIconRequest(id) {
@@ -396,11 +433,15 @@ function processChampionIconQueue() {
 
     window.lcuApi.getChampionIcon(id)
       .then((src) => {
-        championIconCache.set(id, src || null);
+        if (src) {
+          championIconCache.set(id, src);
+        } else {
+          markChampionIconMissing(id);
+        }
         resolve(src || null);
       })
       .catch(() => {
-        championIconCache.set(id, null);
+        markChampionIconMissing(id);
         resolve(null);
       })
       .finally(() => {
@@ -1798,7 +1839,7 @@ function renderInGameFinalCompositionAnalysis() {
       : finalCompositionAnalysisStatus === 'error'
         ? 'ERROR'
         : 'WAITING';
-  header.append(titleBlock, badge);
+  header.append(createInGameAiHeaderTitle('AI Analysis'), badge);
   panel.append(header);
 
   if (finalCompositionAnalysisStatus === 'requesting') {
@@ -1866,7 +1907,12 @@ function renderInGameLaneMatchupAnalysis(analysis) {
       : status === 'error'
         ? 'ERROR'
         : 'WAITING';
-  header.append(titleBlock, badge);
+  const response = analysis?.response || {};
+  const headerMeta = document.createElement('div');
+  headerMeta.className = 'in-game-ai-analysis-header-meta';
+  headerMeta.append(badge);
+
+  header.append(createInGameAiHeaderTitle('AI Matchup'), headerMeta);
   panel.append(header);
 
   if (status === 'requesting') {
@@ -1884,70 +1930,84 @@ function renderInGameLaneMatchupAnalysis(analysis) {
     return;
   }
 
-  const response = analysis?.response || {};
   const request = analysis?.request?.payload || {};
   const summary = response.laneSummary || {};
   const detail = Array.isArray(summary.detail) ? summary.detail : [];
 
-  const overview = document.createElement('article');
-  overview.className = 'draft-ai-analysis-note lane-matchup-overview';
+  const goalCard = createLaneMatchupGoalCard({
+    goal: summary.goal,
+    championIds: analysis?.request?.enemyChampionIds,
+    championName: String(request.enemyChampionName || '').trim(),
+    difficulty: response.difficulty,
+    laneStyle: response.laneStyle
+  });
+  if (goalCard) {
+    panel.append(goalCard);
+  }
 
-  const noteTitle = document.createElement('strong');
-  noteTitle.textContent = summary.title || `${request.myChampionName || '自分'} vs ${request.enemyChampionName || '相手'}`;
+  const detailCard = createLaneMatchupDetailCard(detail);
+  if (detailCard) {
+    panel.append(detailCard);
+  }
+}
 
-  const opponentLabel = String(request.enemyChampionName || '').trim();
-  const opponent = document.createElement('span');
-  opponent.className = 'lane-matchup-opponent';
-  opponent.textContent = opponentLabel ? `vs ${opponentLabel}` : 'vs 相手';
+function createLaneMatchupGoalCard({ goal, championIds, championName, difficulty, laneStyle }) {
+  if (!hasLaneMatchupRichText(goal)) return null;
+
+  const card = document.createElement('article');
+  card.className = 'draft-ai-analysis-note lane-matchup-goal';
+
+  const header = document.createElement('div');
+  header.className = 'lane-matchup-card-header';
+
+  const title = document.createElement('strong');
+  title.textContent = 'Lane Plan';
 
   const badges = document.createElement('div');
-  badges.className = 'lane-matchup-badges';
+  badges.className = 'lane-matchup-card-badges';
   [
-    ['Difficulty', response.difficulty],
-    ['Style', response.laneStyle],
-    ['Scaler', response.scaler]
+    ['Difficulty', difficulty],
+    ['Style', laneStyle]
   ].forEach(([label, value]) => {
     const badge = createLaneMatchupBadge(label, value);
     if (badge) badges.append(badge);
   });
-
-  overview.append(noteTitle, opponent);
+  header.append(title);
   if (badges.children.length) {
-    overview.append(badges);
+    header.append(badges);
   }
-  panel.append(overview);
 
-  const list = document.createElement('div');
-  list.className = 'in-game-ai-analysis-notes lane-matchup-notes';
-  detail.slice(0, 3).forEach((text, index) => {
-    const item = document.createElement('article');
-    item.className = 'draft-ai-analysis-note';
+  const body = document.createElement('p');
+  body.className = 'lane-matchup-goal-text';
+  body.append(createLaneMatchupOpponentVisual({ championIds, championName }));
+  body.append(document.createTextNode(' '), createLaneMatchupRichText(goal));
 
-    const itemTitle = document.createElement('strong');
-    itemTitle.textContent = index === 0 ? 'Plan' : `Point ${index + 1}`;
+  card.append(header, body);
+  return card;
+}
 
-    const body = document.createElement('p');
-    body.textContent = String(text || '').trim();
-    item.append(itemTitle, body);
+function createLaneMatchupDetailCard(detail) {
+  const items = (Array.isArray(detail) ? detail : [])
+    .filter(hasLaneMatchupRichText)
+    .slice(0, 3);
+  if (!items.length) return null;
+
+  const card = document.createElement('article');
+  card.className = 'draft-ai-analysis-note lane-matchup-detail';
+
+  const title = document.createElement('strong');
+  title.textContent = 'Detail';
+
+  const list = document.createElement('ul');
+  list.className = 'lane-matchup-detail-list';
+  items.forEach((richText) => {
+    const item = document.createElement('li');
+    item.append(createLaneMatchupRichText(richText));
     list.append(item);
   });
 
-  if (summary.goal) {
-    const goal = document.createElement('article');
-    goal.className = 'draft-ai-analysis-note';
-
-    const goalTitle = document.createElement('strong');
-    goalTitle.textContent = 'Goal';
-
-    const goalBody = document.createElement('p');
-    goalBody.textContent = String(summary.goal || '').trim();
-    goal.append(goalTitle, goalBody);
-    list.append(goal);
-  }
-
-  if (list.children.length) {
-    panel.append(list);
-  }
+  card.append(title, list);
+  return card;
 }
 
 function createLaneMatchupBadge(label, value) {
@@ -1965,6 +2025,108 @@ function createLaneMatchupBadge(label, value) {
 
   badge.append(badgeLabel, badgeValue);
   return badge;
+}
+
+function hasLaneMatchupRichText(value) {
+  if (Array.isArray(value)) {
+    return value.some((token) => {
+      if (!token || typeof token !== 'object') return false;
+      if (token.type === 'text') return String(token.text || '').trim();
+      if (token.type === 'champion') return String(token.championName || '').trim();
+      return false;
+    });
+  }
+
+  return String(value || '').trim().length > 0;
+}
+
+function createLaneMatchupRichText(value) {
+  const fragment = document.createDocumentFragment();
+
+  if (!Array.isArray(value)) {
+    fragment.append(document.createTextNode(String(value || '').trim()));
+    return fragment;
+  }
+
+  value.forEach((token) => {
+    if (!token || typeof token !== 'object') return;
+
+    if (token.type === 'text') {
+      fragment.append(document.createTextNode(String(token.text || '')));
+      return;
+    }
+
+    if (token.type === 'champion') {
+      const champion = createLaneMatchupInlineChampion(token);
+      if (champion) fragment.append(champion);
+    }
+  });
+
+  return fragment;
+}
+
+function createLaneMatchupInlineChampion(token) {
+  const championName = String(token?.championName || '').trim();
+  if (!championName) return null;
+
+  const championId = Number(token.championId);
+  const container = document.createElement('span');
+  container.className = 'lane-matchup-inline-champion';
+  container.title = championName;
+
+  if (Number.isInteger(championId) && championId > 0) {
+    const image = document.createElement('img');
+    image.alt = championName;
+    image.title = championTitle(championId);
+    image.className = 'lane-matchup-inline-champion-icon';
+    loadChampionIconEager(image, championId);
+    container.append(image);
+  }
+
+  const label = document.createElement('span');
+  label.textContent = championName;
+  container.append(label);
+  return container;
+}
+
+function createLaneMatchupOpponentVisual({ championIds, championName }) {
+  const container = document.createElement('span');
+  container.className = 'lane-matchup-title-opponent';
+  container.title = championName ? `vs ${championName}` : 'vs 相手';
+
+  const label = document.createElement('span');
+  label.textContent = 'vs';
+  container.append(label);
+
+  const ids = (Array.isArray(championIds) ? championIds : [])
+    .map((championId) => Number(championId))
+    .filter((championId) => Number.isInteger(championId) && championId > 0)
+    .slice(0, 2);
+
+  if (!ids.length) {
+    const fallback = document.createElement('span');
+    fallback.textContent = championName || '相手';
+    container.append(fallback);
+    return container;
+  }
+
+  ids.forEach((championId) => {
+    const image = document.createElement('img');
+    image.alt = championLabel(championId);
+    image.title = championTitle(championId);
+    image.className = 'lane-matchup-title-opponent-icon';
+    loadChampionIconEager(image, championId);
+    container.append(image);
+  });
+
+  return container;
+}
+
+function createInGameAiHeaderTitle(text) {
+  const title = document.createElement('p');
+  title.className = 'eyebrow';
+  title.textContent = text;
+  return title;
 }
 
 function createDraftAiAnalysisStatus(text) {
