@@ -1309,7 +1309,7 @@ h2 {
 .in-game-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .in-game-card {
@@ -1321,28 +1321,6 @@ h2 {
 
 .in-game-card-header {
   display: grid;
-}
-
-.in-game-matchup-body {
-  align-items: start;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.in-game-matchup-title {
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.2;
-  width: 100%;
-}
-
-.in-game-matchup-names {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  width: 100%;
 }
 
 .in-game-empty-note {
@@ -1363,55 +1341,180 @@ h2 {
   text-transform: uppercase;
 }
 
-.in-game-team-columns {
+.in-game-ai-analysis {
+  border-top: 1px solid rgba(97, 54, 255, 0.18);
   display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 12px;
+}
+
+.in-game-ai-analysis-header {
+  align-items: center;
+  display: flex;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: space-between;
+  min-width: 0;
 }
 
-.in-game-team-label {
-  color: var(--muted);
-  display: block;
-  font-size: 10px;
-  font-weight: 800;
-  margin-bottom: 7px;
+.in-game-ai-analysis-header h4 {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
 }
 
-.in-game-chip-list {
+.in-game-ai-analysis-header-meta {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.in-game-champion-chip {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(154, 167, 184, 0.18);
-  border-radius: 6px;
-  display: inline-flex;
-  gap: 6px;
-  max-width: 150px;
-  min-height: 30px;
+  justify-content: flex-end;
   min-width: 0;
-  padding: 4px 7px 4px 4px;
 }
 
-.in-game-champion-chip img {
+.in-game-ai-analysis .draft-ai-analysis-status {
+  font-size: 13px;
+  white-space: normal;
+}
+
+.in-game-ai-analysis-notes {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.in-game-ai-analysis .draft-ai-analysis-note {
+  box-shadow: none;
+  padding: 8px 10px;
+}
+
+.in-game-ai-analysis .draft-ai-analysis-note p {
+  max-height: 96px;
+}
+
+.lane-matchup-goal-text {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.lane-matchup-card-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+.lane-matchup-card-header strong {
+  margin-bottom: 0;
+}
+
+.lane-matchup-card-badges {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.lane-matchup-title-opponent {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 5px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.lane-matchup-title-opponent-icon {
   border: 1px solid rgba(97, 54, 255, 0.28);
-  border-radius: 4px;
-  flex: 0 0 auto;
-  height: 22px;
+  border-radius: 999px;
+  height: 24px;
   object-fit: cover;
-  width: 22px;
+  width: 24px;
 }
 
-.in-game-champion-chip span {
+.lane-matchup-title-opponent-icon:not([src]),
+.lane-matchup-inline-champion-icon:not([src]) {
+  display: none;
+}
+
+.lane-matchup-inline-champion {
+  align-items: center;
+  background: rgba(97, 54, 255, 0.08);
+  border: 1px solid rgba(97, 54, 255, 0.18);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 2px;
+  max-width: 100%;
+  padding: 1px 6px 1px 2px;
+  vertical-align: -5px;
+}
+
+.lane-matchup-inline-champion-icon {
+  border-radius: 999px;
+  height: 18px;
+  object-fit: cover;
+  width: 18px;
+}
+
+.lane-matchup-inline-champion span {
   color: var(--text);
   font-size: 12px;
   font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.lane-matchup-badge {
+  align-items: center;
+  background: rgba(97, 54, 255, 0.1);
+  border: 1px solid rgba(97, 54, 255, 0.22);
+  border-radius: 999px;
+  color: var(--accent);
+  display: inline-flex;
+  gap: 5px;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 4px 8px;
+}
+
+.lane-matchup-badge small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lane-matchup-badge b {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.lane-matchup-detail-list {
+  color: var(--text);
+  display: grid;
+  font-size: 13px;
+  gap: 7px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 150px;
+  overflow: auto;
+  padding-left: 18px;
+}
+
+.lane-matchup-detail-list li {
+  padding-left: 2px;
 }
 
 .eyebrow {
@@ -2501,7 +2604,6 @@ pre {
   :root:not([data-theme]) .strong-champion-item .pick-pool-stat-chip,
   :root:not([data-theme]) .pick-pool-stat-chip,
   :root:not([data-theme]) .in-game-self-stats .pick-pool-stat-chip,
-  :root:not([data-theme]) .in-game-champion-chip,
   :root:not([data-theme]) .pool-remove-button {
     background: rgba(24, 29, 59, 0.88);
     border-color: rgba(166, 151, 255, 0.18);
@@ -2732,7 +2834,6 @@ pre {
   :root[data-theme="dark"] .strong-champion-item .pick-pool-stat-chip,
   :root[data-theme="dark"] .pick-pool-stat-chip,
   :root[data-theme="dark"] .in-game-self-stats .pick-pool-stat-chip,
-  :root[data-theme="dark"] .in-game-champion-chip,
   :root[data-theme="dark"] .pool-remove-button {
     background: rgba(24, 29, 59, 0.88);
     border-color: rgba(166, 151, 255, 0.18);
@@ -2880,7 +2981,6 @@ pre {
   .teams-layout,
   .in-game-hero,
   .in-game-grid,
-  .in-game-team-columns,
   .counters-grid,
   .strengths-grid,
   .path-input-row,
@@ -2902,9 +3002,7 @@ pre {
   }
 
   .in-game-stat-row,
-  .in-game-self-stats,
-  .in-game-matchup-body,
-  .in-game-chip-list {
+  .in-game-self-stats {
     justify-content: center;
   }
 
@@ -2982,6 +3080,10 @@ pre {
   }
 
   .draft-ai-analysis-notes {
+    grid-template-columns: 1fr;
+  }
+
+  .in-game-ai-analysis-notes {
     grid-template-columns: 1fr;
   }
 

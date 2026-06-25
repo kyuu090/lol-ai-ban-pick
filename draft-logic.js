@@ -317,6 +317,53 @@
     };
   }
 
+  function isChampSelectFinalization(champSelect, gameflowPhase) {
+    if (gameflowPhase !== 'ChampSelect') return false;
+
+    const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+    const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+    const allPlayersPicked = allyTeam.length >= 5 &&
+      enemyTeam.length >= 5 &&
+      [...allyTeam, ...enemyTeam].every((member) => getMemberChampionId(member) > 0);
+    const timerPhase = String(champSelect?.timer?.phase || '').toUpperCase();
+    if (timerPhase === 'FINALIZATION') return true;
+    if (!allPlayersPicked) return false;
+
+    const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
+    const pickActions = actions.filter((action) => action?.type === 'pick');
+    return pickActions.length > 0 && pickActions.every((action) => action?.completed && !action?.isInProgress);
+  }
+
+  function createFinalCompositionDraftContext({ champSelect, localMember, championLabel = defaultChampionLabel } = {}) {
+    const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
+    const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
+    const localPlayer = localMember || getLocalChampSelectMember(champSelect);
+    const localLockedPick = createDraftChampionEntry(localPlayer, { preferLocked: true, championLabel });
+    if (!localLockedPick) return null;
+
+    const allyLockedPicks = allyTeam
+      .filter((member) => member?.cellId !== localPlayer?.cellId)
+      .map((member) => createDraftChampionEntry(member, { preferLocked: true, championLabel }))
+      .filter(Boolean);
+    const enemyLockedPicks = enemyTeam
+      .map((member) => createDraftChampionEntry(member, { preferLocked: true, championLabel }))
+      .filter(Boolean);
+    if (allyLockedPicks.length < 4 || enemyLockedPicks.length < 5) return null;
+
+    return {
+      phase: 'final_composition',
+      localPlayer: {
+        lockedPick: localLockedPick
+      },
+      allyTeam: {
+        lockedPicks: allyLockedPicks
+      },
+      enemyTeam: {
+        lockedPicks: enemyLockedPicks
+      }
+    };
+  }
+
   function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, championLabel = defaultChampionLabel } = {}) {
     const championId = preferLocked
       ? Number(member?.championId)
@@ -375,6 +422,8 @@
     sortPickPoolCandidates,
     getDraftPanelState,
     createInGameContext,
-    createPickPhaseDraftContext
+    createPickPhaseDraftContext,
+    isChampSelectFinalization,
+    createFinalCompositionDraftContext
   };
 });

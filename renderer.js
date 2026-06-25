@@ -62,9 +62,8 @@ const elements = {
   inGameChampionName: document.querySelector('#inGameChampionName'),
   inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
   inGameSelfStats: document.querySelector('#inGameSelfStats'),
-  inGameMatchupBody: document.querySelector('#inGameMatchupBody'),
-  inGameAllyTeam: document.querySelector('#inGameAllyTeam'),
-  inGameEnemyTeam: document.querySelector('#inGameEnemyTeam'),
+  inGameLaneMatchupAnalysis: document.querySelector('#inGameLaneMatchupAnalysis'),
+  inGameFinalCompositionAnalysis: document.querySelector('#inGameFinalCompositionAnalysis'),
   champSelectView: document.querySelector('#champSelectView'),
   helloMessage: document.querySelector('#helloMessage'),
   allyBans: document.querySelector('#allyBans'),
@@ -119,9 +118,15 @@ let draftAiAnalysisStatus = 'idle';
 let draftAiAnalysisNotes = [];
 let draftAiAnalysisRequestKey = null;
 let draftAiAnalysisError = '';
+let draftAiAnalysisPhase = null;
+let finalCompositionAnalysisStatus = 'idle';
+let finalCompositionAnalysisNotes = [];
+let finalCompositionAnalysisRequestKey = null;
+let finalCompositionAnalysisError = '';
 const championIconCache = new Map();
 const championIconQueue = [];
 const ICON_REQUEST_CONCURRENCY = 4;
+const CHAMPION_ICON_RETRY_DELAY_MS = 12000;
 let activeChampionIconRequests = 0;
 const championIconObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
@@ -131,6 +136,7 @@ let dismissedMatchHistoryButtonKey = null;
 let matchDataMenuOpen = false;
 const {
   collectBans,
+  createFinalCompositionDraftContext,
   createInGameContext,
   createPickPhaseDraftContext,
   getActiveAction,
@@ -141,6 +147,7 @@ const {
   getPendingLabel,
   getPlannedPickThreatStats,
   getSummonerName,
+  isChampSelectFinalization,
   normalizePosition,
   normalizeChampionPool,
   positionLabel,
@@ -327,7 +334,7 @@ function loadChampionIcon(img, championId) {
 
   const cached = championIconCache.get(id);
   if (typeof cached === 'string') {
-    img.src = cached;
+    setChampionIconSrc(img, id, cached);
     return;
   }
 
@@ -346,6 +353,23 @@ function loadChampionIcon(img, championId) {
   attachChampionIcon(img, id, enqueueChampionIconRequest(id));
 }
 
+function loadChampionIconEager(img, championId) {
+  const id = Number(championId);
+  if (!id || !window.lcuApi?.getChampionIcon) return;
+
+  img.dataset.championId = String(id);
+
+  const cached = championIconCache.get(id);
+  if (typeof cached === 'string') {
+    setChampionIconSrc(img, id, cached);
+    return;
+  }
+
+  if (cached === null) return;
+
+  attachChampionIcon(img, id, cached || enqueueChampionIconRequest(id));
+}
+
 function handleChampionIconIntersections(entries) {
   entries.forEach((entry) => {
     if (!entry.isIntersecting) return;
@@ -361,9 +385,28 @@ function handleChampionIconIntersections(entries) {
 function attachChampionIcon(img, id, iconPromise) {
   iconPromise.then((src) => {
     if (src && img.dataset.championId === String(id)) {
-      img.src = src;
+      setChampionIconSrc(img, id, src);
     }
   });
+}
+
+function setChampionIconSrc(img, id, src) {
+  img.onerror = () => {
+    if (img.dataset.championId !== String(id)) return;
+
+    markChampionIconMissing(id);
+    img.removeAttribute('src');
+  };
+  img.src = src;
+}
+
+function markChampionIconMissing(id) {
+  championIconCache.set(id, null);
+  setTimeout(() => {
+    if (championIconCache.get(id) === null) {
+      championIconCache.delete(id);
+    }
+  }, CHAMPION_ICON_RETRY_DELAY_MS);
 }
 
 function enqueueChampionIconRequest(id) {
@@ -390,11 +433,15 @@ function processChampionIconQueue() {
 
     window.lcuApi.getChampionIcon(id)
       .then((src) => {
-        championIconCache.set(id, src || null);
+        if (src) {
+          championIconCache.set(id, src);
+        } else {
+          markChampionIconMissing(id);
+        }
         resolve(src || null);
       })
       .catch(() => {
-        championIconCache.set(id, null);
+        markChampionIconMissing(id);
         resolve(null);
       })
       .finally(() => {
@@ -429,6 +476,10 @@ function renderState(state) {
 function syncDraftAutoFocus(state) {
   const { inChampSelect } = getDraftPanelState(state);
   elements.draftTabButton.classList.toggle('draft-live', inChampSelect);
+
+  if (inChampSelect && !wasInChampSelect) {
+    resetFinalCompositionAnalysis();
+  }
 
   if (inChampSelect && !wasInChampSelect && activeView !== 'draft') {
     setActiveView('draft');
@@ -1470,7 +1521,7 @@ function renderDraft(state) {
 
   if (inChampSelect) {
     lastChampSelectSnapshot = champSelect;
-    renderChampSelect(champSelect);
+    renderChampSelect(champSelect, state.gameflowPhase);
   } else if (inGame) {
     renderInGame(state);
   }
@@ -1491,9 +1542,8 @@ function renderInGame(state) {
   });
 
   renderInGameSelfCard(context);
-  renderInGameMatchup(context);
-  renderInGameTeamSnapshot(elements.inGameAllyTeam, context.allyChampionIds);
-  renderInGameTeamSnapshot(elements.inGameEnemyTeam, context.enemyChampionIds);
+  renderInGameLaneMatchupAnalysis(state.laneMatchupAnalysis);
+  renderInGameFinalCompositionAnalysis();
 }
 
 function renderInGameSelfCard({ championId, position, summonerName }) {
@@ -1542,84 +1592,7 @@ function createInGameStatsSummary(stats, position) {
   return container;
 }
 
-function renderInGameMatchup({ championId, position, opponentChampionId, directMatchupStats }) {
-  elements.inGameMatchupBody.replaceChildren();
-
-  if (!championId || !position) {
-    elements.inGameMatchupBody.append(createInGameEmptyNote('今回のロールとピックを確認できませんでした。'));
-    return;
-  }
-
-  if (!opponentChampionId) {
-    elements.inGameMatchupBody.append(createInGameEmptyNote('同じロールの対面チャンピオンは未確定です。'));
-    return;
-  }
-
-  if (!directMatchupStats || !directMatchupStats.games) {
-    elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
-    elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
-    elements.inGameMatchupBody.append(createInGameEmptyNote('No same-role matchup history'));
-    return;
-  }
-
-  elements.inGameMatchupBody.append(createInGameMatchupTitle(position, opponentChampionId));
-  elements.inGameMatchupBody.append(createInGameMatchupNames(championId, opponentChampionId));
-  elements.inGameMatchupBody.append(createWinRateStatsElement(directMatchupStats, { includeKda: true }));
-  if (Number(directMatchupStats.games || 0) < RELIABLE_SAMPLE_GAMES) {
-    const badge = document.createElement('span');
-    badge.className = 'low-sample-badge';
-    badge.textContent = 'Low sample';
-    elements.inGameMatchupBody.append(badge);
-  }
-}
-
-function createInGameMatchupTitle(position, opponentChampionId) {
-  const title = document.createElement('strong');
-  title.className = 'in-game-matchup-title';
-  title.textContent = `${positionLabel(position)} vs ${championLabel(opponentChampionId)}`;
-  return title;
-}
-
-function createInGameMatchupNames(championId, opponentChampionId) {
-  const row = document.createElement('div');
-  row.className = 'in-game-matchup-names';
-  row.append(createInlineChampionName(championId), document.createTextNode(' into '), createInlineChampionName(opponentChampionId));
-  return row;
-}
-
-function createInGameEmptyNote(text) {
-  const note = document.createElement('p');
-  note.className = 'in-game-empty-note';
-  note.textContent = text;
-  return note;
-}
-
-function renderInGameTeamSnapshot(container, championIds) {
-  const chips = (Array.isArray(championIds) ? championIds : []).map(createInGameChampionChip);
-
-  container.replaceChildren(...chips);
-  if (!chips.length) {
-    container.append(createInGameEmptyNote('No champion snapshot'));
-  }
-}
-
-function createInGameChampionChip(championId) {
-  const chip = document.createElement('span');
-  chip.className = 'in-game-champion-chip';
-  chip.title = championTitle(championId);
-
-  const image = document.createElement('img');
-  image.alt = '';
-  loadChampionIcon(image, championId);
-
-  const label = document.createElement('span');
-  label.textContent = championLabel(championId);
-
-  chip.append(image, label);
-  return chip;
-}
-
-function renderChampSelect(champSelect) {
+function renderChampSelect(champSelect, gameflowPhase) {
   const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
   const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
   const { allyBans, enemyBans } = collectBans(champSelect, allyTeam, enemyTeam);
@@ -1647,6 +1620,9 @@ function renderChampSelect(champSelect) {
   if (isLocalPickTurn) {
     requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction);
   }
+  if (isChampSelectFinalization(champSelect, gameflowPhase)) {
+    requestFinalCompositionAnalysisIfNeeded(champSelect, localMember);
+  }
   renderDraftAiAnalysis(draftAiAnalysisStatus);
 }
 
@@ -1655,53 +1631,111 @@ function resetDraftAiAnalysis() {
   draftAiAnalysisNotes = [];
   draftAiAnalysisRequestKey = null;
   draftAiAnalysisError = '';
+  draftAiAnalysisPhase = null;
+}
+
+function resetFinalCompositionAnalysis() {
+  finalCompositionAnalysisStatus = 'idle';
+  finalCompositionAnalysisNotes = [];
+  finalCompositionAnalysisRequestKey = null;
+  finalCompositionAnalysisError = '';
 }
 
 function requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction) {
-  if (!window.lcuApi?.requestPickPhaseAnalysis) return;
-  if (draftAiAnalysisStatus === 'ready') return;
-
   const draftContext = createPickPhaseDraftContext({
     champSelect,
     localMember,
     championPool,
     championLabel
   });
+  requestDraftAiAnalysis(draftContext, activeAction);
+}
+
+function requestFinalCompositionAnalysisIfNeeded(champSelect, localMember) {
+  const draftContext = createFinalCompositionDraftContext({
+    champSelect,
+    localMember,
+    championLabel
+  });
+  requestDraftAiAnalysis(draftContext);
+}
+
+function requestDraftAiAnalysis(draftContext, activeAction = null) {
   if (!draftContext) return;
 
+  const requestPhase = draftContext.phase || null;
+  const requestAnalysis = requestPhase === 'final_composition'
+    ? window.lcuApi?.requestFinalCompositionAnalysis
+    : window.lcuApi?.requestPickPhaseAnalysis;
+  if (!requestAnalysis) return;
+
   const requestKey = createDraftAiAnalysisRequestKey(activeAction, draftContext);
+  if (requestPhase === 'final_composition') {
+    if (finalCompositionAnalysisStatus === 'requesting' && finalCompositionAnalysisRequestKey === requestKey) return;
+    if (finalCompositionAnalysisStatus === 'ready' && finalCompositionAnalysisRequestKey === requestKey) return;
+    if (finalCompositionAnalysisStatus === 'error' && finalCompositionAnalysisRequestKey === requestKey) return;
+  } else if (draftAiAnalysisStatus === 'ready' && draftAiAnalysisPhase === requestPhase) {
+    return;
+  }
+
   if (draftAiAnalysisStatus === 'requesting' && draftAiAnalysisRequestKey === requestKey) return;
   if (draftAiAnalysisStatus === 'error' && draftAiAnalysisRequestKey === requestKey) return;
+
+  if (requestPhase === 'final_composition') {
+    finalCompositionAnalysisStatus = 'requesting';
+    finalCompositionAnalysisNotes = [];
+    finalCompositionAnalysisError = '';
+    finalCompositionAnalysisRequestKey = requestKey;
+    renderInGameFinalCompositionAnalysis();
+  }
 
   draftAiAnalysisStatus = 'requesting';
   draftAiAnalysisNotes = [];
   draftAiAnalysisError = '';
   draftAiAnalysisRequestKey = requestKey;
+  draftAiAnalysisPhase = requestPhase;
   logDebug('Draft AI analysis request started', { requestKey, draftContext });
 
-  window.lcuApi.requestPickPhaseAnalysis(draftContext)
+  requestAnalysis(draftContext)
     .then((response) => {
-      if (draftAiAnalysisRequestKey !== requestKey) return;
-      draftAiAnalysisNotes = parseDraftAiAnalysisNotes(response);
-      draftAiAnalysisStatus = draftAiAnalysisNotes.length ? 'ready' : 'error';
-      draftAiAnalysisError = draftAiAnalysisNotes.length ? '' : 'AI分析を表示できませんでした。';
-      logDebug('Draft AI analysis response received', { requestKey, notes: draftAiAnalysisNotes.length });
-      renderDraftAiAnalysis(draftAiAnalysisStatus);
+      const notes = parseDraftAiAnalysisNotes(response);
+      if (requestPhase === 'final_composition') {
+        if (finalCompositionAnalysisRequestKey !== requestKey) return;
+        finalCompositionAnalysisNotes = notes;
+        finalCompositionAnalysisStatus = notes.length ? 'ready' : 'error';
+        finalCompositionAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+        renderInGameFinalCompositionAnalysis();
+      }
+      if (draftAiAnalysisRequestKey === requestKey) {
+        draftAiAnalysisNotes = notes;
+        draftAiAnalysisStatus = notes.length ? 'ready' : 'error';
+        draftAiAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+        renderDraftAiAnalysis(draftAiAnalysisStatus);
+      }
+      logDebug('Draft AI analysis response received', { requestKey, notes: notes.length });
     })
     .catch((error) => {
-      if (draftAiAnalysisRequestKey !== requestKey) return;
-      draftAiAnalysisStatus = 'error';
-      draftAiAnalysisError = createDraftAiAnalysisErrorMessage(error);
+      const errorMessage = createDraftAiAnalysisErrorMessage(error);
+      if (requestPhase === 'final_composition' && finalCompositionAnalysisRequestKey === requestKey) {
+        finalCompositionAnalysisStatus = 'error';
+        finalCompositionAnalysisError = errorMessage;
+        renderInGameFinalCompositionAnalysis();
+      }
+      if (draftAiAnalysisRequestKey === requestKey) {
+        draftAiAnalysisStatus = 'error';
+        draftAiAnalysisError = errorMessage;
+        renderDraftAiAnalysis(draftAiAnalysisStatus);
+      }
       logDebug('Draft AI analysis request failed', {
         requestKey,
         error: error?.message || String(error)
       });
-      renderDraftAiAnalysis(draftAiAnalysisStatus);
     });
 }
 
 function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
   return JSON.stringify({
+    phase: draftContext?.phase ?? null,
     actionId: activeAction?.id ?? null,
     actorCellId: activeAction?.actorCellId ?? null,
     draftContext
@@ -1729,7 +1763,7 @@ function renderDraftAiAnalysis(status) {
   eyebrow.className = 'eyebrow';
   eyebrow.textContent = 'AI Analysis';
   const title = document.createElement('h3');
-  title.textContent = 'バンピック分析';
+  title.textContent = draftAiAnalysisPhase === 'final_composition' ? '最終構成分析' : 'バンピック分析';
   titleBlock.append(eyebrow, title);
 
   const badge = document.createElement('span');
@@ -1739,7 +1773,9 @@ function renderDraftAiAnalysis(status) {
   panel.append(header);
 
   if (status === 'requesting') {
-    panel.append(createDraftAiAnalysisStatus('AIに分析を依頼中・・'));
+    panel.append(createDraftAiAnalysisStatus(draftAiAnalysisPhase === 'final_composition'
+      ? 'AIに最終構成を分析依頼中・・'
+      : 'AIに分析を依頼中・・'));
     return;
   }
 
@@ -1775,6 +1811,352 @@ function renderDraftAiAnalysis(status) {
     list.append(item);
   });
   panel.append(list);
+}
+
+function renderInGameFinalCompositionAnalysis() {
+  const panel = elements.inGameFinalCompositionAnalysis;
+  if (!panel) return;
+
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'in-game-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Analysis';
+  const title = document.createElement('h4');
+  title.textContent = '最終構成分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  badge.className = `draft-ai-analysis-badge ${finalCompositionAnalysisStatus}`;
+  badge.textContent = finalCompositionAnalysisStatus === 'ready'
+    ? 'DONE'
+    : finalCompositionAnalysisStatus === 'requesting'
+      ? 'ASKING'
+      : finalCompositionAnalysisStatus === 'error'
+        ? 'ERROR'
+        : 'WAITING';
+  header.append(createInGameAiHeaderTitle('AI Analysis'), badge);
+  panel.append(header);
+
+  if (finalCompositionAnalysisStatus === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIに最終構成を分析依頼中・・'));
+    return;
+  }
+
+  if (finalCompositionAnalysisStatus === 'error') {
+    panel.append(createDraftAiAnalysisStatus(finalCompositionAnalysisError || 'AI分析を取得できませんでした。'));
+    return;
+  }
+
+  if (finalCompositionAnalysisStatus !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('最終構成分析を待機中・・'));
+    return;
+  }
+
+  if (!finalCompositionAnalysisNotes.length) {
+    panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'in-game-ai-analysis-notes';
+  finalCompositionAnalysisNotes.forEach((note) => {
+    const item = document.createElement('article');
+    item.className = 'draft-ai-analysis-note';
+
+    const noteTitle = document.createElement('strong');
+    noteTitle.textContent = note.title;
+
+    const body = document.createElement('p');
+    body.textContent = note.body;
+
+    item.append(noteTitle, body);
+    list.append(item);
+  });
+  panel.append(list);
+}
+
+function renderInGameLaneMatchupAnalysis(analysis) {
+  const panel = elements.inGameLaneMatchupAnalysis;
+  if (!panel) return;
+
+  panel.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'in-game-ai-analysis-header';
+
+  const titleBlock = document.createElement('div');
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'AI Matchup';
+  const title = document.createElement('h4');
+  title.textContent = 'レーン対面分析';
+  titleBlock.append(eyebrow, title);
+
+  const badge = document.createElement('span');
+  const status = analysis?.status || 'idle';
+  badge.className = `draft-ai-analysis-badge ${status}`;
+  badge.textContent = status === 'ready'
+    ? 'DONE'
+    : status === 'requesting'
+      ? 'ASKING'
+      : status === 'error'
+        ? 'ERROR'
+        : 'WAITING';
+  const response = analysis?.response || {};
+  const headerMeta = document.createElement('div');
+  headerMeta.className = 'in-game-ai-analysis-header-meta';
+  headerMeta.append(badge);
+
+  header.append(createInGameAiHeaderTitle('AI Matchup'), headerMeta);
+  panel.append(header);
+
+  if (status === 'requesting') {
+    panel.append(createDraftAiAnalysisStatus('AIにレーン対面分析を依頼中...'));
+    return;
+  }
+
+  if (status === 'error') {
+    panel.append(createDraftAiAnalysisStatus(analysis?.error || 'AI対面分析を取得できませんでした。'));
+    return;
+  }
+
+  if (status !== 'ready') {
+    panel.append(createDraftAiAnalysisStatus('GameStart / InProgress の対面情報を待っています。'));
+    return;
+  }
+
+  const request = analysis?.request?.payload || {};
+  const summary = response.laneSummary || {};
+  const detail = normalizeLaneMatchupDetail(summary.detail);
+
+  const goalCard = createLaneMatchupGoalCard({
+    goal: summary.goal,
+    championIds: analysis?.request?.enemyChampionIds,
+    championName: String(request.enemyChampionName || '').trim(),
+    difficulty: response.difficulty,
+    laneStyle: response.laneStyle
+  });
+  if (goalCard) {
+    panel.append(goalCard);
+  }
+
+  const detailCard = createLaneMatchupDetailCard(detail);
+  if (detailCard) {
+    panel.append(detailCard);
+  }
+}
+
+function createLaneMatchupGoalCard({ goal, championIds, championName, difficulty, laneStyle }) {
+  if (!hasLaneMatchupRichText(goal)) return null;
+
+  const card = document.createElement('article');
+  card.className = 'draft-ai-analysis-note lane-matchup-goal';
+
+  const header = document.createElement('div');
+  header.className = 'lane-matchup-card-header';
+
+  const title = document.createElement('strong');
+  title.textContent = 'Lane Plan';
+
+  const badges = document.createElement('div');
+  badges.className = 'lane-matchup-card-badges';
+  [
+    ['Difficulty', difficulty],
+    ['Style', laneStyle]
+  ].forEach(([label, value]) => {
+    const badge = createLaneMatchupBadge(label, value);
+    if (badge) badges.append(badge);
+  });
+  header.append(title);
+  if (badges.children.length) {
+    header.append(badges);
+  }
+
+  const body = document.createElement('p');
+  body.className = 'lane-matchup-goal-text';
+  body.append(createLaneMatchupOpponentVisual({ championIds, championName }));
+  body.append(document.createTextNode(' '), createLaneMatchupRichText(goal));
+
+  card.append(header, body);
+  return card;
+}
+
+function createLaneMatchupDetailCard(detail) {
+  const items = (Array.isArray(detail) ? detail : [])
+    .filter(hasLaneMatchupRichText)
+    .slice(0, 3);
+  if (!items.length) return null;
+
+  const card = document.createElement('article');
+  card.className = 'draft-ai-analysis-note lane-matchup-detail';
+
+  const title = document.createElement('strong');
+  title.textContent = 'Detail';
+
+  const list = document.createElement('ul');
+  list.className = 'lane-matchup-detail-list';
+  items.forEach((richText) => {
+    const item = document.createElement('li');
+    item.append(createLaneMatchupRichText(richText));
+    list.append(item);
+  });
+
+  card.append(title, list);
+  return card;
+}
+
+function normalizeLaneMatchupDetail(detail) {
+  return (Array.isArray(detail) ? detail : [])
+    .map(normalizeLaneMatchupDetailItem)
+    .filter(hasLaneMatchupRichText);
+}
+
+function normalizeLaneMatchupDetailItem(item) {
+  if (Array.isArray(item)) {
+    return item.filter(isLaneMatchupRichTextToken);
+  }
+
+  if (item && typeof item === 'object') {
+    const text = String(item.text || item.body || item.description || item.detail || '').trim();
+    return isLaneMatchupStructuralFragment(text) ? '' : text;
+  }
+
+  const text = String(item || '').trim();
+  return isLaneMatchupStructuralFragment(text) ? '' : text;
+}
+
+function isLaneMatchupRichTextToken(token) {
+  if (!token || typeof token !== 'object') return false;
+  if (token.type === 'text') return !isLaneMatchupStructuralFragment(token.text);
+  if (token.type === 'champion') return String(token.championName || '').trim().length > 0;
+  return false;
+}
+
+function isLaneMatchupStructuralFragment(value) {
+  const text = String(value || '').trim();
+  if (!text) return true;
+  if (/^[{}\[\],]+$/.test(text)) return true;
+  if (/^"?[A-Za-z0-9_-]+"?\s*:\s*[{\[]?$/.test(text)) return true;
+  return false;
+}
+
+function createLaneMatchupBadge(label, value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+
+  const badge = document.createElement('span');
+  badge.className = 'lane-matchup-badge';
+
+  const badgeLabel = document.createElement('small');
+  badgeLabel.textContent = label;
+
+  const badgeValue = document.createElement('b');
+  badgeValue.textContent = text;
+
+  badge.append(badgeLabel, badgeValue);
+  return badge;
+}
+
+function hasLaneMatchupRichText(value) {
+  if (Array.isArray(value)) {
+    return value.some(isLaneMatchupRichTextToken);
+  }
+
+  return !isLaneMatchupStructuralFragment(value);
+}
+
+function createLaneMatchupRichText(value) {
+  const fragment = document.createDocumentFragment();
+
+  if (!Array.isArray(value)) {
+    fragment.append(document.createTextNode(String(value || '').trim()));
+    return fragment;
+  }
+
+  value.forEach((token) => {
+    if (!token || typeof token !== 'object') return;
+
+    if (token.type === 'text') {
+      fragment.append(document.createTextNode(String(token.text || '')));
+      return;
+    }
+
+    if (token.type === 'champion') {
+      const champion = createLaneMatchupInlineChampion(token);
+      if (champion) fragment.append(champion);
+    }
+  });
+
+  return fragment;
+}
+
+function createLaneMatchupInlineChampion(token) {
+  const championName = String(token?.championName || '').trim();
+  if (!championName) return null;
+
+  const championId = Number(token.championId);
+  const container = document.createElement('span');
+  container.className = 'lane-matchup-inline-champion';
+  container.title = championName;
+
+  if (Number.isInteger(championId) && championId > 0) {
+    const image = document.createElement('img');
+    image.alt = championName;
+    image.title = championTitle(championId);
+    image.className = 'lane-matchup-inline-champion-icon';
+    loadChampionIconEager(image, championId);
+    container.append(image);
+  }
+
+  const label = document.createElement('span');
+  label.textContent = championName;
+  container.append(label);
+  return container;
+}
+
+function createLaneMatchupOpponentVisual({ championIds, championName }) {
+  const container = document.createElement('span');
+  container.className = 'lane-matchup-title-opponent';
+  container.title = championName ? `vs ${championName}` : 'vs 相手';
+
+  const label = document.createElement('span');
+  label.textContent = 'vs';
+  container.append(label);
+
+  const ids = (Array.isArray(championIds) ? championIds : [])
+    .map((championId) => Number(championId))
+    .filter((championId) => Number.isInteger(championId) && championId > 0)
+    .slice(0, 2);
+
+  if (!ids.length) {
+    const fallback = document.createElement('span');
+    fallback.textContent = championName || '相手';
+    container.append(fallback);
+    return container;
+  }
+
+  ids.forEach((championId) => {
+    const image = document.createElement('img');
+    image.alt = championLabel(championId);
+    image.title = championTitle(championId);
+    image.className = 'lane-matchup-title-opponent-icon';
+    loadChampionIconEager(image, championId);
+    container.append(image);
+  });
+
+  return container;
+}
+
+function createInGameAiHeaderTitle(text) {
+  const title = document.createElement('p');
+  title.className = 'eyebrow';
+  title.textContent = text;
+  return title;
 }
 
 function createDraftAiAnalysisStatus(text) {
