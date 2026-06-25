@@ -15,6 +15,8 @@ const {
   getPlannedPickChampionId,
   getPlannedPickThreatStats,
   getSummonerName,
+  hasGameModeEvidence,
+  isSupportedDraftGameMode,
   isChampSelectFinalization,
   normalizePosition,
   normalizeChampionId,
@@ -78,29 +80,131 @@ test('getDraftPanelState distinguishes logged out, champ select, and in-game sta
     champSelect: null,
     loggedIn: false,
     inGame: false,
-    inChampSelect: false
+    inChampSelect: false,
+    supportedDraftGameMode: false,
+    unsupportedGameMode: false
   });
 
   assert.deepEqual(getDraftPanelState({
     lcuStatus: 'connected',
     summoner: { gameName: 'Tester' },
     gameflowPhase: 'ChampSelect',
-    champSelect: { localPlayerCellId: 1 }
+    champSelect: { localPlayerCellId: 1 },
+    gameflowSession: createGameflowSession({ queue: { id: 400 } })
   }), {
     phase: 'ChampSelect',
     champSelect: { localPlayerCellId: 1 },
     loggedIn: true,
     inGame: false,
-    inChampSelect: true
+    inChampSelect: true,
+    supportedDraftGameMode: true,
+    unsupportedGameMode: false
   });
 
   assert.equal(getDraftPanelState({
     lcuStatus: 'connected',
     summoner: { gameName: 'Tester' },
     gameflowPhase: 'InProgress',
-    champSelect: { localPlayerCellId: 1 }
+    champSelect: { localPlayerCellId: 1 },
+    gameflowSession: createGameflowSession({ queue: { id: 420 } })
   }).inGame, true);
+
+  assert.deepEqual(getDraftPanelState({
+    lcuStatus: 'connected',
+    summoner: { gameName: 'Tester' },
+    gameflowPhase: 'ChampSelect',
+    champSelect: { localPlayerCellId: 1 },
+    gameflowSession: createGameflowSession({ queue: { id: 450, mapId: 12, gameMode: 'ARAM' } })
+  }), {
+    phase: 'ChampSelect',
+    champSelect: { localPlayerCellId: 1 },
+    loggedIn: true,
+    inGame: false,
+    inChampSelect: false,
+    supportedDraftGameMode: false,
+    unsupportedGameMode: true
+  });
+
+  assert.deepEqual(getDraftPanelState({
+    lcuStatus: 'connected',
+    summoner: { gameName: 'Tester' },
+    gameflowPhase: 'ChampSelect',
+    champSelect: { localPlayerCellId: 1 },
+    gameflowSession: { error: 'not ready' }
+  }), {
+    phase: 'ChampSelect',
+    champSelect: { localPlayerCellId: 1 },
+    loggedIn: true,
+    inGame: false,
+    inChampSelect: false,
+    supportedDraftGameMode: false,
+    unsupportedGameMode: false
+  });
 });
+
+test('isSupportedDraftGameMode allows supported Summoners Rift draft queues only', () => {
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 400 } })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 420 } })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 440 } })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: { error: 'not ready' },
+    lobby: createLobby({ queueId: 420, mapId: undefined, gameMode: undefined })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({
+      isCustomGame: true,
+      queue: { isCustom: true, id: 0, pickMode: 'DraftModeType' }
+    })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({
+      isCustomGame: true,
+      queue: { isCustom: true, id: 0, pickMode: 'TournamentDraftModeType' }
+    })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 430, pickMode: 'TeamBuilderBlindPickStrategy' } })
+  }), false);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 450, mapId: 12, gameMode: 'ARAM' } })
+  }), false);
+  assert.equal(hasGameModeEvidence({
+    gameflowSession: { error: 'not ready' }
+  }), false);
+  assert.equal(hasGameModeEvidence({
+    lobby: createLobby({ queueId: 420 })
+  }), true);
+});
+
+function createGameflowSession({ queue = {}, isCustomGame = false } = {}) {
+  return {
+    phase: 'ChampSelect',
+    gameData: {
+      isCustomGame,
+      queue: {
+        mapId: 11,
+        gameMode: 'CLASSIC',
+        ...queue
+      }
+    }
+  };
+}
+
+function createLobby(gameConfig = {}) {
+  return {
+    gameConfig: {
+      mapId: 11,
+      gameMode: 'CLASSIC',
+      ...gameConfig
+    }
+  };
+}
 
 test('small normalization helpers handle LCU edge cases', () => {
   assert.equal(normalizeChampionId('1'), 1);

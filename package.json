@@ -1,6 +1,6 @@
 {
   "name": "banpick-ai",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "League of Legends ban pick insights agent",
   "author": "kyuu090",
   "main": "main.js",

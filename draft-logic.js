@@ -30,6 +30,8 @@
     bottom: 'BOTTOM',
     utility: 'UTILITY'
   };
+  const SUPPORTED_DRAFT_QUEUE_IDS = new Set([400, 420, 440]);
+  const SUMMONERS_RIFT_MAP_ID = 11;
 
   function hasUsableData(value) {
     return value && typeof value === 'object' && !value.error;
@@ -245,15 +247,123 @@
     const champSelect = hasUsableData(state?.champSelect) ? state.champSelect : null;
     const loggedIn = state?.lcuStatus === 'connected' && hasUsableData(state?.summoner);
     const inGame = ['InProgress', 'GameStart'].includes(phase);
-    const inChampSelect = phase === 'ChampSelect' && Boolean(champSelect) && !inGame;
+    const supportedDraftGameMode = isSupportedDraftGameMode(state);
+    const inChampSelect = phase === 'ChampSelect' && Boolean(champSelect) && !inGame && supportedDraftGameMode;
+    const unsupportedGameMode = loggedIn &&
+      ['ChampSelect', 'GameStart', 'InProgress'].includes(phase) &&
+      hasGameModeEvidence(state) &&
+      !supportedDraftGameMode;
 
     return {
       phase,
       champSelect,
       loggedIn,
       inGame,
-      inChampSelect
+      inChampSelect,
+      supportedDraftGameMode,
+      unsupportedGameMode
     };
+  }
+
+  function isSupportedDraftGameMode(state) {
+    return collectGameModeCandidates(state).some(isSupportedDraftCandidate);
+  }
+
+  function hasGameModeEvidence(state) {
+    return collectGameModeCandidates(state).length > 0;
+  }
+
+  function collectGameModeCandidates(state) {
+    const candidates = [];
+    const gameflowSession = state?.gameflowSession;
+    if (hasUsableData(gameflowSession)) {
+      const gameData = gameflowSession.gameData || {};
+      candidates.push({
+        gameData,
+        queue: gameData.queue || gameflowSession.queue || {}
+      });
+    }
+
+    const lobby = state?.lobby;
+    if (hasUsableData(lobby)) {
+      const gameConfig = lobby.gameConfig || {};
+      candidates.push({
+        gameData: {
+          mapId: gameConfig.mapId,
+          gameMode: gameConfig.gameMode || gameConfig.gameModeName,
+          queueId: gameConfig.queueId,
+          isCustomGame: gameConfig.isCustom || gameConfig.isCustomGame
+        },
+        queue: {
+          id: gameConfig.queueId,
+          queueId: gameConfig.queueId,
+          mapId: gameConfig.mapId,
+          gameMode: gameConfig.gameMode,
+          isCustom: gameConfig.isCustom,
+          isRanked: gameConfig.isRanked,
+          type: gameConfig.queueType,
+          pickMode: gameConfig.pickMode
+        }
+      });
+    }
+
+    return candidates.filter(({ gameData, queue }) => hasQueueEvidence(gameData, queue));
+  }
+
+  function isSupportedDraftCandidate({ gameData, queue }) {
+    const queueId = normalizeQueueId(queue.id ?? queue.queueId ?? gameData.queueId);
+    if (SUPPORTED_DRAFT_QUEUE_IDS.has(queueId)) return true;
+
+    if (!isSummonersRiftClassicGame(gameData, queue)) return false;
+
+    const isRanked = queue.isRanked === true || String(queue.type || '').toUpperCase() === 'RANKED';
+    if (isRanked && hasDraftPickMode(queue)) return true;
+
+    const isCustom = queue.isCustom === true ||
+      gameData.isCustomGame === true ||
+      String(queue.type || '').toUpperCase() === 'CUSTOM';
+    return isCustom && hasDraftPickMode(queue);
+  }
+
+  function hasQueueEvidence(gameData, queue) {
+    return Boolean(
+      normalizeQueueId(queue?.id ?? queue?.queueId ?? gameData?.queueId) ||
+      normalizeQueueId(queue?.mapId ?? gameData?.mapId ?? gameData?.map?.id) ||
+      queue?.gameMode ||
+      gameData?.gameMode ||
+      gameData?.map?.gameMode ||
+      queue?.pickMode ||
+      queue?.type
+    );
+  }
+
+  function isSummonersRiftClassicGame(gameData, queue) {
+    const mapId = normalizeQueueId(queue?.mapId ?? gameData?.mapId ?? gameData?.map?.id);
+    const gameMode = String(queue?.gameMode || gameData?.gameMode || gameData?.map?.gameMode || '').toUpperCase();
+    return mapId === SUMMONERS_RIFT_MAP_ID && gameMode === 'CLASSIC';
+  }
+
+  function normalizeQueueId(value) {
+    const queueId = Number(value);
+    return Number.isInteger(queueId) ? queueId : 0;
+  }
+
+  function hasDraftPickMode(queue) {
+    const gameTypeConfig = queue?.gameTypeConfig || {};
+    const text = [
+      queue?.pickMode,
+      gameTypeConfig.pickMode,
+      gameTypeConfig.banMode,
+      queue?.name,
+      queue?.shortName,
+      queue?.description,
+      queue?.detailedDescription
+    ].map((value) => String(value || '').toLowerCase()).join(' ');
+
+    return text.includes('draft') ||
+      text.includes('tournament') ||
+      text.includes('ドラフト') ||
+      text.includes('トーナメント');
   }
 
   function createInGameContext({ champSelect, summonerName = '', matchupStats = [] } = {}) {
@@ -421,6 +531,8 @@
     getBestIntoOpponentStats,
     sortPickPoolCandidates,
     getDraftPanelState,
+    isSupportedDraftGameMode,
+    hasGameModeEvidence,
     createInGameContext,
     createPickPhaseDraftContext,
     isChampSelectFinalization,
