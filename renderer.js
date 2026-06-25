@@ -1932,7 +1932,7 @@ function renderInGameLaneMatchupAnalysis(analysis) {
 
   const request = analysis?.request?.payload || {};
   const summary = response.laneSummary || {};
-  const detail = Array.isArray(summary.detail) ? summary.detail : [];
+  const detail = normalizeLaneMatchupDetail(summary.detail);
 
   const goalCard = createLaneMatchupGoalCard({
     goal: summary.goal,
@@ -2010,6 +2010,41 @@ function createLaneMatchupDetailCard(detail) {
   return card;
 }
 
+function normalizeLaneMatchupDetail(detail) {
+  return (Array.isArray(detail) ? detail : [])
+    .map(normalizeLaneMatchupDetailItem)
+    .filter(hasLaneMatchupRichText);
+}
+
+function normalizeLaneMatchupDetailItem(item) {
+  if (Array.isArray(item)) {
+    return item.filter(isLaneMatchupRichTextToken);
+  }
+
+  if (item && typeof item === 'object') {
+    const text = String(item.text || item.body || item.description || item.detail || '').trim();
+    return isLaneMatchupStructuralFragment(text) ? '' : text;
+  }
+
+  const text = String(item || '').trim();
+  return isLaneMatchupStructuralFragment(text) ? '' : text;
+}
+
+function isLaneMatchupRichTextToken(token) {
+  if (!token || typeof token !== 'object') return false;
+  if (token.type === 'text') return !isLaneMatchupStructuralFragment(token.text);
+  if (token.type === 'champion') return String(token.championName || '').trim().length > 0;
+  return false;
+}
+
+function isLaneMatchupStructuralFragment(value) {
+  const text = String(value || '').trim();
+  if (!text) return true;
+  if (/^[{}\[\],]+$/.test(text)) return true;
+  if (/^"?[A-Za-z0-9_-]+"?\s*:\s*[{\[]?$/.test(text)) return true;
+  return false;
+}
+
 function createLaneMatchupBadge(label, value) {
   const text = String(value || '').trim();
   if (!text) return null;
@@ -2029,15 +2064,10 @@ function createLaneMatchupBadge(label, value) {
 
 function hasLaneMatchupRichText(value) {
   if (Array.isArray(value)) {
-    return value.some((token) => {
-      if (!token || typeof token !== 'object') return false;
-      if (token.type === 'text') return String(token.text || '').trim();
-      if (token.type === 'champion') return String(token.championName || '').trim();
-      return false;
-    });
+    return value.some(isLaneMatchupRichTextToken);
   }
 
-  return String(value || '').trim().length > 0;
+  return !isLaneMatchupStructuralFragment(value);
 }
 
 function createLaneMatchupRichText(value) {
