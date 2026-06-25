@@ -110,6 +110,8 @@ let matchHistoryEnemyChampionStats = [];
 let matchHistoryLaneOpponentStats = [];
 let matchHistorySelfVsLaneOpponentStats = [];
 let championPoolDirty = false;
+let lastChampionPickerRenderKey = '';
+let lastChampionPoolListRenderKey = '';
 let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
 let lastChampSelectSnapshot = null;
@@ -635,6 +637,44 @@ function getChampionOptions() {
     .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
 
+function createChampionOptionsRenderKey(options) {
+  return options
+    .map((champion) => [
+      Number(champion.id) || 0,
+      champion.name || '',
+      champion.alias || '',
+      champion.title || ''
+    ].join(':'))
+    .join('|');
+}
+
+function createChampionPoolStatsRenderKey(championIds, laneId) {
+  const position = getChampionPoolLanePosition(laneId);
+  return championIds
+    .map((championId) => {
+      const stats = getChampionRoleDisplayStats(championId, position);
+      return [
+        Number(championId) || 0,
+        championLabel(championId),
+        championTitle(championId),
+        Number(stats?.games || 0),
+        Number(stats?.wins || 0),
+        Number(stats?.winRate || 0),
+        Number(stats?.kda || 0)
+      ].join(':');
+    })
+    .join('|');
+}
+
+function updateChampionPickerSelection(selectedChampionIds) {
+  elements.championPoolPickerGrid.querySelectorAll('.champion-picker-card').forEach((button) => {
+    const championId = Number(button.dataset.championId);
+    const selected = selectedChampionIds.has(championId);
+    button.classList.toggle('selected', selected);
+    button.title = selected ? `${championLabel(championId)} は登録済みです` : championTitle(championId);
+  });
+}
+
 function normalizeSearchText(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -728,6 +768,17 @@ function renderChampionPicker(championIds) {
       champion.title
     ].some((value) => normalizeSearchText(value).includes(searchText));
   });
+  const renderKey = [
+    searchText,
+    createChampionOptionsRenderKey(options),
+    filteredOptions.map((champion) => Number(champion.id) || 0).join(',')
+  ].join('::');
+
+  if (renderKey === lastChampionPickerRenderKey) {
+    updateChampionPickerSelection(selectedChampionIds);
+    return;
+  }
+  lastChampionPickerRenderKey = renderKey;
 
   elements.championPoolPickerGrid.replaceChildren(...filteredOptions.map((champion) => {
     const championId = Number(champion.id);
@@ -765,12 +816,20 @@ function renderChampionPool() {
 
   const lane = getActiveChampionPoolLane();
   const championIds = championPool[lane.id] || [];
+  const listRenderKey = [
+    lane.id,
+    championIds.join(','),
+    createChampionPoolStatsRenderKey(championIds, lane.id)
+  ].join('::');
 
   renderLaneTabs();
   renderChampionPicker(championIds);
 
   elements.championPoolListTitle.textContent = lane.label;
   elements.championPoolEmpty.hidden = championIds.length > 0;
+  if (listRenderKey === lastChampionPoolListRenderKey) return;
+  lastChampionPoolListRenderKey = listRenderKey;
+
   elements.championPoolList.replaceChildren(...championIds.map((championId) => {
     const item = document.createElement('article');
     item.className = 'pool-champion';
