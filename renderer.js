@@ -869,6 +869,12 @@ function renderChampionPool() {
   }));
 }
 
+function forceRenderChampionPool() {
+  lastChampionPickerRenderKey = '';
+  lastChampionPoolListRenderKey = '';
+  renderChampionPool();
+}
+
 function renderPlayedChampionStatsLegacy() {
   const lane = CHAMPION_POOL_LANES.find((entry) => entry.id === activePlayedStatsLane) || CHAMPION_POOL_LANES[0];
   const position = getChampionPoolLanePosition(lane.id);
@@ -2844,6 +2850,10 @@ function setActiveView(viewName) {
   elements.tabButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.view === activeView);
   });
+
+  if (activeView === 'championPool') {
+    forceRenderChampionPool();
+  }
 
   renderStatsSubtabs();
 }
