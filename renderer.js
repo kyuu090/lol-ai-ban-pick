@@ -57,6 +57,7 @@ const elements = {
   settingsMessage: document.querySelector('#settingsMessage'),
   loggedOutView: document.querySelector('#loggedOutView'),
   loggedInView: document.querySelector('#loggedInView'),
+  unsupportedGameModeView: document.querySelector('#unsupportedGameModeView'),
   inGameView: document.querySelector('#inGameView'),
   inGameSelfPortrait: document.querySelector('#inGameSelfPortrait'),
   inGameChampionName: document.querySelector('#inGameChampionName'),
@@ -476,18 +477,19 @@ function renderState(state) {
 }
 
 function syncDraftAutoFocus(state) {
-  const { inChampSelect } = getDraftPanelState(state);
+  const { phase, inChampSelect, unsupportedGameMode } = getDraftPanelState(state);
+  const shouldAutoFocusDraft = inChampSelect || (unsupportedGameMode && phase === 'ChampSelect');
   elements.draftTabButton.classList.toggle('draft-live', inChampSelect);
 
   if (inChampSelect && !wasInChampSelect) {
     resetFinalCompositionAnalysis();
   }
 
-  if (inChampSelect && !wasInChampSelect && activeView !== 'draft') {
+  if (shouldAutoFocusDraft && !wasInChampSelect && activeView !== 'draft') {
     setActiveView('draft');
   }
 
-  wasInChampSelect = inChampSelect;
+  wasInChampSelect = shouldAutoFocusDraft;
 }
 
 function renderMatchDataSummary(summary, settings) {
@@ -1570,14 +1572,18 @@ function renderStatus(state) {
 }
 
 function renderDraft(state) {
-  const { champSelect, loggedIn, inGame, inChampSelect } = getDraftPanelState(state);
+  const { champSelect, loggedIn, inGame, inChampSelect, unsupportedGameMode } = getDraftPanelState(state);
 
-  showOnlyDraftPanel(loggedIn, inChampSelect, inGame);
+  showOnlyDraftPanel(loggedIn, inChampSelect, inGame, unsupportedGameMode);
 
-  if (!inChampSelect) {
+  if (!inChampSelect || unsupportedGameMode) {
     elements.champSelectView.classList.remove('local-turn');
     markedLaneOpponentCellId = null;
     resetDraftAiAnalysis();
+  }
+  if (unsupportedGameMode) {
+    resetFinalCompositionAnalysis();
+    return;
   }
 
   if (!loggedIn) return;
@@ -1592,11 +1598,12 @@ function renderDraft(state) {
   }
 }
 
-function showOnlyDraftPanel(loggedIn, inChampSelect, inGame) {
+function showOnlyDraftPanel(loggedIn, inChampSelect, inGame, unsupportedGameMode = false) {
   elements.loggedOutView.hidden = loggedIn;
-  elements.loggedInView.hidden = !loggedIn || inChampSelect || inGame;
-  elements.champSelectView.hidden = !loggedIn || !inChampSelect || inGame;
-  elements.inGameView.hidden = !loggedIn || !inGame;
+  elements.loggedInView.hidden = !loggedIn || inChampSelect || inGame || unsupportedGameMode;
+  elements.unsupportedGameModeView.hidden = !loggedIn || !unsupportedGameMode;
+  elements.champSelectView.hidden = !loggedIn || !inChampSelect || inGame || unsupportedGameMode;
+  elements.inGameView.hidden = !loggedIn || !inGame || unsupportedGameMode;
 }
 
 function renderInGame(state) {
