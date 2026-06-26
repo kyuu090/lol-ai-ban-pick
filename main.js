@@ -12,10 +12,8 @@ const {
   parseLockfile
 } = require('./lcu-logic');
 const {
-  DEFAULT_RIOT_BFF_BASE_URL,
   normalizeRiotPlatformRegion,
-  parseRetryAfterMs,
-  requestRiotBffJson
+  parseRetryAfterMs
 } = require('./riot-api');
 const {
   aggregateEnemyChampionStats,
@@ -62,6 +60,13 @@ const {
   toggleMaximizeWindow
 } = require('./main/window');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
+const {
+  createRiotBffPath,
+  requestBffJson,
+  requestFinalCompositionAnalysis,
+  requestLaneMatchupAnalysis,
+  requestPickPhaseAnalysis
+} = require('./main/ai-analysis-service');
 
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
@@ -323,70 +328,6 @@ function getRiotIdFromSummoner(summoner) {
   }
 
   throw new Error('LCU current summonerからRiot IDとTaglineを取得できませんでした');
-}
-
-function encodePathSegment(value) {
-  return encodeURIComponent(String(value));
-}
-
-function createRiotBffPath(region, segments, query = null) {
-  const path = `/api/riot/${[
-    region,
-    ...segments
-  ].map(encodePathSegment).join('/')}`;
-
-  if (!query) return path;
-
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    params.set(key, String(value));
-  });
-
-  const queryString = params.toString();
-  return queryString ? `${path}?${queryString}` : path;
-}
-
-function requestBffJson({ path, method = 'GET', body = null, timeoutMs = undefined, onRetry = null, maxRetries = undefined }) {
-  return requestRiotBffJson({
-    baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
-    path,
-    method,
-    body,
-    ...(timeoutMs === undefined ? {} : { timeoutMs }),
-    onRetry,
-    ...(maxRetries === undefined ? {} : { maxRetries })
-  });
-}
-
-function requestPickPhaseAnalysis(_event, draftContext) {
-  return requestBffJson({
-    path: '/api/openai/pick-phase',
-    method: 'POST',
-    body: draftContext,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
-}
-
-function requestFinalCompositionAnalysis(_event, draftContext) {
-  return requestBffJson({
-    path: '/api/openai/final-composition',
-    method: 'POST',
-    body: draftContext,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
-}
-
-function requestLaneMatchupAnalysis(laneMatchupPayload) {
-  return requestBffJson({
-    path: '/api/openai/lane-matchup',
-    method: 'POST',
-    body: laneMatchupPayload,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
 }
 
 function requestBffHealth({ onRetry = null } = {}) {
