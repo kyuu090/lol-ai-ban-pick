@@ -259,4 +259,44 @@
   - `main/window.js` は Electron の `BrowserWindow` に依存するため、現時点では単体テストではなく syntax check に留めている。
 - 注意:
   - Electron の実起動確認は未実施。
-  - 次の低リスク候補は `main/ai-analysis-service.js` への BFF request 部分の分離。
+  - Phase 5 では、Phase 4.5 に含まれていた `ipc-handlers.js` を先行済みとして扱い、残りの外部接続系を分ける。
+
+## 2026-06-26: Phase 5 main external service split completed
+
+- 実施内容:
+  - `main/ai-analysis-service.js` を追加し、OpenAI / BFF analysis request と Riot BFF path builder を移動。
+  - `main/riot-match-history-service.js` を追加し、Riot BFF の health / account / match id / match detail request と detail response 適用 helper を移動。
+  - `main/lcu-client.js` を追加し、lockfile 読み取り、LCU REST request、champion icon 取得、icon transient error 判定を移動。
+  - `main/lcu-watch.js` を追加し、LCU WebSocket 接続、WAMP subscribe、message event apply、close / error handling、再接続、lockfile retry timer を移動。
+  - `main.js` は各 service を factory で組み立て、state 更新と高レベル orchestration を担当する形へ整理。
+  - Phase 4.5 で先行分割した `main/ipc-handlers.js` は Phase 5 の候補に含まれていたため、Phase 5 では先行済みとして扱った。
+  - `test/main-ai-analysis-service.test.js`、`test/main-riot-match-history-service.test.js`、`test/main-lcu-client.test.js`、`test/main-lcu-watch.test.js` を追加。
+- 変更した主なファイル:
+  - `main/ai-analysis-service.js`
+  - `main/riot-match-history-service.js`
+  - `main/lcu-client.js`
+  - `main/lcu-watch.js`
+  - `main.js`
+  - `test/main-ai-analysis-service.test.js`
+  - `test/main-riot-match-history-service.test.js`
+  - `test/main-lcu-client.test.js`
+  - `test/main-lcu-watch.test.js`
+  - `docs/AGENTS_CONTEXT.md`
+  - `docs/development.md`
+  - `docs/refactoring-for-ai-agents.md`
+  - `docs/refactoring-for-ai-agents-save-data.md`
+- 確認:
+  - `node --check main.js`: pass。
+  - `node --check main/ai-analysis-service.js`: pass。
+  - `node --check main/riot-match-history-service.js`: pass。
+  - `node --check main/lcu-client.js`: pass。
+  - `node --check main/lcu-watch.js`: pass。
+  - `npm test`: 88 tests pass。
+  - 作業後の `main.js`: 1046 行。
+- Phase 5 完了メモ:
+  - `main.js` には、外部接続結果を既存 state に反映する orchestration と、lane matchup / match history の状態管理がまだ残っている。
+  - 保存ファイル形式、IPC channel 名、LCU endpoint、WebSocket subscribe payload は変更していない。
+  - `main/lcu-watch.js` と `main/lcu-client.js` は Electron / network 依存があるため、現時点では pure helper の単体テストと syntax check を中心に確認している。
+- 注意:
+  - Electron の実起動確認は未実施。
+  - 次にさらに薄くするなら、match history orchestration または lane matchup analysis state machine を service 側へ寄せる候補がある。

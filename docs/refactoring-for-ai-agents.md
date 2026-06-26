@@ -252,6 +252,8 @@ Phase 4 後続の推奨分割順:
 
 目的: LCU / Riot / BFF / AI の境界を明確にする。
 
+Phase 4.5 で `main/ipc-handlers.js` は先行分割済み。Phase 5 では残りの外部接続系を分離する。
+
 候補:
 
 1. `main/lcu-client.js`
@@ -262,8 +264,6 @@ Phase 4 後続の推奨分割順:
    - Riot match id / detail 取得、rate limit handling、snapshot publish。
 4. `main/ai-analysis-service.js`
    - pick phase、final composition、lane matchup の BFF request。
-5. `main/ipc-handlers.js`
-   - IPC channel 登録を集約。
 
 この段階は副作用が大きいため、既存テストに加えて手動起動確認を行う。
 

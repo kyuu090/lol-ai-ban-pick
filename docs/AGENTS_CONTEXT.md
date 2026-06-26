@@ -91,6 +91,10 @@ AGENTS_CONTEXT.md
 - `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当する。
 - `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当する。
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当する。
+- `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当する。
+- `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当する。
+- `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当する。
+- `main/lcu-watch.js` は LCU WebSocket 接続、購読、再接続、lockfile retry timer を担当する。
 - `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 
