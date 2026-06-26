@@ -137,6 +137,13 @@ declare global {
     UiStatsView?: { createStatsView(deps: StatsViewDeps): any };
     UiInGameView?: { createInGameView(deps: InGameViewDeps): any };
     UiDraftView?: { createDraftView(deps: DraftViewDeps): any };
+    RendererState?: any;
+    RendererNavigation?: any;
+    RendererStateSync?: any;
+    RendererAiAnalysisController?: any;
+    RendererChampionPoolController?: any;
+    RendererMatchHistoryController?: any;
+    RendererDraftController?: any;
     [key: string]: any;
   }
 
