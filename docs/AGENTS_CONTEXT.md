@@ -49,7 +49,7 @@ LCU WebSocket event から作れるバンピック中・試合中・試合終了
 - Electron
 - Node.js
 - HTML/CSS/JavaScript
-- TypeScriptは未導入。AI可読性向上のための段階的移行計画は `docs/typescript-migration-for-ai-agents.md` にまとめている。
+- TypeScriptは未導入。AI可読性向上のための段階的移行計画は `docs/ts-magiration/README.md` から Phase 別に読む。
 - Reactなし
 - Windows環境想定
 - `electron-log`
@@ -557,7 +557,7 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 
 ### AI Readability and TypeScript Migration
 
-今後の保守では、生成AIが読む文脈を減らす目的で TypeScript 化を検討している。詳細な作業計画は `docs/typescript-migration-for-ai-agents.md` を読む。
+今後の保守では、生成AIが読む文脈を減らす目的で TypeScript 化を検討している。詳細な作業計画は `docs/ts-magiration/README.md` から Phase 別に読む。
 
 方針:
 
@@ -565,7 +565,7 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 - 目的は型安全化そのものではなく、`AppState`、`window.lcuApi`、IPC channel、Draft context、Match history、AI analysis response の shape を生成AIが型だけで把握できるようにすること。
 - 初期段階では CommonJS 構成を維持し、ESM 移行やフレームワーク導入を同時に行わない。
 - `main.js` と `renderer.js` は型が揃ってから薄くする。大きい入口ファイルを最初に `.ts` 化しない。
-- TypeScript 作業後は `docs/refactoring-for-ai-agents-save-data.md` に作業ログを残す。
+- TypeScript 作業後は `docs/ts-magiration/save-data/` 配下の対応する Phase の save-data ファイルに作業ログを残す。
 
 ## UI
 
