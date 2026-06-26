@@ -203,6 +203,49 @@ CSS 分割時は visual regression が起きやすいので、起動確認また
 
 保存ファイルの場所や JSON 形式は変えない。
 
+Phase 4 完了後の `main/` 目標構造:
+
+```text
+main/
+  app-state.js
+  window.js
+  ipc-handlers.js
+  settings-store.js
+  champion-pool-store.js
+  match-history-store.js
+  lcu-client.js
+  lcu-watch.js
+  riot-match-history-service.js
+  ai-analysis-service.js
+```
+
+Phase 4 後続の推奨分割順:
+
+1. `main/window.js` と `main/ipc-handlers.js`
+   - `createWindow`、window minimize / maximize / close、IPC登録を分離する。
+   - `main.js` は `registerIpcHandlers({ ipcMain, handlers })` と window 作成を呼ぶだけに寄せる。
+2. `main/ai-analysis-service.js`
+   - pick phase、final composition、lane matchup の BFF request を分離する。
+   - lane matchup の retry / state 更新は絡みが強いため、まず HTTP request 部分だけを移す。
+3. `main/riot-match-history-service.js`
+   - Riot match id / detail 取得、rate limit handling、snapshot publish を分離する。
+   - `appState`、settings、dialog、store 依存が多いため、`createRiotMatchHistoryService(deps)` の factory 形式にする。
+4. `main/lcu-client.js`
+   - lockfile 読み取り、LCU fetch、champion icon 取得を分離する。
+5. `main/lcu-watch.js`
+   - WebSocket 接続、再接続、LCU state refresh、WebSocket event apply を分離する。
+   - Electron lifecycle と IPC 登録順序を変えず、`main.js` から service を組み立てる。
+
+推奨コミット単位:
+
+1. `refactor split main window and ipc handlers`
+2. `refactor split ai analysis service`
+3. `refactor split riot match history service`
+4. `refactor split lcu client`
+5. `refactor split lcu watcher`
+
+外部接続系を触る後半では、`npm test` に加えて Electron 起動確認を行う。
+
 ### Phase 5: main.js の外部接続系分割
 
 目的: LCU / Riot / BFF / AI の境界を明確にする。
@@ -263,4 +306,3 @@ CSS 分割時は visual regression が起きやすいので、起動確認また
 - `npm test` が通る。
 - 必要に応じて Electron の起動確認が済んでいる。
 - 後続修正時に読むべきファイルが以前より明確になっている。
-

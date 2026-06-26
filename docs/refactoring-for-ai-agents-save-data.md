@@ -224,6 +224,9 @@
 - Phase 4 完了メモ:
   - 保存ファイルの場所と JSON 形式は変更していない。
   - `main.js` の Electron lifecycle、IPC 登録順序、LCU / Riot / BFF 接続系の責務は維持している。
+  - 後続で目指す `main/` 構造は `app-state.js`, `window.js`, `ipc-handlers.js`, `settings-store.js`, `champion-pool-store.js`, `match-history-store.js`, `lcu-client.js`, `lcu-watch.js`, `riot-match-history-service.js`, `ai-analysis-service.js`。
+  - 推奨分割順は、まず `window.js` / `ipc-handlers.js`、次に `ai-analysis-service.js`、その後 `riot-match-history-service.js`、最後に `lcu-client.js` と `lcu-watch.js`。
+  - `riot-match-history-service.js` と `lcu-watch.js` は state / timer / external connection 依存が大きいため、factory 形式で deps を渡す方針が安全。
 - 注意:
   - Electron の実起動確認は未実施。
   - Phase 5 では LCU / Riot / BFF / AI 接続系を分ける候補がある。
