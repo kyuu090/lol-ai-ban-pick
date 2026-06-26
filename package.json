@@ -32,6 +32,7 @@
       "riot-api.js",
       "riot-match-history.js",
       "style.css",
+      "ui/**/*",
       "package.json"
     ],
     "directories": {

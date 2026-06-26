@@ -1,92 +1,4 @@
-const elements = {
-  windowTitlebar: document.querySelector('#windowTitlebar'),
-  windowMinimizeButton: document.querySelector('#windowMinimizeButton'),
-  windowMaximizeButton: document.querySelector('#windowMaximizeButton'),
-  windowCloseButton: document.querySelector('#windowCloseButton'),
-  refreshButton: document.querySelector('#refreshButton'),
-  collectRiotMatchesButton: document.querySelector('#collectRiotMatchesButton'),
-  matchDataMenuButton: document.querySelector('#matchDataMenuButton'),
-  matchDataMenu: document.querySelector('#matchDataMenu'),
-  collectSeasonRiotMatchesButton: document.querySelector('#collectSeasonRiotMatchesButton'),
-  matchDataCount: document.querySelector('#matchDataCount'),
-  matchDataRange: document.querySelector('#matchDataRange'),
-  matchDataSeasonHint: document.querySelector('#matchDataSeasonHint'),
-  matchDataProgress: document.querySelector('#matchDataProgress'),
-  tabButtons: document.querySelectorAll('.tab-button'),
-  draftTabButton: document.querySelector('#draftTabButton'),
-  draftView: document.querySelector('#draftView'),
-  championPoolView: document.querySelector('#championPoolView'),
-  statsView: document.querySelector('#statsView'),
-  statsSubtabButtons: document.querySelectorAll('.stats-subtab'),
-  playedStatsView: document.querySelector('#playedStatsView'),
-  opponentStatsView: document.querySelector('#opponentStatsView'),
-  debugView: document.querySelector('#debugView'),
-  settingsView: document.querySelector('#settingsView'),
-  laneTabs: document.querySelector('#laneTabs'),
-  playedStatsLaneTabs: document.querySelector('#playedStatsLaneTabs'),
-  opponentStatsLaneTabs: document.querySelector('#opponentStatsLaneTabs'),
-  playedStatsSampleFilter: document.querySelector('#playedStatsSampleFilter'),
-  opponentStatsSampleFilter: document.querySelector('#opponentStatsSampleFilter'),
-  championPoolSearchInput: document.querySelector('#championPoolSearchInput'),
-  championPoolPickerGrid: document.querySelector('#championPoolPickerGrid'),
-  championPoolPickerEmpty: document.querySelector('#championPoolPickerEmpty'),
-  saveChampionPoolButton: document.querySelector('#saveChampionPoolButton'),
-  championPoolListTitle: document.querySelector('#championPoolListTitle'),
-  championPoolList: document.querySelector('#championPoolList'),
-  championPoolEmpty: document.querySelector('#championPoolEmpty'),
-  playedStatsSampleSelect: document.querySelector('#playedStatsSampleSelect'),
-  playedStatsSortGamesButton: document.querySelector('#playedStatsSortGamesButton'),
-  playedStatsSortWinRateButton: document.querySelector('#playedStatsSortWinRateButton'),
-  playedStatsTableBody: document.querySelector('#playedStatsTableBody'),
-  playedStatsEmpty: document.querySelector('#playedStatsEmpty'),
-  opponentStatsSampleSelect: document.querySelector('#opponentStatsSampleSelect'),
-  opponentStatsSortGamesButton: document.querySelector('#opponentStatsSortGamesButton'),
-  opponentStatsSortWinRateButton: document.querySelector('#opponentStatsSortWinRateButton'),
-  opponentStatsTableBody: document.querySelector('#opponentStatsTableBody'),
-  opponentStatsEmpty: document.querySelector('#opponentStatsEmpty'),
-  championPoolMessage: document.querySelector('#championPoolMessage'),
-  lolInstallDirInput: document.querySelector('#lolInstallDirInput'),
-  riotPlatformRegionSelect: document.querySelector('#riotPlatformRegionSelect'),
-  riotRegionalRouteStatus: document.querySelector('#riotRegionalRouteStatus'),
-  themeModeSelect: document.querySelector('#themeModeSelect'),
-  themeModeStatus: document.querySelector('#themeModeStatus'),
-  chooseLolDirButton: document.querySelector('#chooseLolDirButton'),
-  saveLolDirButton: document.querySelector('#saveLolDirButton'),
-  saveRiotPlatformRegionButton: document.querySelector('#saveRiotPlatformRegionButton'),
-  saveThemeModeButton: document.querySelector('#saveThemeModeButton'),
-  settingsMessage: document.querySelector('#settingsMessage'),
-  loggedOutView: document.querySelector('#loggedOutView'),
-  loggedInView: document.querySelector('#loggedInView'),
-  unsupportedGameModeView: document.querySelector('#unsupportedGameModeView'),
-  inGameView: document.querySelector('#inGameView'),
-  inGameSelfPortrait: document.querySelector('#inGameSelfPortrait'),
-  inGameChampionName: document.querySelector('#inGameChampionName'),
-  inGameChampionDetail: document.querySelector('#inGameChampionDetail'),
-  inGameSelfStats: document.querySelector('#inGameSelfStats'),
-  inGameLaneMatchupAnalysis: document.querySelector('#inGameLaneMatchupAnalysis'),
-  inGameFinalCompositionAnalysis: document.querySelector('#inGameFinalCompositionAnalysis'),
-  champSelectView: document.querySelector('#champSelectView'),
-  helloMessage: document.querySelector('#helloMessage'),
-  allyBans: document.querySelector('#allyBans'),
-  enemyBans: document.querySelector('#enemyBans'),
-  allyTeam: document.querySelector('#allyTeam'),
-  enemyTeam: document.querySelector('#enemyTeam'),
-  currentAction: document.querySelector('#currentAction'),
-  currentPick: document.querySelector('#currentPick'),
-  draftSelfSummary: document.querySelector('#draftSelfSummary'),
-  banInsightPanel: document.querySelector('#banInsightPanel'),
-  draftAiAnalysisPanel: document.querySelector('#draftAiAnalysisPanel'),
-  lcuStatus: document.querySelector('#lcuStatus'),
-  websocketStatus: document.querySelector('#websocketStatus'),
-  gameflowPhase: document.querySelector('#gameflowPhase'),
-  updatedAt: document.querySelector('#updatedAt'),
-  errorMessage: document.querySelector('#errorMessage'),
-  summonerJson: document.querySelector('#summonerJson'),
-  lobbyJson: document.querySelector('#lobbyJson'),
-  champSelectJson: document.querySelector('#champSelectJson'),
-  lastEventJson: document.querySelector('#lastEventJson'),
-  stateJson: document.querySelector('#stateJson')
-};
+const elements = window.UiDomElements.elements;
 
 let activeView = 'draft';
 let activeStatsView = 'played';
@@ -126,14 +38,6 @@ let finalCompositionAnalysisStatus = 'idle';
 let finalCompositionAnalysisNotes = [];
 let finalCompositionAnalysisRequestKey = null;
 let finalCompositionAnalysisError = '';
-const championIconCache = new Map();
-const championIconQueue = [];
-const ICON_REQUEST_CONCURRENCY = 4;
-const CHAMPION_ICON_RETRY_DELAY_MS = 12000;
-let activeChampionIconRequests = 0;
-const championIconObserver = typeof IntersectionObserver === 'function'
-  ? new IntersectionObserver(handleChampionIconIntersections, { rootMargin: '180px' })
-  : null;
 let matchHistoryButtonTimer = null;
 let dismissedMatchHistoryButtonKey = null;
 let matchDataMenuOpen = false;
@@ -171,6 +75,17 @@ const RELIABLE_SAMPLE_GAMES = 5;
 const PICK_POOL_CANDIDATE_LIMIT = 6;
 const BAN_INSIGHT_LIMIT = 3;
 const BAN_INSIGHT_SAMPLE_OPTIONS = [0, 3, 5, 10, 20];
+const {
+  formatAverageKda,
+  formatDate,
+  formatMatchDataDate,
+  formatNumber,
+  formatPercent
+} = window.UiFormatters;
+const {
+  loadChampionIcon,
+  loadChampionIconEager
+} = window.UiChampionIcons;
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -208,25 +123,6 @@ function describeThemeMode(themeMode) {
 function renderWindowMaximizedState(isMaximized) {
   elements.windowMaximizeButton.textContent = isMaximized ? '❐' : '□';
   elements.windowMaximizeButton.setAttribute('aria-label', isMaximized ? '元に戻す' : '最大化');
-}
-
-function formatDate(value) {
-  if (!value) return '-';
-  return new Intl.DateTimeFormat('ja-JP', {
-    dateStyle: 'short',
-    timeStyle: 'medium'
-  }).format(new Date(value));
-}
-
-function formatMatchDataDate(value) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value));
 }
 
 function championLabel(championId) {
@@ -272,18 +168,6 @@ function getChampionRoleDisplayStats(championId, position) {
   )) || null;
 }
 
-function formatPercent(value) {
-  return `${Math.round(Number(value || 0) * 100)}%`;
-}
-
-function formatNumber(value, digits = 1) {
-  return Number(value || 0).toFixed(digits);
-}
-
-function formatAverageKda(stats) {
-  return `${formatNumber(stats?.avgKills)}/${formatNumber(stats?.avgDeaths)}/${formatNumber(stats?.avgAssists)}`;
-}
-
 function appendLowSampleBadge(container, games) {
   const sampleGames = Number(games || 0);
   if (sampleGames <= 0 || sampleGames >= RELIABLE_SAMPLE_GAMES) return;
@@ -327,131 +211,6 @@ function getPlayedStatsMinGames() {
 function getOpponentStatsMinGames() {
   const selectedGames = Number(elements.opponentStatsSampleSelect?.value);
   return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : opponentStatsMinGames;
-}
-
-function loadChampionIcon(img, championId) {
-  const id = Number(championId);
-  if (!id || !window.lcuApi?.getChampionIcon) return;
-
-  img.dataset.championId = String(id);
-
-  const cached = championIconCache.get(id);
-  if (typeof cached === 'string') {
-    setChampionIconSrc(img, id, cached);
-    return;
-  }
-
-  if (cached === null) return;
-
-  if (cached) {
-    attachChampionIcon(img, id, cached);
-    return;
-  }
-
-  if (championIconObserver) {
-    championIconObserver.observe(img);
-    return;
-  }
-
-  attachChampionIcon(img, id, enqueueChampionIconRequest(id));
-}
-
-function loadChampionIconEager(img, championId) {
-  const id = Number(championId);
-  if (!id || !window.lcuApi?.getChampionIcon) return;
-
-  img.dataset.championId = String(id);
-
-  const cached = championIconCache.get(id);
-  if (typeof cached === 'string') {
-    setChampionIconSrc(img, id, cached);
-    return;
-  }
-
-  if (cached === null) return;
-
-  attachChampionIcon(img, id, cached || enqueueChampionIconRequest(id));
-}
-
-function handleChampionIconIntersections(entries) {
-  entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-
-    championIconObserver.unobserve(entry.target);
-    const id = Number(entry.target.dataset.championId);
-    if (!id) return;
-
-    attachChampionIcon(entry.target, id, enqueueChampionIconRequest(id));
-  });
-}
-
-function attachChampionIcon(img, id, iconPromise) {
-  iconPromise.then((src) => {
-    if (src && img.dataset.championId === String(id)) {
-      setChampionIconSrc(img, id, src);
-    }
-  });
-}
-
-function setChampionIconSrc(img, id, src) {
-  img.onerror = () => {
-    if (img.dataset.championId !== String(id)) return;
-
-    markChampionIconMissing(id);
-    img.removeAttribute('src');
-  };
-  img.src = src;
-}
-
-function markChampionIconMissing(id) {
-  championIconCache.set(id, null);
-  setTimeout(() => {
-    if (championIconCache.get(id) === null) {
-      championIconCache.delete(id);
-    }
-  }, CHAMPION_ICON_RETRY_DELAY_MS);
-}
-
-function enqueueChampionIconRequest(id) {
-  const cached = championIconCache.get(id);
-  if (cached) return cached;
-  if (cached === null) return Promise.resolve(null);
-
-  let resolveRequest;
-  const iconPromise = new Promise((resolve) => {
-    resolveRequest = resolve;
-  });
-
-  championIconCache.set(id, iconPromise);
-  championIconQueue.push({ id, resolve: resolveRequest });
-  processChampionIconQueue();
-
-  return iconPromise;
-}
-
-function processChampionIconQueue() {
-  while (activeChampionIconRequests < ICON_REQUEST_CONCURRENCY && championIconQueue.length > 0) {
-    const { id, resolve } = championIconQueue.shift();
-    activeChampionIconRequests += 1;
-
-    window.lcuApi.getChampionIcon(id)
-      .then((src) => {
-        if (src) {
-          championIconCache.set(id, src);
-        } else {
-          markChampionIconMissing(id);
-        }
-        resolve(src || null);
-      })
-      .catch(() => {
-        markChampionIconMissing(id);
-        resolve(null);
-      })
-      .finally(() => {
-        activeChampionIconRequests -= 1;
-        processChampionIconQueue();
-      });
-  }
 }
 
 function renderState(state) {
