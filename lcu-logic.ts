@@ -1,4 +1,19 @@
-function parseLockfile(raw) {
+type LcuAnyRecord = Record<string, any>;
+type GameflowParticipantRecord = LcuAnyRecord & {
+  championId: number;
+  selectedPosition?: string;
+  team?: 'teamOne' | 'teamTwo';
+};
+type TeamName = 'teamOne' | 'teamTwo';
+type LaneMatchupPayload = LcuAnyRecord & {
+  myChampionName: string;
+  myChampionId: number | string;
+  enemyChampionName: string;
+  enemyChampionId: number | string;
+  lane?: string;
+};
+
+function parseLockfile(raw: any) {
   const [processName, pid, port, password, protocol] = String(raw).trim().split(':');
 
   if (!port || !password || !protocol) {
@@ -8,11 +23,11 @@ function parseLockfile(raw) {
   return { processName, pid, port, password, protocol };
 }
 
-function createAuthHeader(password) {
+function createAuthHeader(password: string) {
   return `Basic ${Buffer.from(`riot:${password}`).toString('base64')}`;
 }
 
-function createChampionsById(championSummary) {
+function createChampionsById(championSummary: any): Record<number, LcuAnyRecord> {
   const champions = Array.isArray(championSummary) ? championSummary : [];
 
   return champions.reduce((acc, champion) => {
@@ -30,7 +45,7 @@ function createChampionsById(championSummary) {
   }, {});
 }
 
-function normalizeGameflowSelectedPosition(position) {
+function normalizeGameflowSelectedPosition(position: any): string {
   const normalized = String(position || '').trim().toUpperCase();
   if (normalized === 'JUNGLE') return 'JUNGLE';
   if (normalized === 'MIDDLE') return 'MIDDLE';
@@ -40,7 +55,17 @@ function normalizeGameflowSelectedPosition(position) {
   return '';
 }
 
-function createLaneMatchupAnalysisRequest({ gameflowSession, localPuuid, championsById = {}, champSelectSession = null } = {}) {
+function createLaneMatchupAnalysisRequest({
+  gameflowSession,
+  localPuuid,
+  championsById = {},
+  champSelectSession = null
+}: {
+  gameflowSession?: LcuAnyRecord | null;
+  localPuuid?: string;
+  championsById?: Record<number, LcuAnyRecord>;
+  champSelectSession?: LcuAnyRecord | null;
+} = {}) {
   const phase = String(gameflowSession?.phase || '').trim();
   if (!['GameStart', 'InProgress'].includes(phase)) return null;
 
@@ -75,7 +100,7 @@ function createLaneMatchupAnalysisRequest({ gameflowSession, localPuuid, champio
   if (!localParticipant.championId || !localPosition) return null;
 
   const gameId = gameData?.gameId ?? gameflowSession?.gameId ?? null;
-  const championName = (championId) => getChampionName(championsById, championId);
+  const championName = (championId: any) => getChampionName(championsById, championId);
 
   if (localPosition === 'BOTTOM' || localPosition === 'UTILITY') {
     const localBottom = findTeamParticipantByPosition(localTeam, 'BOTTOM');
@@ -84,7 +109,7 @@ function createLaneMatchupAnalysisRequest({ gameflowSession, localPuuid, champio
     const enemySupport = findTeamParticipantByPosition(enemyTeam, 'UTILITY');
     if (!localBottom || !localSupport || !enemyBottom || !enemySupport) return null;
 
-    const payload = {
+    const payload: LaneMatchupPayload = {
       myChampionName: `${championName(localBottom.championId)}/${championName(localSupport.championId)}`,
       myChampionId: `${localBottom.championId}/${localSupport.championId}`,
       lane: 'BOTTOM/SUPPORT',
@@ -107,7 +132,7 @@ function createLaneMatchupAnalysisRequest({ gameflowSession, localPuuid, champio
   const enemyParticipant = findTeamParticipantByPosition(enemyTeam, localPosition);
   if (!enemyParticipant) return null;
 
-  const payload = {
+  const payload: LaneMatchupPayload = {
     myChampionName: championName(localParticipant.championId),
     myChampionId: localParticipant.championId,
     enemyChampionName: championName(enemyParticipant.championId),
@@ -129,7 +154,7 @@ function createLaneMatchupAnalysisRequest({ gameflowSession, localPuuid, champio
   };
 }
 
-function normalizeGameflowTeam(team) {
+function normalizeGameflowTeam(team: any): GameflowParticipantRecord[] {
   return (Array.isArray(team) ? team : [])
     .map((participant) => ({
       ...participant,
@@ -139,7 +164,7 @@ function normalizeGameflowTeam(team) {
     .filter((participant) => participant.championId > 0);
 }
 
-function normalizePlayerChampionSelections(playerChampionSelections) {
+function normalizePlayerChampionSelections(playerChampionSelections: any): GameflowParticipantRecord[] {
   return (Array.isArray(playerChampionSelections) ? playerChampionSelections : [])
     .map((selection) => ({
       ...selection,
@@ -154,6 +179,12 @@ function inferMissingAllyParticipantsFromChampSelect({
   champSelectSession,
   localPuuid,
   playerChampionSelections
+}: {
+  teamOne: GameflowParticipantRecord[];
+  teamTwo: GameflowParticipantRecord[];
+  champSelectSession?: LcuAnyRecord | null;
+  localPuuid?: string;
+  playerChampionSelections: GameflowParticipantRecord[];
 }) {
   const localParticipant = findLocalParticipant({
     teamOne,
@@ -174,7 +205,11 @@ function inferMissingAllyParticipantsFromChampSelect({
     : { teamOne, teamTwo: inferredAllyTeam };
 }
 
-function inferMissingTeamParticipantsFromChampSelect(team, otherTeam, champSelectTeam) {
+function inferMissingTeamParticipantsFromChampSelect(
+  team: GameflowParticipantRecord[],
+  otherTeam: GameflowParticipantRecord[],
+  champSelectTeam: any
+): GameflowParticipantRecord[] {
   if (!Array.isArray(champSelectTeam) || team.length >= 5 || otherTeam.length !== 5) return team;
 
   const knownChampionIds = new Set(team.map((participant) => participant.championId));
@@ -184,23 +219,23 @@ function inferMissingTeamParticipantsFromChampSelect(team, otherTeam, champSelec
     .filter((participant) => (
       participant.championId > 0 &&
       participant.selectedPosition &&
-      missingPositions.has(participant.selectedPosition) &&
+      missingPositions.has(String(participant.selectedPosition)) &&
       !knownChampionIds.has(participant.championId)
     ));
 
-  const additions = [];
+  const additions: GameflowParticipantRecord[] = [];
   inferredParticipants.forEach((participant) => {
-    if (!missingPositions.has(participant.selectedPosition)) return;
+    if (!missingPositions.has(String(participant.selectedPosition))) return;
 
     additions.push(participant);
-    missingPositions.delete(participant.selectedPosition);
+    missingPositions.delete(String(participant.selectedPosition));
     knownChampionIds.add(participant.championId);
   });
 
   return additions.length ? [...team, ...additions] : team;
 }
 
-function normalizeChampSelectMemberForGameflow(member) {
+function normalizeChampSelectMemberForGameflow(member: LcuAnyRecord): GameflowParticipantRecord {
   const championId = normalizePositiveInteger(member?.championId) ||
     normalizePositiveInteger(member?.championPickIntent);
 
@@ -212,7 +247,11 @@ function normalizeChampSelectMemberForGameflow(member) {
   };
 }
 
-function inferChampSelectAllyTeamName(teamOne, teamTwo, champSelectTeam) {
+function inferChampSelectAllyTeamName(
+  teamOne: GameflowParticipantRecord[],
+  teamTwo: GameflowParticipantRecord[],
+  champSelectTeam: any
+): TeamName | '' {
   const normalizedChampSelectTeam = (Array.isArray(champSelectTeam) ? champSelectTeam : [])
     .map(normalizeChampSelectMemberForGameflow)
     .filter((participant) => participant.championId > 0 || getParticipantPuuid(participant));
@@ -225,7 +264,7 @@ function inferChampSelectAllyTeamName(teamOne, teamTwo, champSelectTeam) {
   return teamOneScore > teamTwoScore ? 'teamOne' : 'teamTwo';
 }
 
-function scoreTeamAgainstChampSelect(team, champSelectTeam) {
+function scoreTeamAgainstChampSelect(team: GameflowParticipantRecord[], champSelectTeam: GameflowParticipantRecord[]): number {
   const teamChampionIds = new Set(team.map((participant) => participant.championId));
   const teamPuuids = new Set(team.map(getParticipantPuuid).filter(Boolean));
 
@@ -237,7 +276,15 @@ function scoreTeamAgainstChampSelect(team, champSelectTeam) {
   }, 0);
 }
 
-function inferMissingGameflowParticipants({ teamOne, teamTwo, playerChampionSelections }) {
+function inferMissingGameflowParticipants({
+  teamOne,
+  teamTwo,
+  playerChampionSelections
+}: {
+  teamOne: GameflowParticipantRecord[];
+  teamTwo: GameflowParticipantRecord[];
+  playerChampionSelections: GameflowParticipantRecord[];
+}) {
   const knownChampionIds = new Set([
     ...teamOne.map((participant) => participant.championId),
     ...teamTwo.map((participant) => participant.championId)
@@ -250,7 +297,7 @@ function inferMissingGameflowParticipants({ teamOne, teamTwo, playerChampionSele
     return { teamOne, teamTwo };
   }
 
-  const inferForTeam = (team, otherTeam) => {
+  const inferForTeam = (team: GameflowParticipantRecord[], otherTeam: GameflowParticipantRecord[]) => {
     const missingPositions = getMissingTeamPositions(team);
     if (team.length !== 4 || otherTeam.length !== 5 || missingPositions.length !== 1) return team;
 
@@ -270,23 +317,35 @@ function inferMissingGameflowParticipants({ teamOne, teamTwo, playerChampionSele
   };
 }
 
-function getMissingTeamPositions(team) {
+function getMissingTeamPositions(team: GameflowParticipantRecord[]): string[] {
   const positions = new Set(team.map((participant) => normalizeGameflowSelectedPosition(participant.selectedPosition)));
   return ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'].filter((position) => !positions.has(position));
 }
 
-function normalizePositiveInteger(value) {
+function normalizePositiveInteger(value: any): number {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : 0;
 }
 
-function findLocalParticipant({ teamOne, teamTwo, playerChampionSelections, localPuuid, champSelectSession = null }) {
+function findLocalParticipant({
+  teamOne,
+  teamTwo,
+  playerChampionSelections,
+  localPuuid,
+  champSelectSession = null
+}: {
+  teamOne: GameflowParticipantRecord[];
+  teamTwo: GameflowParticipantRecord[];
+  playerChampionSelections: GameflowParticipantRecord[];
+  localPuuid?: string;
+  champSelectSession?: LcuAnyRecord | null;
+}): (GameflowParticipantRecord & { team: TeamName }) | null {
   const puuid = String(localPuuid || '').trim();
   if (!puuid) return null;
 
   const directMatch = [
-    ...teamOne.map((participant) => ({ participant, team: 'teamOne' })),
-    ...teamTwo.map((participant) => ({ participant, team: 'teamTwo' }))
+    ...teamOne.map((participant) => ({ participant, team: 'teamOne' as const })),
+    ...teamTwo.map((participant) => ({ participant, team: 'teamTwo' as const }))
   ].find(({ participant }) => getParticipantPuuid(participant) === puuid);
   if (directMatch) return { ...directMatch.participant, team: directMatch.team };
 
@@ -295,8 +354,8 @@ function findLocalParticipant({ teamOne, teamTwo, playerChampionSelections, loca
   const championId = normalizePositiveInteger(localSelection?.championId);
   if (championId) {
     const championMatch = [
-      ...teamOne.map((participant) => ({ participant, team: 'teamOne' })),
-      ...teamTwo.map((participant) => ({ participant, team: 'teamTwo' }))
+      ...teamOne.map((participant) => ({ participant, team: 'teamOne' as const })),
+      ...teamTwo.map((participant) => ({ participant, team: 'teamTwo' as const }))
     ].find(({ participant }) => participant.championId === championId);
     if (championMatch) return { ...championMatch.participant, team: championMatch.team };
   }
@@ -311,7 +370,7 @@ function findLocalParticipant({ teamOne, teamTwo, playerChampionSelections, loca
   };
 }
 
-function findLocalChampSelectMember(champSelectSession, localPuuid) {
+function findLocalChampSelectMember(champSelectSession: LcuAnyRecord | null | undefined, localPuuid: string): LcuAnyRecord | null {
   const allyTeam = Array.isArray(champSelectSession?.myTeam) ? champSelectSession.myTeam : [];
   const puuid = String(localPuuid || '').trim();
   const puuidMatch = allyTeam.find((member) => getParticipantPuuid(member) === puuid);
@@ -322,11 +381,11 @@ function findLocalChampSelectMember(champSelectSession, localPuuid) {
   return allyTeam.find((member) => Number(member?.cellId) === localCellId) || null;
 }
 
-function getParticipantPuuid(participant) {
+function getParticipantPuuid(participant: LcuAnyRecord | null | undefined): string {
   return String(participant?.puuid || participant?.playerPuuid || '').trim();
 }
 
-function findTeamParticipantByPosition(team, position) {
+function findTeamParticipantByPosition(team: GameflowParticipantRecord[], position: any): GameflowParticipantRecord | null {
   const normalizedPosition = normalizeGameflowSelectedPosition(position);
   return team.find((participant) => (
     participant.championId > 0 &&
@@ -334,7 +393,7 @@ function findTeamParticipantByPosition(team, position) {
   )) || null;
 }
 
-function getLaneMatchupLane(position) {
+function getLaneMatchupLane(position: any): string {
   const normalizedPosition = normalizeGameflowSelectedPosition(position);
   if (normalizedPosition === 'TOP') return 'TOP';
   if (normalizedPosition === 'JUNGLE') return 'JG';
@@ -344,13 +403,13 @@ function getLaneMatchupLane(position) {
   return '';
 }
 
-function getChampionName(championsById, championId) {
+function getChampionName(championsById: Record<number, LcuAnyRecord>, championId: any): string {
   const id = normalizePositiveInteger(championId);
   const name = String(championsById?.[id]?.name || '').trim();
   return name || `Champion ${id}`;
 }
 
-function createLaneMatchupRequestKey({ gameId, payload }) {
+function createLaneMatchupRequestKey({ gameId, payload }: { gameId: any; payload: LaneMatchupPayload }): string {
   return JSON.stringify({
     gameId: gameId ?? null,
     myChampionName: payload.myChampionName,
@@ -360,7 +419,15 @@ function createLaneMatchupRequestKey({ gameId, payload }) {
   });
 }
 
-function describeLaneMatchupAnalysisReadiness({ gameflowSession, localPuuid, champSelectSession = null } = {}) {
+function describeLaneMatchupAnalysisReadiness({
+  gameflowSession,
+  localPuuid,
+  champSelectSession = null
+}: {
+  gameflowSession?: LcuAnyRecord | null;
+  localPuuid?: string;
+  champSelectSession?: LcuAnyRecord | null;
+} = {}) {
   const phase = String(gameflowSession?.phase || '').trim();
   if (!gameflowSession) return { ready: false, reason: 'missing_session', phase };
   if (gameflowSession.error) return { ready: false, reason: 'session_error', phase, error: gameflowSession.error };
@@ -447,7 +514,7 @@ function describeLaneMatchupAnalysisReadiness({ gameflowSession, localPuuid, cha
   };
 }
 
-function summarizeTeamPositions(team) {
+function summarizeTeamPositions(team: GameflowParticipantRecord[]) {
   return team.map((participant) => ({
     championId: participant.championId,
     selectedPosition: normalizeGameflowSelectedPosition(participant.selectedPosition),

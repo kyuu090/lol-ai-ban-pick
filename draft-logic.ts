@@ -1,4 +1,11 @@
-(function attachDraftLogic(root, factory) {
+type DraftAnyRecord = Record<string, any>;
+type ChampionPool = Record<string, number[]>;
+type ChampionLabel = (championId: number) => string;
+type ChampSelectMemberRecord = DraftAnyRecord;
+type ChampSelectSessionRecord = DraftAnyRecord;
+type SortableStats = DraftAnyRecord;
+
+(function attachDraftLogic(root: any, factory: () => DraftAnyRecord) {
   const logic = factory();
 
   if (typeof module === 'object' && module.exports) {
@@ -33,53 +40,53 @@
   const SUPPORTED_DRAFT_QUEUE_IDS = new Set([400, 420, 440]);
   const SUMMONERS_RIFT_MAP_ID = 11;
 
-  function hasUsableData(value) {
+  function hasUsableData(value: any): value is DraftAnyRecord {
     return value && typeof value === 'object' && !value.error;
   }
 
-  function getPhase(state) {
+  function getPhase(state: DraftAnyRecord | null | undefined): string | null {
     return typeof state?.gameflowPhase === 'string' ? state.gameflowPhase : null;
   }
 
-  function getSummonerName(summoner) {
+  function getSummonerName(summoner: DraftAnyRecord | null | undefined): string {
     if (!hasUsableData(summoner)) return '';
     return summoner.gameName || summoner.displayName || summoner.internalName || summoner.name || 'Summoner';
   }
 
-  function positionLabel(position) {
-    return position ? POSITION_LABELS[position.toLowerCase()] || position.toUpperCase() : '未確定';
+  function positionLabel(position: any): string {
+    return position ? (POSITION_LABELS as Record<string, string>)[String(position).toLowerCase()] || String(position).toUpperCase() : '未確定';
   }
 
-  function getPendingLabel(member, championLabel) {
+  function getPendingLabel(member: DraftAnyRecord | null | undefined, championLabel: ChampionLabel): string {
     if (member?.championPickIntent) {
       return `${championLabel(member.championPickIntent)} を予定`;
     }
     return 'PICKING NEXT';
   }
 
-  function normalizeChampionIds(value) {
+  function normalizeChampionIds(value: any): number[] {
     return Array.isArray(value)
       ? value.map(normalizeChampionId).filter((championId) => championId !== null)
       : [];
   }
 
-  function normalizeChampionId(value) {
+  function normalizeChampionId(value: any): number | null {
     const championId = Number(value);
     return Number.isInteger(championId) && championId > 0 ? championId : null;
   }
 
-  function uniqueChampionIds(championIds) {
+  function uniqueChampionIds(championIds: number[]): number[] {
     return [...new Set(championIds)];
   }
 
-  function createDefaultChampionPool() {
+  function createDefaultChampionPool(): ChampionPool {
     return CHAMPION_POOL_LANES.reduce((pool, lane) => {
       pool[lane.id] = [];
       return pool;
-    }, {});
+    }, {} as ChampionPool);
   }
 
-  function normalizeChampionPool(value) {
+  function normalizeChampionPool(value: any): ChampionPool {
     const source = value && typeof value === 'object' ? value : {};
     const pool = createDefaultChampionPool();
 
@@ -90,7 +97,11 @@
     return pool;
   }
 
-  function collectBans(champSelect, allyTeam = [], enemyTeam = []) {
+  function collectBans(
+    champSelect: ChampSelectSessionRecord | null | undefined,
+    allyTeam: ChampSelectMemberRecord[] = [],
+    enemyTeam: ChampSelectMemberRecord[] = []
+  ) {
     const allyCellIds = new Set(allyTeam.map((member) => member.cellId));
     const enemyCellIds = new Set(enemyTeam.map((member) => member.cellId));
     const allyBans = normalizeChampionIds(champSelect?.bans?.myTeamBans);
@@ -116,7 +127,7 @@
     };
   }
 
-  function getActiveAction(champSelect, preferredActorCellId = null) {
+  function getActiveAction(champSelect: ChampSelectSessionRecord | null | undefined, preferredActorCellId: any = null): DraftAnyRecord | null {
     const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
     const preferredCellId = Number(preferredActorCellId);
     if (Number.isInteger(preferredCellId)) {
@@ -130,15 +141,15 @@
     return actions.find((action) => action?.isInProgress) || actions.find((action) => !action?.completed) || null;
   }
 
-  function normalizePosition(position) {
+  function normalizePosition(position: any): string {
     return String(position || '').toUpperCase();
   }
 
-  function getPlannedPickChampionId(localMember) {
+  function getPlannedPickChampionId(localMember: ChampSelectMemberRecord | null | undefined): number {
     return getMemberChampionId(localMember);
   }
 
-  function getMemberChampionId(member) {
+  function getMemberChampionId(member: ChampSelectMemberRecord | null | undefined): number {
     const selectedChampionId = Number(member?.championId) || 0;
     if (selectedChampionId > 0) return selectedChampionId;
 
@@ -146,13 +157,17 @@
     return intendedChampionId > 0 ? intendedChampionId : 0;
   }
 
-  function getLocalChampSelectMember(champSelect) {
+  function getLocalChampSelectMember(champSelect: ChampSelectSessionRecord | null | undefined): ChampSelectMemberRecord | null {
     const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
     const localCellId = champSelect?.localPlayerCellId;
     return allyTeam.find((member) => member.cellId === localCellId) || null;
   }
 
-  function collectUnavailableChampionReasons(champSelect, allyTeam = champSelect?.myTeam, enemyTeam = champSelect?.theirTeam) {
+  function collectUnavailableChampionReasons(
+    champSelect: ChampSelectSessionRecord | null | undefined,
+    allyTeam: ChampSelectMemberRecord[] | undefined = champSelect?.myTeam,
+    enemyTeam: ChampSelectMemberRecord[] | undefined = champSelect?.theirTeam
+  ): Map<number, string> {
     const allies = Array.isArray(allyTeam) ? allyTeam : [];
     const enemies = Array.isArray(enemyTeam) ? enemyTeam : [];
     const { allyBans, enemyBans } = collectBans(champSelect, allies, enemies);
@@ -172,13 +187,13 @@
     return reasons;
   }
 
-  function compareChampionName(a, b, championIdKey = 'championId') {
+  function compareChampionName(a: SortableStats, b: SortableStats, championIdKey: string = 'championId'): number {
     const aName = a?.championName || a?.opponentChampionName || `Champion ${Number(a?.[championIdKey]) || 0}`;
     const bName = b?.championName || b?.opponentChampionName || `Champion ${Number(b?.[championIdKey]) || 0}`;
     return String(aName).localeCompare(String(bName), 'en');
   }
 
-  function sortWorstWinRateStats(stats, championIdKey = 'championId') {
+  function sortWorstWinRateStats(stats: any, championIdKey: string = 'championId'): SortableStats[] {
     return [...(Array.isArray(stats) ? stats : [])].sort((a, b) => (
       (Number(a?.winRate || 0) - Number(b?.winRate || 0)) ||
       (Number(b?.games || 0) - Number(a?.games || 0)) ||
@@ -186,7 +201,7 @@
     ));
   }
 
-  function sortBestWinRateStats(stats, championIdKey = 'championId') {
+  function sortBestWinRateStats(stats: any, championIdKey: string = 'championId'): SortableStats[] {
     return [...(Array.isArray(stats) ? stats : [])].sort((a, b) => (
       (Number(b?.winRate || 0) - Number(a?.winRate || 0)) ||
       (Number(b?.games || 0) - Number(a?.games || 0)) ||
@@ -194,7 +209,17 @@
     ));
   }
 
-  function getPlannedPickThreatStats({ stats, champSelect, localMember, limit = 3 } = {}) {
+  function getPlannedPickThreatStats({
+    stats,
+    champSelect,
+    localMember,
+    limit = 3
+  }: {
+    stats?: SortableStats[];
+    champSelect?: ChampSelectSessionRecord | null;
+    localMember?: ChampSelectMemberRecord | null;
+    limit?: number;
+  } = {}) {
     const plannedChampionId = getPlannedPickChampionId(localMember);
     const position = normalizePosition(localMember?.assignedPosition);
     if (!plannedChampionId || !position) {
@@ -211,7 +236,17 @@
     return { plannedChampionId, position, statsList };
   }
 
-  function getBestIntoOpponentStats({ stats, opponentChampionId, position, limit = 5 } = {}) {
+  function getBestIntoOpponentStats({
+    stats,
+    opponentChampionId,
+    position,
+    limit = 5
+  }: {
+    stats?: SortableStats[];
+    opponentChampionId?: any;
+    position?: any;
+    limit?: number;
+  } = {}): SortableStats[] {
     const opponentId = Number(opponentChampionId) || 0;
     const normalizedPosition = normalizePosition(position);
     if (!opponentId || !normalizedPosition) return [];
@@ -222,7 +257,7 @@
     ))).slice(0, limit);
   }
 
-  function sortPickPoolCandidates(candidates, reliableSampleGames = 5) {
+  function sortPickPoolCandidates(candidates: any, reliableSampleGames: number = 5): DraftAnyRecord[] {
     return [...(Array.isArray(candidates) ? candidates : [])].sort((a, b) => {
       if (a.available !== b.available) return a.available ? -1 : 1;
 
@@ -242,15 +277,16 @@
     });
   }
 
-  function getDraftPanelState(state) {
+  function getDraftPanelState(state: DraftAnyRecord | null | undefined) {
+    const currentState = state || {};
     const phase = getPhase(state);
-    const champSelect = hasUsableData(state?.champSelect) ? state.champSelect : null;
-    const loggedIn = state?.lcuStatus === 'connected' && hasUsableData(state?.summoner);
-    const inGame = ['InProgress', 'GameStart'].includes(phase);
+    const champSelect = hasUsableData(currentState.champSelect) ? currentState.champSelect : null;
+    const loggedIn = currentState.lcuStatus === 'connected' && hasUsableData(currentState.summoner);
+    const inGame = ['InProgress', 'GameStart'].includes(String(phase));
     const supportedDraftGameMode = isSupportedDraftGameMode(state);
     const inChampSelect = phase === 'ChampSelect' && Boolean(champSelect) && !inGame && supportedDraftGameMode;
     const unsupportedGameMode = loggedIn &&
-      ['ChampSelect', 'GameStart', 'InProgress'].includes(phase) &&
+      ['ChampSelect', 'GameStart', 'InProgress'].includes(String(phase)) &&
       hasGameModeEvidence(state) &&
       !supportedDraftGameMode;
 
@@ -265,16 +301,18 @@
     };
   }
 
-  function isSupportedDraftGameMode(state) {
+  function isSupportedDraftGameMode(state: DraftAnyRecord | null | undefined): boolean {
     return collectGameModeCandidates(state).some(isSupportedDraftCandidate);
   }
 
-  function hasGameModeEvidence(state) {
+  function hasGameModeEvidence(state: DraftAnyRecord | null | undefined): boolean {
     return collectGameModeCandidates(state).length > 0;
   }
 
-  function collectGameModeCandidates(state) {
-    const candidates = [];
+  function collectGameModeCandidates(
+    state: DraftAnyRecord | null | undefined
+  ): Array<{ gameData: DraftAnyRecord; queue: DraftAnyRecord }> {
+    const candidates: Array<{ gameData: DraftAnyRecord; queue: DraftAnyRecord }> = [];
     const gameflowSession = state?.gameflowSession;
     if (hasUsableData(gameflowSession)) {
       const gameData = gameflowSession.gameData || {};
@@ -310,7 +348,7 @@
     return candidates.filter(({ gameData, queue }) => hasQueueEvidence(gameData, queue));
   }
 
-  function isSupportedDraftCandidate({ gameData, queue }) {
+  function isSupportedDraftCandidate({ gameData, queue }: { gameData: DraftAnyRecord; queue: DraftAnyRecord }): boolean {
     const queueId = normalizeQueueId(queue.id ?? queue.queueId ?? gameData.queueId);
     if (SUPPORTED_DRAFT_QUEUE_IDS.has(queueId)) return true;
 
@@ -325,7 +363,7 @@
     return isCustom && hasDraftPickMode(queue);
   }
 
-  function hasQueueEvidence(gameData, queue) {
+  function hasQueueEvidence(gameData: DraftAnyRecord, queue: DraftAnyRecord): boolean {
     return Boolean(
       normalizeQueueId(queue?.id ?? queue?.queueId ?? gameData?.queueId) ||
       normalizeQueueId(queue?.mapId ?? gameData?.mapId ?? gameData?.map?.id) ||
@@ -337,18 +375,18 @@
     );
   }
 
-  function isSummonersRiftClassicGame(gameData, queue) {
+  function isSummonersRiftClassicGame(gameData: DraftAnyRecord, queue: DraftAnyRecord): boolean {
     const mapId = normalizeQueueId(queue?.mapId ?? gameData?.mapId ?? gameData?.map?.id);
     const gameMode = String(queue?.gameMode || gameData?.gameMode || gameData?.map?.gameMode || '').toUpperCase();
     return mapId === SUMMONERS_RIFT_MAP_ID && gameMode === 'CLASSIC';
   }
 
-  function normalizeQueueId(value) {
+  function normalizeQueueId(value: any): number {
     const queueId = Number(value);
     return Number.isInteger(queueId) ? queueId : 0;
   }
 
-  function hasDraftPickMode(queue) {
+  function hasDraftPickMode(queue: DraftAnyRecord): boolean {
     const gameTypeConfig = queue?.gameTypeConfig || {};
     const text = [
       queue?.pickMode,
@@ -366,7 +404,15 @@
       text.includes('トーナメント');
   }
 
-  function createInGameContext({ champSelect, summonerName = '', matchupStats = [] } = {}) {
+  function createInGameContext({
+    champSelect,
+    summonerName = '',
+    matchupStats = []
+  }: {
+    champSelect?: ChampSelectSessionRecord | null;
+    summonerName?: string;
+    matchupStats?: SortableStats[];
+  } = {}) {
     const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
     const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
     const localMember = getLocalChampSelectMember(champSelect);
@@ -396,7 +442,17 @@
     };
   }
 
-  function createPickPhaseDraftContext({ champSelect, localMember, championPool = {}, championLabel = defaultChampionLabel } = {}) {
+  function createPickPhaseDraftContext({
+    champSelect,
+    localMember,
+    championPool = {},
+    championLabel = defaultChampionLabel
+  }: {
+    champSelect?: ChampSelectSessionRecord | null;
+    localMember?: ChampSelectMemberRecord | null;
+    championPool?: ChampionPool;
+    championLabel?: ChampionLabel;
+  } = {}) {
     const localRole = normalizePosition(localMember?.assignedPosition);
     if (!localRole) return null;
 
@@ -427,7 +483,7 @@
     };
   }
 
-  function isChampSelectFinalization(champSelect, gameflowPhase) {
+  function isChampSelectFinalization(champSelect: ChampSelectSessionRecord | null | undefined, gameflowPhase: any): boolean {
     if (gameflowPhase !== 'ChampSelect') return false;
 
     const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
@@ -444,7 +500,15 @@
     return pickActions.length > 0 && pickActions.every((action) => action?.completed && !action?.isInProgress);
   }
 
-  function createFinalCompositionDraftContext({ champSelect, localMember, championLabel = defaultChampionLabel } = {}) {
+  function createFinalCompositionDraftContext({
+    champSelect,
+    localMember,
+    championLabel = defaultChampionLabel
+  }: {
+    champSelect?: ChampSelectSessionRecord | null;
+    localMember?: ChampSelectMemberRecord | null;
+    championLabel?: ChampionLabel;
+  } = {}) {
     const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
     const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
     const localPlayer = localMember || getLocalChampSelectMember(champSelect);
@@ -474,7 +538,14 @@
     };
   }
 
-  function createDraftChampionEntry(member, { preferIntent = false, preferLocked = false, championLabel = defaultChampionLabel } = {}) {
+  function createDraftChampionEntry(
+    member: ChampSelectMemberRecord | null | undefined,
+    { preferIntent = false, preferLocked = false, championLabel = defaultChampionLabel }: {
+      preferIntent?: boolean;
+      preferLocked?: boolean;
+      championLabel?: ChampionLabel;
+    } = {}
+  ) {
     const championId = preferLocked
       ? Number(member?.championId)
       : preferIntent
@@ -488,8 +559,16 @@
     };
   }
 
-  function createOwnChampionPoolEntries({ role, championPool = {}, championLabel = defaultChampionLabel } = {}) {
-    const lane = CHAMPION_POOL_LANES.find((entry) => CHAMPION_POOL_LANE_TO_POSITION[entry.id] === role);
+  function createOwnChampionPoolEntries({
+    role,
+    championPool = {},
+    championLabel = defaultChampionLabel
+  }: {
+    role?: string;
+    championPool?: ChampionPool;
+    championLabel?: ChampionLabel;
+  } = {}) {
+    const lane = CHAMPION_POOL_LANES.find((entry) => (CHAMPION_POOL_LANE_TO_POSITION as Record<string, string>)[entry.id] === role);
     if (!lane) return [];
 
     return (championPool[lane.id] || [])
@@ -501,7 +580,7 @@
       }));
   }
 
-  function defaultChampionLabel(championId) {
+  function defaultChampionLabel(championId: number): string {
     return `Champion ${championId}`;
   }
 

@@ -1,6 +1,38 @@
 const http = require('node:http');
 const https = require('node:https');
 
+type RiotApiErrorDetails = {
+  statusCode?: number | null;
+  path?: string;
+  body?: string;
+};
+
+type HttpJsonResponse = {
+  statusCode: number;
+  headers: Record<string, any>;
+  body: string;
+};
+
+type RequestHttpJsonOptions = {
+  url: URL;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | null;
+  timeoutMs?: number;
+};
+
+type RequestRiotBffJsonOptions = {
+  baseUrl?: string;
+  path: string;
+  method?: string;
+  body?: any;
+  timeoutMs?: number;
+  maxRetries?: number;
+  requestFn?: (options: RequestHttpJsonOptions) => Promise<HttpJsonResponse>;
+  wait?: (ms: number) => Promise<void>;
+  onRetry?: ((retry: { attempt: number; delayMs: number; response: HttpJsonResponse }) => void | Promise<void>) | null;
+};
+
 const RIOT_PLATFORM_REGIONS = [
   'BR1',
   'EUN1',
@@ -45,7 +77,11 @@ const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 30000;
 
 class RiotApiError extends Error {
-  constructor(message, details = {}) {
+  statusCode: number | null;
+  path: string;
+  body: string;
+
+  constructor(message: string, details: RiotApiErrorDetails = {}) {
     super(message);
     this.name = 'RiotApiError';
     this.statusCode = details.statusCode ?? null;
@@ -54,12 +90,12 @@ class RiotApiError extends Error {
   }
 }
 
-function normalizeRiotPlatformRegion(value) {
+function normalizeRiotPlatformRegion(value: any): string {
   const region = String(value || '').trim().toUpperCase();
   return RIOT_PLATFORM_REGIONS.includes(region) ? region : DEFAULT_RIOT_PLATFORM_REGION;
 }
 
-function normalizeRiotBffBaseUrl(value) {
+function normalizeRiotBffBaseUrl(value: any): string {
   const baseUrl = String(value || '').trim() || DEFAULT_RIOT_BFF_BASE_URL;
 
   try {
@@ -77,11 +113,11 @@ function normalizeRiotBffBaseUrl(value) {
   }
 }
 
-function getRiotRegionalRoute(platformRegion) {
-  return PLATFORM_TO_REGIONAL_ROUTE[normalizeRiotPlatformRegion(platformRegion)] || 'ASIA';
+function getRiotRegionalRoute(platformRegion: any): string {
+  return (PLATFORM_TO_REGIONAL_ROUTE as Record<string, string>)[normalizeRiotPlatformRegion(platformRegion)] || 'ASIA';
 }
 
-function createRiotApiHosts(platformRegion) {
+function createRiotApiHosts(platformRegion: any) {
   const normalizedPlatformRegion = normalizeRiotPlatformRegion(platformRegion);
   const regionalRoute = getRiotRegionalRoute(normalizedPlatformRegion);
 
@@ -93,7 +129,7 @@ function createRiotApiHosts(platformRegion) {
   };
 }
 
-function parseRetryAfterMs(value) {
+function parseRetryAfterMs(value: any): number | null {
   if (value === undefined || value === null || value === '') return null;
 
   const retryAfterSeconds = Number(value);
@@ -107,7 +143,7 @@ function parseRetryAfterMs(value) {
   return Math.max(0, retryAfterDateMs - Date.now());
 }
 
-function getRetryDelayMs(response, attempt) {
+function getRetryDelayMs(response: Partial<HttpJsonResponse> | null | undefined, attempt: number): number {
   const headers = response?.headers || {};
   const retryAfter = headers['retry-after'] ?? headers['Retry-After'];
   const retryAfterMs = parseRetryAfterMs(retryAfter);
@@ -116,13 +152,13 @@ function getRetryDelayMs(response, attempt) {
   return DEFAULT_RETRY_DELAY_MS * Math.max(1, attempt + 1);
 }
 
-function delay(ms) {
+function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
 
-async function requestRiotBffJson(options) {
+async function requestRiotBffJson(options: RequestRiotBffJsonOptions): Promise<any> {
   const {
     baseUrl = DEFAULT_RIOT_BFF_BASE_URL,
     path,
@@ -176,7 +212,7 @@ async function requestRiotBffJson(options) {
   throw new Error(`Riot BFF ${path} retry limit exceeded`);
 }
 
-function requestHttpJson({ url, method = 'GET', headers, body = null, timeoutMs = 10000 }) {
+function requestHttpJson({ url, method = 'GET', headers, body = null, timeoutMs = 10000 }: RequestHttpJsonOptions): Promise<HttpJsonResponse> {
   return new Promise((resolve, reject) => {
     const client = url.protocol === 'https:' ? https : http;
     const request = client.request(
@@ -186,10 +222,10 @@ function requestHttpJson({ url, method = 'GET', headers, body = null, timeoutMs 
         headers,
         timeout: timeoutMs
       },
-      (response) => {
-        const chunks = [];
+      (response: any) => {
+        const chunks: Buffer[] = [];
 
-        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
         response.on('end', () => {
           resolve({
             statusCode: response.statusCode ?? 0,

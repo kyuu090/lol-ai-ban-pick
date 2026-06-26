@@ -6,11 +6,27 @@ const ALLOWED_SR_5V5_QUEUE_GROUPS = {
   490: { queueType: 'normal', queueGroup: 'normal_quickplay' }
 };
 
-function getQueueClassification(queueId) {
-  return ALLOWED_SR_5V5_QUEUE_GROUPS[Number(queueId)] || null;
+type QueueClassification = {
+  queueType: string;
+  queueGroup: string;
+};
+
+type MatchParticipant = Record<string, any>;
+type RiotMatch = Record<string, any>;
+type NormalizedParticipant = {
+  championId: number;
+  championName: string;
+  position: string;
+};
+type NormalizedMatchRecord = Record<string, any>;
+type ChampionStatsRecord = Record<string, any>;
+type OpponentStatsRecord = Record<string, any>;
+
+function getQueueClassification(queueId: any): QueueClassification | null {
+  return (ALLOWED_SR_5V5_QUEUE_GROUPS as Record<number, QueueClassification>)[Number(queueId)] || null;
 }
 
-function isSupportedSr5v5Match(match) {
+function isSupportedSr5v5Match(match: RiotMatch | null | undefined): match is RiotMatch {
   const info = match?.info;
   return Boolean(
     info &&
@@ -22,7 +38,7 @@ function isSupportedSr5v5Match(match) {
   );
 }
 
-function normalizeParticipant(participant) {
+function normalizeParticipant(participant: MatchParticipant): NormalizedParticipant {
   return {
     championId: Number(participant.championId) || 0,
     championName: participant.championName || '',
@@ -30,23 +46,24 @@ function normalizeParticipant(participant) {
   };
 }
 
-function calculateKda(kills, deaths, assists) {
+function calculateKda(kills: number, deaths: number, assists: number): number {
   return deaths === 0 ? kills + assists : (kills + assists) / deaths;
 }
 
-function normalizeRiotMatch(match, targetPuuid) {
+function normalizeRiotMatch(match: RiotMatch | null | undefined, targetPuuid: string): NormalizedMatchRecord | null {
   if (!isSupportedSr5v5Match(match)) return null;
 
   const info = match.info;
-  const self = info.participants.find((participant) => participant.puuid === targetPuuid);
+  const self = info.participants.find((participant: MatchParticipant) => participant.puuid === targetPuuid);
   if (!self) return null;
 
   const queue = getQueueClassification(info.queueId);
+  if (!queue) return null;
   const allies = info.participants
-    .filter((participant) => participant.teamId === self.teamId)
+    .filter((participant: MatchParticipant) => participant.teamId === self.teamId)
     .map(normalizeParticipant);
   const enemies = info.participants
-    .filter((participant) => participant.teamId !== self.teamId)
+    .filter((participant: MatchParticipant) => participant.teamId !== self.teamId)
     .map(normalizeParticipant);
   const kills = Number(self.kills) || 0;
   const deaths = Number(self.deaths) || 0;
@@ -80,14 +97,23 @@ function normalizeRiotMatch(match, targetPuuid) {
   };
 }
 
-function normalizeRiotMatches(matchesById, targetPuuid, matchIds = Object.keys(matchesById || {})) {
+function normalizeRiotMatches(
+  matchesById: Record<string, RiotMatch> | null | undefined,
+  targetPuuid: string,
+  matchIds: string[] = Object.keys(matchesById || {})
+): NormalizedMatchRecord[] {
   return matchIds
     .map((matchId) => normalizeRiotMatch(matchesById?.[matchId], targetPuuid))
-    .filter(Boolean)
+    .filter((record): record is NormalizedMatchRecord => Boolean(record))
     .sort((a, b) => (b.gameCreation || 0) - (a.gameCreation || 0));
 }
 
-function createEmptyStats(record, queueGroup = record.queueGroup, queueType = record.queueType, position = null) {
+function createEmptyStats(
+  record: NormalizedMatchRecord,
+  queueGroup: string = record.queueGroup,
+  queueType: string = record.queueType,
+  position: string | null = null
+): ChampionStatsRecord {
   return {
     championId: record.self.championId,
     championName: record.self.championName,
@@ -110,7 +136,7 @@ function createEmptyStats(record, queueGroup = record.queueGroup, queueType = re
   };
 }
 
-function addRecordToStats(stats, record) {
+function addRecordToStats(stats: ChampionStatsRecord, record: NormalizedMatchRecord): void {
   stats.games += 1;
   stats.wins += record.self.win ? 1 : 0;
   stats.losses = stats.games - stats.wins;
@@ -124,7 +150,7 @@ function addRecordToStats(stats, record) {
   stats.positions[position] = (stats.positions[position] || 0) + 1;
 }
 
-function finalizeStats(stats, records) {
+function finalizeStats(stats: ChampionStatsRecord, records: NormalizedMatchRecord[]): ChampionStatsRecord {
   const recentRecords = records.slice(0, 5);
   const recentWins = recentRecords.filter((record) => record.self.win).length;
 
@@ -141,7 +167,7 @@ function finalizeStats(stats, records) {
   };
 }
 
-function aggregateChampionStats(matchRecords) {
+function aggregateChampionStats(matchRecords: NormalizedMatchRecord[]): ChampionStatsRecord[] {
   const grouped = new Map();
 
   matchRecords.forEach((record) => {
@@ -172,7 +198,7 @@ function aggregateChampionStats(matchRecords) {
     .sort((a, b) => (b.games - a.games) || String(a.championName).localeCompare(String(b.championName), 'en'));
 }
 
-function createOpponentPerformanceStats() {
+function createOpponentPerformanceStats(): OpponentStatsRecord {
   return {
     games: 0,
     wins: 0,
@@ -185,7 +211,7 @@ function createOpponentPerformanceStats() {
   };
 }
 
-function createOpponentStats(championId, championName, position = null) {
+function createOpponentStats(championId: number, championName: string, position: string | null = null): OpponentStatsRecord {
   return {
     championId,
     championName,
@@ -194,7 +220,7 @@ function createOpponentStats(championId, championName, position = null) {
   };
 }
 
-function addRecordToOpponentStats(stats, record) {
+function addRecordToOpponentStats(stats: OpponentStatsRecord, record: NormalizedMatchRecord): void {
   stats.games += 1;
   stats.wins += record.self.win ? 1 : 0;
   stats.losses = stats.games - stats.wins;
@@ -204,7 +230,7 @@ function addRecordToOpponentStats(stats, record) {
   stats.avgKda += record.self.kda;
 }
 
-function finalizeOpponentStats(stats) {
+function finalizeOpponentStats(stats: OpponentStatsRecord): OpponentStatsRecord {
   return {
     ...stats,
     winRate: stats.games > 0 ? stats.wins / stats.games : 0,
@@ -215,7 +241,7 @@ function finalizeOpponentStats(stats) {
   };
 }
 
-function sortWorstOpponentStats(stats) {
+function sortWorstOpponentStats(stats: OpponentStatsRecord[]): OpponentStatsRecord[] {
   return stats.sort((a, b) => (
     (a.winRate - b.winRate) ||
     (b.games - a.games) ||
@@ -223,7 +249,7 @@ function sortWorstOpponentStats(stats) {
   ));
 }
 
-function sortBestOpponentStats(stats) {
+function sortBestOpponentStats(stats: OpponentStatsRecord[]): OpponentStatsRecord[] {
   return stats.sort((a, b) => (
     (b.winRate - a.winRate) ||
     (b.games - a.games) ||
@@ -231,7 +257,7 @@ function sortBestOpponentStats(stats) {
   ));
 }
 
-function aggregateEnemyChampionStats(matchRecords) {
+function aggregateEnemyChampionStats(matchRecords: NormalizedMatchRecord[]): OpponentStatsRecord[] {
   const grouped = new Map();
 
   matchRecords.forEach((record) => {
@@ -253,7 +279,11 @@ function aggregateEnemyChampionStats(matchRecords) {
   return sortWorstOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
 }
 
-function createSelfVsLaneOpponentStats(record, laneOpponent, position) {
+function createSelfVsLaneOpponentStats(
+  record: NormalizedMatchRecord,
+  laneOpponent: NormalizedParticipant,
+  position: string
+): OpponentStatsRecord {
   return {
     championId: record.self.championId,
     championName: record.self.championName,
@@ -264,7 +294,7 @@ function createSelfVsLaneOpponentStats(record, laneOpponent, position) {
   };
 }
 
-function aggregateSelfChampionVsLaneOpponentStats(matchRecords) {
+function aggregateSelfChampionVsLaneOpponentStats(matchRecords: NormalizedMatchRecord[]): OpponentStatsRecord[] {
   const grouped = new Map();
 
   matchRecords.forEach((record) => {
@@ -288,7 +318,7 @@ function aggregateSelfChampionVsLaneOpponentStats(matchRecords) {
   return sortBestOpponentStats(Array.from(grouped.values()).map(finalizeOpponentStats));
 }
 
-function aggregateLaneOpponentStats(matchRecords) {
+function aggregateLaneOpponentStats(matchRecords: NormalizedMatchRecord[]): OpponentStatsRecord[] {
   const grouped = new Map();
 
   matchRecords.forEach((record) => {

@@ -16,3 +16,17 @@
   - `npm run compile`: 成功。
   - `npm test`: 成功。88 tests / 88 pass。
 
+## 2026-06-26 追記
+
+- Phase 05 の残り対象ファイルを TypeScript 化した。
+  - `draft-logic.js` を `draft-logic.ts` に変更。
+  - `lcu-logic.js` を `lcu-logic.ts` に変更。
+  - `riot-api.js` を `riot-api.ts` に変更。
+  - `riot-match-history.js` を `riot-match-history.ts` に変更。
+- 既存の CommonJS `module.exports` と renderer 用 IIFE の runtime 互換は維持した。
+- `strict` typecheck で落ちる暗黙 any / nullable / index access を、既存挙動を変えない範囲の型注釈と型ガードで補正した。
+- 確認結果:
+  - `npm run typecheck`: 成功。
+  - `npm run compile`: 成功。
+  - `npm test`: 成功。88 tests / 88 pass。
+
