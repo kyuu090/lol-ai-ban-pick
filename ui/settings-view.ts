@@ -1,9 +1,9 @@
-(function attachUiSettingsView(root) {
-  function normalizeThemeMode(themeMode) {
-    return ['system', 'light', 'dark'].includes(themeMode) ? themeMode : 'system';
+(function attachUiSettingsView(root: UiRoot) {
+  function normalizeThemeMode(themeMode: unknown): 'system' | 'light' | 'dark' {
+    return themeMode === 'light' || themeMode === 'dark' || themeMode === 'system' ? themeMode : 'system';
   }
 
-  function applyThemeMode(themeMode, doc = root.document) {
+  function applyThemeMode(themeMode: unknown, doc: Document = root.document as Document): void {
     const normalizedThemeMode = normalizeThemeMode(themeMode);
     if (normalizedThemeMode === 'system') {
       doc.documentElement.removeAttribute('data-theme');
@@ -13,18 +13,18 @@
     doc.documentElement.dataset.theme = normalizedThemeMode;
   }
 
-  function describeThemeMode(themeMode) {
+  function describeThemeMode(themeMode: unknown): string {
     const normalizedThemeMode = normalizeThemeMode(themeMode);
     if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
     if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
     return 'OSの表示モードに合わせます。';
   }
 
-  function renderSettings(settings, deps = {}) {
+  function renderSettings(settings: any, deps: SettingsViewDeps = {}): void {
     if (!settings) return;
 
-    const doc = deps.document || root.document;
-    const elements = deps.elements || root.UiDomElements?.elements;
+    const doc = (deps.document || root.document) as Document;
+    const elements = (deps.elements || root.UiDomElements?.elements) as UiDomElements;
     const themeMode = normalizeThemeMode(settings.themeMode);
     applyThemeMode(themeMode, doc);
 
@@ -40,14 +40,14 @@
     elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
   }
 
-  function renderRiotPlatformRegions(settings, deps = {}) {
-    const doc = deps.document || root.document;
-    const elements = deps.elements || root.UiDomElements?.elements;
+  function renderRiotPlatformRegions(settings: any, deps: SettingsViewDeps = {}): void {
+    const doc = (deps.document || root.document) as Document;
+    const elements = (deps.elements || root.UiDomElements?.elements) as UiDomElements;
     const regions = Array.isArray(settings.riotPlatformRegions) ? settings.riotPlatformRegions : [];
     const selectedRegion = settings.riotPlatformRegion || 'JP1';
 
     if (elements.riotPlatformRegionSelect.childElementCount === 0 && regions.length > 0) {
-      elements.riotPlatformRegionSelect.replaceChildren(...regions.map((region) => {
+      elements.riotPlatformRegionSelect.replaceChildren(...regions.map((region: string) => {
         const option = doc.createElement('option');
         option.value = region;
         option.textContent = region;

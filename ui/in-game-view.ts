@@ -1,9 +1,9 @@
-(function attachUiInGameView(root) {
-  function createInGameView(deps) {
+(function attachUiInGameView(root: UiRoot) {
+  function createInGameView(deps: InGameViewDeps) {
     const elements = deps.elements;
-    const doc = deps.document || root.document;
+    const doc = (deps.document || root.document) as Document;
 
-    function renderInGame(state) {
+    function renderInGame(state: any): void {
       const context = deps.createInGameContext({
         champSelect: deps.getLastChampSelectSnapshot(),
         summonerName: deps.getSummonerName(state.summoner),
@@ -15,7 +15,7 @@
       renderInGameFinalCompositionAnalysis();
     }
 
-    function renderInGameSelfCard({ championId, position, summonerName }) {
+    function renderInGameSelfCard({ championId, position, summonerName }: { championId: number; position: string; summonerName: string }): void {
       elements.inGameSelfPortrait.replaceChildren();
 
       if (championId > 0) {
@@ -37,7 +37,7 @@
       elements.inGameSelfStats.append(createInGameStatsSummary(stats, position));
     }
 
-    function createInGameStatsSummary(stats, position) {
+    function createInGameStatsSummary(stats: any, position: string): HTMLDivElement {
       const container = doc.createElement('div');
       container.className = 'in-game-self-stats';
 
@@ -61,7 +61,7 @@
       return container;
     }
 
-    function renderInGameFinalCompositionAnalysis() {
+    function renderInGameFinalCompositionAnalysis(): void {
       const panel = elements.inGameFinalCompositionAnalysis;
       if (!panel) return;
 
@@ -108,7 +108,7 @@
 
       const list = doc.createElement('div');
       list.className = 'in-game-ai-analysis-notes';
-      notes.forEach((note) => {
+      notes.forEach((note: any) => {
         const item = doc.createElement('article');
         item.className = 'draft-ai-analysis-note';
 
@@ -124,7 +124,7 @@
       panel.append(list);
     }
 
-    function renderInGameLaneMatchupAnalysis(analysis) {
+    function renderInGameLaneMatchupAnalysis(analysis: any): void {
       const panel = elements.inGameLaneMatchupAnalysis;
       if (!panel) return;
 
@@ -187,7 +187,7 @@
       }
     }
 
-    function createLaneMatchupGoalCard({ goal, championIds, championName, difficulty, laneStyle }) {
+    function createLaneMatchupGoalCard({ goal, championIds, championName, difficulty, laneStyle }: any): HTMLElement | null {
       if (!hasLaneMatchupRichText(goal)) return null;
 
       const card = doc.createElement('article');
@@ -222,7 +222,7 @@
       return card;
     }
 
-    function createLaneMatchupDetailCard(detail) {
+    function createLaneMatchupDetailCard(detail: any): HTMLElement | null {
       const items = (Array.isArray(detail) ? detail : [])
         .filter(hasLaneMatchupRichText)
         .slice(0, 3);
@@ -246,13 +246,13 @@
       return card;
     }
 
-    function normalizeLaneMatchupDetail(detail) {
+    function normalizeLaneMatchupDetail(detail: any): any[] {
       return (Array.isArray(detail) ? detail : [])
         .map(normalizeLaneMatchupDetailItem)
         .filter(hasLaneMatchupRichText);
     }
 
-    function normalizeLaneMatchupDetailItem(item) {
+    function normalizeLaneMatchupDetailItem(item: any): any {
       if (Array.isArray(item)) {
         return item.filter(isLaneMatchupRichTextToken);
       }
@@ -266,14 +266,14 @@
       return isLaneMatchupStructuralFragment(text) ? '' : text;
     }
 
-    function isLaneMatchupRichTextToken(token) {
+    function isLaneMatchupRichTextToken(token: any): boolean {
       if (!token || typeof token !== 'object') return false;
       if (token.type === 'text') return !isLaneMatchupStructuralFragment(token.text);
       if (token.type === 'champion') return String(token.championName || '').trim().length > 0;
       return false;
     }
 
-    function isLaneMatchupStructuralFragment(value) {
+    function isLaneMatchupStructuralFragment(value: unknown): boolean {
       const text = String(value || '').trim();
       if (!text) return true;
       if (/^[{}\[\],]+$/.test(text)) return true;
@@ -281,7 +281,7 @@
       return false;
     }
 
-    function createLaneMatchupBadge(label, value) {
+    function createLaneMatchupBadge(label: string, value: unknown): HTMLSpanElement | null {
       const text = String(value || '').trim();
       if (!text) return null;
 
@@ -298,7 +298,7 @@
       return badge;
     }
 
-    function hasLaneMatchupRichText(value) {
+    function hasLaneMatchupRichText(value: any): boolean {
       if (Array.isArray(value)) {
         return value.some(isLaneMatchupRichTextToken);
       }
@@ -306,7 +306,7 @@
       return !isLaneMatchupStructuralFragment(value);
     }
 
-    function createLaneMatchupRichText(value) {
+    function createLaneMatchupRichText(value: any): DocumentFragment {
       const fragment = doc.createDocumentFragment();
 
       if (!Array.isArray(value)) {
@@ -331,7 +331,7 @@
       return fragment;
     }
 
-    function createLaneMatchupInlineChampion(token) {
+    function createLaneMatchupInlineChampion(token: any): HTMLSpanElement | null {
       const championName = String(token?.championName || '').trim();
       if (!championName) return null;
 
@@ -355,7 +355,7 @@
       return container;
     }
 
-    function createLaneMatchupOpponentVisual({ championIds, championName }) {
+    function createLaneMatchupOpponentVisual({ championIds, championName }: any): HTMLSpanElement {
       const container = doc.createElement('span');
       container.className = 'lane-matchup-title-opponent';
       container.title = championName ? `vs ${championName}` : 'vs 相手';
@@ -388,14 +388,14 @@
       return container;
     }
 
-    function createInGameAiHeaderTitle(text) {
+    function createInGameAiHeaderTitle(text: string): HTMLParagraphElement {
       const title = doc.createElement('p');
       title.className = 'eyebrow';
       title.textContent = text;
       return title;
     }
 
-    function createDraftAiAnalysisStatus(text) {
+    function createDraftAiAnalysisStatus(text: string): HTMLParagraphElement {
       const message = doc.createElement('p');
       message.className = 'draft-ai-analysis-status';
       message.textContent = text;

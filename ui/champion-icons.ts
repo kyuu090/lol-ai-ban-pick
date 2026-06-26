@@ -1,19 +1,19 @@
-(function attachUiChampionIcons(root) {
+(function attachUiChampionIcons(root: UiRoot) {
   const DEFAULT_ICON_REQUEST_CONCURRENCY = 4;
   const DEFAULT_CHAMPION_ICON_RETRY_DELAY_MS = 12000;
 
-  function createChampionIconLoader(options = {}) {
+  function createChampionIconLoader(options: ChampionIconLoaderOptions = {}): ChampionIconLoader {
     const runtimeRoot = options.root || root;
     const cache = options.cache || new Map();
-    const queue = [];
+    const queue: Array<{ id: number; resolve: (src: string | null) => void }> = [];
     const requestConcurrency = options.requestConcurrency || DEFAULT_ICON_REQUEST_CONCURRENCY;
     const retryDelayMs = options.retryDelayMs || DEFAULT_CHAMPION_ICON_RETRY_DELAY_MS;
-    const getChampionIcon = options.getChampionIcon || ((id) => runtimeRoot.lcuApi?.getChampionIcon?.(id));
+    const getChampionIcon = options.getChampionIcon || ((id: number) => runtimeRoot.lcuApi?.getChampionIcon?.(id));
     const setTimer = options.setTimeout || runtimeRoot.setTimeout?.bind(runtimeRoot) || setTimeout;
     let activeRequests = 0;
-    let observer = null;
+    let observer: IntersectionObserver | null = null;
 
-    function loadChampionIcon(img, championId) {
+    function loadChampionIcon(img: HTMLImageElement, championId: number | string): void {
       const id = Number(championId);
       if (!id || !runtimeRoot.lcuApi?.getChampionIcon && !options.getChampionIcon) return;
 
@@ -40,7 +40,7 @@
       attachChampionIcon(img, id, enqueueChampionIconRequest(id));
     }
 
-    function loadChampionIconEager(img, championId) {
+    function loadChampionIconEager(img: HTMLImageElement, championId: number | string): void {
       const id = Number(championId);
       if (!id || !runtimeRoot.lcuApi?.getChampionIcon && !options.getChampionIcon) return;
 
@@ -57,19 +57,20 @@
       attachChampionIcon(img, id, cached || enqueueChampionIconRequest(id));
     }
 
-    function handleChampionIconIntersections(entries) {
+    function handleChampionIconIntersections(entries: IntersectionObserverEntry[]): void {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
 
-        observer.unobserve(entry.target);
-        const id = Number(entry.target.dataset.championId);
+        observer?.unobserve(entry.target);
+        const target = entry.target as HTMLImageElement;
+        const id = Number(target.dataset.championId);
         if (!id) return;
 
-        attachChampionIcon(entry.target, id, enqueueChampionIconRequest(id));
+        attachChampionIcon(target, id, enqueueChampionIconRequest(id));
       });
     }
 
-    function attachChampionIcon(img, id, iconPromise) {
+    function attachChampionIcon(img: HTMLImageElement, id: number, iconPromise: Promise<string | null>): void {
       iconPromise.then((src) => {
         if (src && img.dataset.championId === String(id)) {
           setChampionIconSrc(img, id, src);
@@ -77,7 +78,7 @@
       });
     }
 
-    function setChampionIconSrc(img, id, src) {
+    function setChampionIconSrc(img: HTMLImageElement, id: number, src: string): void {
       img.onerror = () => {
         if (img.dataset.championId !== String(id)) return;
 
@@ -87,7 +88,7 @@
       img.src = src;
     }
 
-    function markChampionIconMissing(id) {
+    function markChampionIconMissing(id: number): void {
       cache.set(id, null);
       setTimer(() => {
         if (cache.get(id) === null) {
@@ -96,13 +97,13 @@
       }, retryDelayMs);
     }
 
-    function enqueueChampionIconRequest(id) {
+    function enqueueChampionIconRequest(id: number): Promise<string | null> {
       const cached = cache.get(id);
       if (cached) return cached;
       if (cached === null) return Promise.resolve(null);
 
-      let resolveRequest;
-      const iconPromise = new Promise((resolve) => {
+      let resolveRequest: (src: string | null) => void = () => {};
+      const iconPromise = new Promise<string | null>((resolve) => {
         resolveRequest = resolve;
       });
 
@@ -113,9 +114,11 @@
       return iconPromise;
     }
 
-    function processChampionIconQueue() {
+    function processChampionIconQueue(): void {
       while (activeRequests < requestConcurrency && queue.length > 0) {
-        const { id, resolve } = queue.shift();
+        const request = queue.shift();
+        if (!request) return;
+        const { id, resolve } = request;
         activeRequests += 1;
 
         Promise.resolve(getChampionIcon(id))
@@ -148,7 +151,7 @@
     };
   }
 
-  const api = { createChampionIconLoader };
+  const api = { createChampionIconLoader } as ChampionIconLoader & { createChampionIconLoader(options?: ChampionIconLoaderOptions): ChampionIconLoader };
   Object.assign(api, createChampionIconLoader());
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -1,14 +1,14 @@
-(function attachUiMatchDataView(root) {
-  function createMatchDataView(deps) {
+(function attachUiMatchDataView(root: UiRoot) {
+  function createMatchDataView(deps: MatchDataViewDeps) {
     const elements = deps.elements;
     const formatMatchDataDate = deps.formatMatchDataDate;
     const setTimer = deps.setTimeout || root.setTimeout?.bind(root) || setTimeout;
     const clearTimer = deps.clearTimeout || root.clearTimeout?.bind(root) || clearTimeout;
-    let matchHistoryButtonTimer = null;
-    let dismissedMatchHistoryButtonKey = null;
+    let matchHistoryButtonTimer: UiTimerHandle | null = null;
+    let dismissedMatchHistoryButtonKey: string | null = null;
     let matchDataMenuOpen = false;
 
-    function renderMatchDataSummary(summary) {
+    function renderMatchDataSummary(summary: any): void {
       const matchCount = Number(summary?.normalizedMatches || 0);
 
       elements.matchDataRange.classList.remove('is-error');
@@ -29,7 +29,7 @@
       elements.matchDataSeasonHint.hidden = matchCount > 90;
     }
 
-    function renderMatchHistoryStatus(status) {
+    function renderMatchHistoryStatus(status: any): void {
       const statusKey = `${status?.phase || 'idle'}:${status?.updatedAt || ''}`;
 
       if (matchHistoryButtonTimer) {
@@ -72,7 +72,7 @@
       }
     }
 
-    function resetMatchHistoryControls() {
+    function resetMatchHistoryControls(): void {
       elements.collectRiotMatchesButton.disabled = false;
       elements.matchDataMenuButton.disabled = false;
       elements.collectSeasonRiotMatchesButton.disabled = false;
@@ -80,14 +80,14 @@
       elements.collectRiotMatchesButton.textContent = 'Download recent match';
     }
 
-    function renderMatchDataProgress(status) {
+    function renderMatchDataProgress(status: any): void {
       const message = status?.message || '';
       elements.matchDataProgress.hidden = !message;
       elements.matchDataProgress.textContent = message;
       elements.matchDataProgress.dataset.phase = status?.phase || '';
     }
 
-    function getMatchHistoryButtonText(status) {
+    function getMatchHistoryButtonText(status: any): string {
       if (!status) return 'Download recent match';
 
       if (status.phase === 'collecting') return status.mode === 'season' ? 'Downloading season...' : 'Downloading...';
@@ -100,17 +100,17 @@
       return 'Download recent match';
     }
 
-    function setMatchDataMenuOpen(open) {
+    function setMatchDataMenuOpen(open: boolean): void {
       matchDataMenuOpen = Boolean(open);
       elements.matchDataMenu.hidden = !matchDataMenuOpen;
       elements.matchDataMenuButton.setAttribute('aria-expanded', String(matchDataMenuOpen));
     }
 
-    function toggleMatchDataMenu() {
+    function toggleMatchDataMenu(): void {
       setMatchDataMenuOpen(!matchDataMenuOpen);
     }
 
-    function isMatchDataMenuOpen() {
+    function isMatchDataMenuOpen(): boolean {
       return matchDataMenuOpen;
     }
 

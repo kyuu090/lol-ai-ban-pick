@@ -1,5 +1,5 @@
-(function attachUiDomElements(root) {
-  function createDomElements(doc = root.document) {
+(function attachUiDomElements(root: UiRoot) {
+  function createDomElements(doc: Document = root.document as Document): UiDomElements {
     return {
       windowTitlebar: doc.querySelector('#windowTitlebar'),
       windowMinimizeButton: doc.querySelector('#windowMinimizeButton'),
@@ -91,7 +91,7 @@
     };
   }
 
-  const api = { createDomElements };
+  const api: UiDomElementsApi = { createDomElements };
   if (root.document) {
     api.elements = createDomElements(root.document);
   }

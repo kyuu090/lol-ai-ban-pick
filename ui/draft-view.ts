@@ -1,19 +1,19 @@
-(function attachUiDraftView(root) {
-  function createDraftView(deps) {
+(function attachUiDraftView(root: UiRoot) {
+  function createDraftView(deps: DraftViewDeps) {
     const elements = deps.elements;
-    const doc = deps.document || root.document;
+    const doc = (deps.document || root.document) as Document;
 
-    function renderChampSelect(champSelect, gameflowPhase) {
+    function renderChampSelect(champSelect: any, gameflowPhase: any): void {
       const allyTeam = Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [];
       const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
       const { allyBans, enemyBans } = deps.collectBans(champSelect, allyTeam, enemyTeam);
       const localCellId = champSelect?.localPlayerCellId;
       const activeAction = deps.getActiveAction(champSelect, localCellId);
-      const localMember = allyTeam.find((member) => member.cellId === localCellId);
+      const localMember = allyTeam.find((member: any) => member.cellId === localCellId);
       const isLocalTurn = activeAction?.actorCellId === localCellId;
       const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
       const isLocalPickTurn = isDraftActionPhase && Boolean(activeAction?.isInProgress) && isLocalTurn && activeAction?.type === 'pick';
-      if (deps.getMarkedLaneOpponentCellId() !== null && !enemyTeam.some((member) => member.cellId === deps.getMarkedLaneOpponentCellId())) {
+      if (deps.getMarkedLaneOpponentCellId() !== null && !enemyTeam.some((member: any) => member.cellId === deps.getMarkedLaneOpponentCellId())) {
         deps.setMarkedLaneOpponentCellId(null);
       }
 
@@ -37,7 +37,7 @@
       renderDraftAiAnalysis(deps.getDraftAiAnalysisStatus());
     }
 
-    function renderDraftAiAnalysis(status) {
+    function renderDraftAiAnalysis(status: UiDraftAiAnalysisStatus): void {
       if (!elements.draftAiAnalysisPanel) return;
 
       const panel = elements.draftAiAnalysisPanel;
@@ -85,7 +85,7 @@
 
       const list = doc.createElement('div');
       list.className = 'draft-ai-analysis-notes';
-      notes.forEach((note) => {
+      notes.forEach((note: any) => {
         const item = doc.createElement('article');
         item.className = 'draft-ai-analysis-note';
 
@@ -101,14 +101,14 @@
       panel.append(list);
     }
 
-    function createDraftAiAnalysisStatus(text) {
+    function createDraftAiAnalysisStatus(text: string): HTMLParagraphElement {
       const message = doc.createElement('p');
       message.className = 'draft-ai-analysis-status';
       message.textContent = text;
       return message;
     }
 
-    function renderBanList(container, bans) {
+    function renderBanList(container: HTMLElement, bans: number[]): void {
       container.replaceChildren(...bans.slice(0, 5).map((championId) => {
         const item = doc.createElement('span');
         item.className = 'ban-token';
@@ -134,7 +134,7 @@
       }
     }
 
-    function renderTeam(container, team, side, turnState = {}) {
+    function renderTeam(container: HTMLElement, team: any[], side: string, turnState: any = {}): void {
       const rows = Array.from({ length: 5 }, (_, index) => team[index] ?? { cellId: index, championId: 0 });
 
       container.replaceChildren(...rows.map((member) => {
@@ -156,7 +156,7 @@
           row.setAttribute('aria-pressed', String(isMarkedLaneOpponent));
           row.title = isMarkedLaneOpponent ? 'Click to unmark lane opponent' : 'Click to mark as lane opponent';
           row.addEventListener('click', () => deps.toggleMarkedLaneOpponent(member.cellId));
-          row.addEventListener('keydown', (event) => {
+          row.addEventListener('keydown', (event: KeyboardEvent) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               deps.toggleMarkedLaneOpponent(member.cellId);
@@ -206,9 +206,9 @@
       }));
     }
 
-    function renderDraftFocus(champSelect, activeAction = deps.getActiveAction(champSelect)) {
+    function renderDraftFocus(champSelect: any, activeAction: any = deps.getActiveAction(champSelect)): void {
       const localCellId = champSelect?.localPlayerCellId;
-      const localMember = champSelect?.myTeam?.find((member) => member.cellId === localCellId);
+      const localMember = champSelect?.myTeam?.find((member: any) => member.cellId === localCellId);
       const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
       renderDraftSelfSummary(localMember);
       renderDraftInsights(null, { champSelect, localMember });
@@ -230,7 +230,7 @@
       elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
     }
 
-    function renderDraftSelfSummary(localMember) {
+    function renderDraftSelfSummary(localMember: any): void {
       if (!elements.draftSelfSummary) return;
 
       const championId = deps.getMemberChampionId(localMember);
@@ -257,7 +257,7 @@
       elements.draftSelfSummary.append(header, stats);
     }
 
-    function renderDraftInsights(type, context = {}) {
+    function renderDraftInsights(type: string | null, context: any = {}): void {
       if (type === 'ban') {
         renderBanInsights(true, context.champSelect, context.localMember);
       } else if (type === 'pick') {
@@ -269,7 +269,7 @@
       }
     }
 
-    function renderInsightPanel(visible, mode = '') {
+    function renderInsightPanel(visible: boolean, mode = ''): HTMLElement | null {
       const focus = elements.banInsightPanel?.closest('.champion-focus');
       if (!elements.banInsightPanel || !focus) return null;
 
@@ -285,18 +285,18 @@
       return elements.banInsightPanel;
     }
 
-    function renderBanInsights(visible, champSelect, localMember) {
+    function renderBanInsights(visible: boolean, champSelect: any, localMember: any): void {
       const panel = renderInsightPanel(visible, 'ban-mode');
       if (!panel) return;
 
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       const minGames = getBanInsightMinGames();
       const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position, minGames);
-      const laneStats = deps.sortWorstWinRateStats(deps.getMatchHistoryLaneOpponentStats().filter((stats) => (
+      const laneStats = deps.sortWorstWinRateStats(deps.getMatchHistoryLaneOpponentStats().filter((stats: any) => (
         String(stats.position || '').toUpperCase() === position &&
         Number(stats.games || 0) >= minGames
       ))).slice(0, deps.BAN_INSIGHT_LIMIT);
-      const enemyStats = deps.sortWorstWinRateStats(deps.getMatchHistoryEnemyChampionStats().filter((stats) => (
+      const enemyStats = deps.sortWorstWinRateStats(deps.getMatchHistoryEnemyChampionStats().filter((stats: any) => (
         Number(stats.games || 0) >= minGames
       ))).slice(0, deps.BAN_INSIGHT_LIMIT);
 
@@ -312,11 +312,11 @@
       panel.replaceChildren(...sections);
     }
 
-    function getBanInsightMinGames() {
+    function getBanInsightMinGames(): number {
       return deps.BAN_INSIGHT_SAMPLE_OPTIONS.includes(deps.getBanInsightMinGames()) ? deps.getBanInsightMinGames() : 5;
     }
 
-    function createBanInsightSampleControl(champSelect, localMember) {
+    function createBanInsightSampleControl(champSelect: any, localMember: any): HTMLDivElement {
       const control = doc.createElement('div');
       control.className = 'ban-insight-control';
 
@@ -328,7 +328,7 @@
 
       const select = doc.createElement('select');
       select.setAttribute('aria-label', 'Ban insight sample filter');
-      deps.BAN_INSIGHT_SAMPLE_OPTIONS.forEach((games) => {
+      deps.BAN_INSIGHT_SAMPLE_OPTIONS.forEach((games: number) => {
         const option = doc.createElement('option');
         option.value = String(games);
         option.textContent = `${games}+ games`;
@@ -346,9 +346,9 @@
       return control;
     }
 
-    function createPlannedPickBanThreatSection(champSelect, localMember, position, minGames) {
+    function createPlannedPickBanThreatSection(champSelect: any, localMember: any, position: string, minGames: number): HTMLElement | null {
       const { plannedChampionId, statsList } = deps.getPlannedPickThreatStats({
-        stats: deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats) => (
+        stats: deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats: any) => (
           Number(stats.games || 0) >= minGames &&
           Number(stats.winRate || 0) < 0.5
         )),
@@ -378,14 +378,14 @@
       }
 
       const list = doc.createElement('ol');
-      statsList.forEach((stats) => {
+      statsList.forEach((stats: any) => {
         list.append(createPlannedPickBanThreatItem(stats));
       });
       section.append(list);
       return section;
     }
 
-    function createPlannedPickBanThreatItem(stats) {
+    function createPlannedPickBanThreatItem(stats: any): HTMLLIElement {
       const item = doc.createElement('li');
 
       const nameBlock = doc.createElement('span');
@@ -400,7 +400,7 @@
       return item;
     }
 
-    function renderPickPoolInsights(visible, champSelect, localMember) {
+    function renderPickPoolInsights(visible: boolean, champSelect: any, localMember: any): void {
       const panel = renderInsightPanel(visible, 'pick-mode');
       if (!panel) return;
 
@@ -410,7 +410,7 @@
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       const championIds = lane ? normalizedChampionPool[lane.id] || [] : [];
       const unavailableReasons = deps.collectUnavailableChampionReasons(champSelect);
-      const candidates = championIds.map((championId) => {
+      const candidates = championIds.map((championId: number) => {
         const stats = deps.getChampionRoleDisplayStats(championId, position);
         const unavailableReason = unavailableReasons.get(Number(championId)) || '';
 
@@ -451,7 +451,7 @@
 
       const list = doc.createElement('ol');
       list.className = 'pick-pool-list';
-      visibleCandidates.forEach((candidate) => {
+      visibleCandidates.forEach((candidate: any) => {
         list.append(createPickPoolCandidateItem(candidate, position));
       });
 
@@ -462,7 +462,7 @@
       );
     }
 
-    function renderMarkedOpponentPickInsights(visible, champSelect, localMember) {
+    function renderMarkedOpponentPickInsights(visible: boolean, champSelect: any, localMember: any): void {
       const panel = renderInsightPanel(visible, 'pick-mode marked-opponent-mode');
       if (!panel) return;
 
@@ -475,7 +475,7 @@
       panel.replaceChildren(...insightElements);
     }
 
-    function createMarkedOpponentInsightElements(champSelect, localMember) {
+    function createMarkedOpponentInsightElements(champSelect: any, localMember: any): HTMLElement[] {
       const opponentChampionId = getMarkedLaneOpponentChampionId(champSelect);
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       if (!opponentChampionId || !position) return [];
@@ -512,7 +512,7 @@
 
       const list = doc.createElement('ol');
       list.className = 'pick-pool-list marked-opponent-list';
-      statsList.forEach((stats) => {
+      statsList.forEach((stats: any) => {
         list.append(createMarkedOpponentPickItem(stats));
       });
       section.append(list);
@@ -520,16 +520,16 @@
       return [section];
     }
 
-    function getMarkedLaneOpponentChampionId(champSelect) {
+    function getMarkedLaneOpponentChampionId(champSelect: any): number | null {
       if (deps.getMarkedLaneOpponentCellId() === null) return null;
 
       const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
-      const member = enemyTeam.find((enemy) => enemy.cellId === deps.getMarkedLaneOpponentCellId());
+      const member = enemyTeam.find((enemy: any) => enemy.cellId === deps.getMarkedLaneOpponentCellId());
       const championId = Number(member?.championId || member?.championPickIntent) || 0;
       return championId > 0 ? championId : null;
     }
 
-    function createMarkedOpponentPickItem(stats) {
+    function createMarkedOpponentPickItem(stats: any): HTMLLIElement {
       const item = doc.createElement('li');
       item.className = 'pick-pool-candidate marked-opponent-candidate';
 
@@ -543,7 +543,7 @@
       return item;
     }
 
-    function createPickPoolCandidateItem(candidate, position) {
+    function createPickPoolCandidateItem(candidate: any, position: string): HTMLLIElement {
       const item = doc.createElement('li');
       item.className = `pick-pool-candidate${candidate.available ? '' : ' unavailable'}`;
 
@@ -564,7 +564,7 @@
       return item;
     }
 
-    function createPickPoolCandidateStatsElement(stats, position) {
+    function createPickPoolCandidateStatsElement(stats: any, position: string): HTMLSpanElement {
       const container = doc.createElement('span');
       container.className = 'pick-pool-stats';
 
@@ -586,7 +586,7 @@
       return container;
     }
 
-    function createBanInsightSection(title, statsList) {
+    function createBanInsightSection(title: string, statsList: any[]): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'ban-insight-section';
 
@@ -610,7 +610,7 @@
       return section;
     }
 
-    function createCollapsedBanInsightSection(title, statsList) {
+    function createCollapsedBanInsightSection(title: string, statsList: any[]): HTMLDetailsElement {
       const details = doc.createElement('details');
       details.className = 'ban-insight-details';
 
@@ -624,7 +624,7 @@
       return details;
     }
 
-    function createBanInsightItem(stats) {
+    function createBanInsightItem(stats: any): HTMLLIElement {
       const item = doc.createElement('li');
 
       const nameBlock = doc.createElement('span');

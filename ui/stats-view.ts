@@ -1,13 +1,13 @@
-(function attachUiStatsView(root) {
-  function createStatsView(deps) {
+(function attachUiStatsView(root: UiRoot) {
+  function createStatsView(deps: StatsViewDeps) {
     const elements = deps.elements;
-    const doc = deps.document || root.document;
+    const doc = (deps.document || root.document) as Document;
     const lanes = deps.lanes;
 
-    function renderPlayedStatsLaneTabs() {
+    function renderPlayedStatsLaneTabs(): void {
       const activeLaneId = deps.getActivePlayedLaneId();
       if (elements.playedStatsLaneTabs.childElementCount > 0) {
-        elements.playedStatsLaneTabs.querySelectorAll('button').forEach((button) => {
+        elements.playedStatsLaneTabs.querySelectorAll('button').forEach((button: HTMLButtonElement) => {
           button.classList.toggle('active', button.dataset.lane === activeLaneId);
         });
         return;
@@ -31,10 +31,10 @@
       elements.playedStatsLaneTabs.replaceChildren(...buttons);
     }
 
-    function renderOpponentStatsLaneTabs() {
+    function renderOpponentStatsLaneTabs(): void {
       const activeLaneId = deps.getActiveOpponentLaneId();
       if (elements.opponentStatsLaneTabs.childElementCount > 0) {
-        elements.opponentStatsLaneTabs.querySelectorAll('button').forEach((button) => {
+        elements.opponentStatsLaneTabs.querySelectorAll('button').forEach((button: HTMLButtonElement) => {
           button.classList.toggle('active', button.dataset.lane === activeLaneId);
         });
         return;
@@ -58,7 +58,7 @@
       elements.opponentStatsLaneTabs.replaceChildren(...buttons);
     }
 
-    function sortStatsTableRows(statsList, sortKey, sortDirection = 'desc') {
+    function sortStatsTableRows(statsList: any[], sortKey: UiStatsSortKey, sortDirection: UiSortDirection = 'desc'): any[] {
       const direction = sortDirection === 'asc' ? 1 : -1;
       return [...statsList].sort((a, b) => {
         const primary = sortKey === 'winRate'
@@ -75,7 +75,7 @@
       });
     }
 
-    function createStatsTableRow(stats, championIdKey) {
+    function createStatsTableRow(stats: any, championIdKey: string): HTMLTableRowElement {
       const row = doc.createElement('tr');
 
       const championCell = doc.createElement('th');
@@ -95,7 +95,7 @@
       return row;
     }
 
-    function renderStatsSortButtons(viewName) {
+    function renderStatsSortButtons(viewName: 'played' | 'opponents'): void {
       const sortKey = viewName === 'opponents' ? deps.getOpponentStatsSortKey() : deps.getPlayedStatsSortKey();
       const sortDirection = viewName === 'opponents' ? deps.getOpponentStatsSortDirection() : deps.getPlayedStatsSortDirection();
       const gamesButton = viewName === 'opponents'
@@ -118,7 +118,7 @@
       });
     }
 
-    function setStatsSort(viewName, sortKey) {
+    function setStatsSort(viewName: 'played' | 'opponents', sortKey: UiStatsSortKey): void {
       if (viewName === 'opponents') {
         deps.setOpponentStatsSortDirection(deps.getOpponentStatsSortKey() === sortKey && deps.getOpponentStatsSortDirection() === 'desc'
           ? 'asc'
@@ -139,13 +139,13 @@
       renderPlayedChampionStats();
     }
 
-    function renderLaneOpponentStats() {
+    function renderLaneOpponentStats(): void {
       const lane = lanes.find((entry) => entry.id === deps.getActiveOpponentLaneId()) || lanes[0];
       const position = deps.getChampionPoolLanePosition(lane.id);
       const minGames = deps.getOpponentStatsMinGames();
       renderOpponentStatsLaneTabs();
 
-      const statsList = sortStatsTableRows(deps.getMatchHistoryLaneOpponentStats().filter((stats) => (
+      const statsList = sortStatsTableRows(deps.getMatchHistoryLaneOpponentStats().filter((stats: any) => (
         String(stats.position || '').toUpperCase() === position &&
         Number(stats.games || 0) >= minGames
       )), deps.getOpponentStatsSortKey(), deps.getOpponentStatsSortDirection());
@@ -162,8 +162,8 @@
       renderStatsSortButtons('opponents');
     }
 
-    function renderOpponentStatsTable(statsList, position) {
-      const rows = [];
+    function renderOpponentStatsTable(statsList: any[], position: string): void {
+      const rows: HTMLTableRowElement[] = [];
       statsList.forEach((stats) => {
         const championId = Number(stats.championId);
         const selected = championId === deps.getExpandedOpponentStatsChampionId();
@@ -187,7 +187,7 @@
       elements.opponentStatsEmpty.textContent = '条件に合う対面データがありません。';
     }
 
-    function createOpponentPickBreakdownRow(opponentChampionId, position) {
+    function createOpponentPickBreakdownRow(opponentChampionId: number, position: string): HTMLTableRowElement {
       const row = doc.createElement('tr');
       row.className = 'stats-opponent-detail-row';
 
@@ -199,23 +199,23 @@
       return row;
     }
 
-    function createOpponentPickBreakdown(opponentChampionId, position) {
+    function createOpponentPickBreakdown(opponentChampionId: number, position: string): HTMLDivElement {
       const container = doc.createElement('div');
       container.className = 'stats-opponent-detail';
 
       const normalizedPosition = String(position || '').toUpperCase();
-      const matchupStats = deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats) => (
+      const matchupStats = deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats: any) => (
         Number(stats.opponentChampionId) === Number(opponentChampionId) &&
         String(stats.position || '').toUpperCase() === normalizedPosition &&
         Number(stats.games || 0) > 0
       ));
 
       const winning = matchupStats
-        .filter((stats) => getWinMargin(stats) > 0)
+        .filter((stats: any) => getWinMargin(stats) > 0)
         .sort(compareWinningMatchupStats)
         .slice(0, 3);
       const losing = matchupStats
-        .filter((stats) => getLossMargin(stats) > 0)
+        .filter((stats: any) => getLossMargin(stats) > 0)
         .sort(compareLosingMatchupStats)
         .slice(0, 3);
 
@@ -226,11 +226,11 @@
       return container;
     }
 
-    function createOpponentPickBreakdownGroup(title, statsList, tone) {
+    function createOpponentPickBreakdownGroup(title: string, statsList: any[], tone: string): HTMLElement {
       return createMatchupBreakdownGroup(title, statsList, tone, 'championId');
     }
 
-    function createMatchupBreakdownGroup(title, statsList, tone, championIdKey) {
+    function createMatchupBreakdownGroup(title: string, statsList: any[], tone: string, championIdKey: string): HTMLElement {
       const group = doc.createElement('section');
       group.className = `stats-opponent-detail-group ${tone}`;
 
@@ -255,7 +255,7 @@
       return group;
     }
 
-    function createMatchupBreakdownToken(stats, championId, tone) {
+    function createMatchupBreakdownToken(stats: any, championId: number, tone: string): HTMLSpanElement {
       const token = doc.createElement('span');
       token.className = `stats-opponent-detail-pick ${tone}`;
 
@@ -270,15 +270,15 @@
       return token;
     }
 
-    function getWinMargin(stats) {
+    function getWinMargin(stats: any): number {
       return Number(stats?.wins || 0) - deps.getLosses(stats);
     }
 
-    function getLossMargin(stats) {
+    function getLossMargin(stats: any): number {
       return deps.getLosses(stats) - Number(stats?.wins || 0);
     }
 
-    function compareWinningMatchupStats(a, b) {
+    function compareWinningMatchupStats(a: any, b: any): number {
       return (
         (getWinMargin(b) - getWinMargin(a)) ||
         (Number(b.wins || 0) - Number(a.wins || 0)) ||
@@ -287,7 +287,7 @@
       );
     }
 
-    function compareLosingMatchupStats(a, b) {
+    function compareLosingMatchupStats(a: any, b: any): number {
       return (
         (getLossMargin(b) - getLossMargin(a)) ||
         (deps.getLosses(b) - deps.getLosses(a)) ||
@@ -296,13 +296,13 @@
       );
     }
 
-    function renderPlayedChampionStats() {
+    function renderPlayedChampionStats(): void {
       const lane = lanes.find((entry) => entry.id === deps.getActivePlayedLaneId()) || lanes[0];
       const position = deps.getChampionPoolLanePosition(lane.id);
       const minGames = deps.getPlayedStatsMinGames();
       renderPlayedStatsLaneTabs();
 
-      const statsList = sortStatsTableRows(deps.getMatchHistoryChampionStats().filter((stats) => (
+      const statsList = sortStatsTableRows(deps.getMatchHistoryChampionStats().filter((stats: any) => (
         stats.queueGroup === 'all_sr_5v5' &&
         String(stats.position || '').toUpperCase() === position &&
         Number(stats.games || 0) >= minGames
@@ -320,8 +320,8 @@
       renderStatsSortButtons('played');
     }
 
-    function renderPlayedStatsTable(statsList, position) {
-      const rows = [];
+    function renderPlayedStatsTable(statsList: any[], position: string): void {
+      const rows: HTMLTableRowElement[] = [];
       statsList.forEach((stats) => {
         const championId = Number(stats.championId);
         const selected = championId === deps.getExpandedPlayedStatsChampionId();
@@ -345,7 +345,7 @@
       elements.playedStatsEmpty.textContent = '条件に合うチャンピオン実績がありません。';
     }
 
-    function createPlayedPickBreakdownRow(championId, position) {
+    function createPlayedPickBreakdownRow(championId: number, position: string): HTMLTableRowElement {
       const row = doc.createElement('tr');
       row.className = 'stats-opponent-detail-row';
 
@@ -357,23 +357,23 @@
       return row;
     }
 
-    function createPlayedPickBreakdown(championId, position) {
+    function createPlayedPickBreakdown(championId: number, position: string): HTMLDivElement {
       const container = doc.createElement('div');
       container.className = 'stats-opponent-detail';
 
       const normalizedPosition = String(position || '').toUpperCase();
-      const matchupStats = deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats) => (
+      const matchupStats = deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats: any) => (
         Number(stats.championId) === Number(championId) &&
         String(stats.position || '').toUpperCase() === normalizedPosition &&
         Number(stats.games || 0) > 0
       ));
 
       const strongInto = matchupStats
-        .filter((stats) => getWinMargin(stats) > 0)
+        .filter((stats: any) => getWinMargin(stats) > 0)
         .sort(compareWinningMatchupStats)
         .slice(0, 3);
       const weakInto = matchupStats
-        .filter((stats) => getLossMargin(stats) > 0)
+        .filter((stats: any) => getLossMargin(stats) > 0)
         .sort(compareLosingMatchupStats)
         .slice(0, 3);
 

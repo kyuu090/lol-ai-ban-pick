@@ -1,7 +1,7 @@
-(function attachUiChampionPoolView(root) {
-  function createChampionPoolView(deps) {
+(function attachUiChampionPoolView(root: UiRoot) {
+  function createChampionPoolView(deps: ChampionPoolViewDeps) {
     const elements = deps.elements;
-    const doc = deps.document || root.document;
+    const doc = (deps.document || root.document) as Document;
     const lanes = deps.lanes;
     const laneToPosition = deps.laneToPosition;
     const normalizeChampionPool = deps.normalizeChampionPool;
@@ -13,26 +13,26 @@
     let lastChampionPickerRenderKey = '';
     let lastChampionPoolListRenderKey = '';
 
-    function getActiveChampionPoolLane() {
+    function getActiveChampionPoolLane(): UiLane {
       return lanes.find((lane) => lane.id === deps.getActiveLaneId()) || lanes[0];
     }
 
-    function getChampionPoolLanePosition(laneId) {
+    function getChampionPoolLanePosition(laneId: UiLaneId): string | null {
       return laneToPosition[laneId] || null;
     }
 
-    function getChampionPoolLaneByPosition(position) {
+    function getChampionPoolLaneByPosition(position: string | null | undefined): UiLane | null {
       const normalizedPosition = String(position || '').toUpperCase();
       return lanes.find((lane) => laneToPosition[lane.id] === normalizedPosition) || null;
     }
 
-    function getChampionOptions() {
+    function getChampionOptions(): any[] {
       return Object.values(deps.getChampionsById())
         .filter((champion) => Number(champion.id) > 0 && champion.name)
         .sort((a, b) => a.name.localeCompare(b.name, 'en'));
     }
 
-    function createChampionOptionsRenderKey(options) {
+    function createChampionOptionsRenderKey(options: any[]): string {
       return options
         .map((champion) => [
           Number(champion.id) || 0,
@@ -43,7 +43,7 @@
         .join('|');
     }
 
-    function createChampionPoolStatsRenderKey(championIds, laneId) {
+    function createChampionPoolStatsRenderKey(championIds: number[], laneId: UiLaneId): string {
       const position = getChampionPoolLanePosition(laneId);
       return championIds
         .map((championId) => {
@@ -61,8 +61,8 @@
         .join('|');
     }
 
-    function updateChampionPickerSelection(selectedChampionIds) {
-      elements.championPoolPickerGrid.querySelectorAll('.champion-picker-card').forEach((button) => {
+    function updateChampionPickerSelection(selectedChampionIds: Set<number>): void {
+      elements.championPoolPickerGrid.querySelectorAll('.champion-picker-card').forEach((button: HTMLElement) => {
         const championId = Number(button.dataset.championId);
         const selected = selectedChampionIds.has(championId);
         button.classList.toggle('selected', selected);
@@ -70,14 +70,14 @@
       });
     }
 
-    function normalizeSearchText(value) {
+    function normalizeSearchText(value: unknown): string {
       return String(value || '').trim().toLowerCase();
     }
 
-    function renderLaneTabs() {
+    function renderLaneTabs(): void {
       const activeLaneId = deps.getActiveLaneId();
       if (elements.laneTabs.childElementCount > 0) {
-        elements.laneTabs.querySelectorAll('button').forEach((button) => {
+        elements.laneTabs.querySelectorAll('button').forEach((button: HTMLButtonElement) => {
           button.classList.toggle('active', button.dataset.lane === activeLaneId);
         });
         return;
@@ -100,7 +100,7 @@
       elements.laneTabs.replaceChildren(...buttons);
     }
 
-    function renderChampionPicker(championIds) {
+    function renderChampionPicker(championIds: number[]): void {
       const options = getChampionOptions();
       const searchText = normalizeSearchText(elements.championPoolSearchInput.value);
       const selectedChampionIds = new Set(championIds);
@@ -155,12 +155,12 @@
         : 'LCU接続後にチャンピオン一覧を取得します。';
     }
 
-    function renderChampionPool() {
+    function renderChampionPool(): void {
       const normalizedChampionPool = normalizeChampionPool(deps.getChampionPool());
       deps.setChampionPool(normalizedChampionPool);
 
       const lane = getActiveChampionPoolLane();
-      const championIds = normalizedChampionPool[lane.id] || [];
+      const championIds = (normalizedChampionPool as Record<string, number[]>)[lane.id] || [];
       const listRenderKey = [
         lane.id,
         championIds.join(','),
@@ -175,7 +175,7 @@
       if (listRenderKey === lastChampionPoolListRenderKey) return;
       lastChampionPoolListRenderKey = listRenderKey;
 
-      elements.championPoolList.replaceChildren(...championIds.map((championId) => {
+      elements.championPoolList.replaceChildren(...championIds.map((championId: number) => {
         const item = doc.createElement('article');
         item.className = 'pool-champion';
         item.title = championTitle(championId);
@@ -214,7 +214,7 @@
       }));
     }
 
-    function forceRenderChampionPool() {
+    function forceRenderChampionPool(): void {
       lastChampionPickerRenderKey = '';
       lastChampionPoolListRenderKey = '';
       renderChampionPool();

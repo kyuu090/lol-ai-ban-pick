@@ -2,6 +2,10 @@
 
 目的は、Renderer の各 view module が受け取る `deps` を型で固定すること。DOM 操作と view model 作成の境界を明確にする。
 
+## ステータス
+
+完了。作業証跡は `docs/ts-magiration/save-data/phase-08-ui-modules-ts-save-data.md` を参照。
+
 ## 推奨順
 
 1. `ui/formatters.ts` は Phase 05 で完了済みならスキップ。
