@@ -1,3 +1,26 @@
+// @ts-check
+
+/**
+ * @typedef {import('../types/domain/ai-analysis').LaneMatchupAnalysisState} LaneMatchupAnalysisState
+ * @typedef {import('../types/domain/app-state').AppState} AppState
+ * @typedef {import('../types/domain/champion').ChampionPool} ChampionPool
+ * @typedef {import('../types/domain/match-history').ChampionStats} ChampionStats
+ * @typedef {import('../types/domain/match-history').EnemyChampionStats} EnemyChampionStats
+ * @typedef {import('../types/domain/match-history').LaneOpponentStats} LaneOpponentStats
+ * @typedef {import('../types/domain/match-history').MatchHistoryStatus} MatchHistoryStatus
+ * @typedef {import('../types/domain/match-history').MatchHistorySummary} MatchHistorySummary
+ * @typedef {import('../types/domain/match-history').SelfVsLaneOpponentStats} SelfVsLaneOpponentStats
+ * @typedef {import('../types/domain/settings').PublicSettings} PublicSettings
+ */
+
+/**
+ * @typedef {{ gameCreation?: number | string | null }} MatchHistorySummarySourceMatch
+ */
+
+/**
+ * @param {Partial<LaneMatchupAnalysisState>} [patch]
+ * @returns {LaneMatchupAnalysisState}
+ */
 function createLaneMatchupAnalysisState(patch = {}) {
   return {
     status: 'idle',
@@ -10,7 +33,13 @@ function createLaneMatchupAnalysisState(patch = {}) {
   };
 }
 
-function createMatchHistoryStatus({ defaultRequestedMatches, patch = {} } = {}) {
+/**
+ * @param {object} [options]
+ * @param {number} [options.defaultRequestedMatches]
+ * @param {Partial<MatchHistoryStatus>} [options.patch]
+ * @returns {MatchHistoryStatus}
+ */
+function createMatchHistoryStatus({ defaultRequestedMatches = 0, patch = {} } = {}) {
   return {
     phase: 'idle',
     source: 'manual',
@@ -30,6 +59,17 @@ function createMatchHistoryStatus({ defaultRequestedMatches, patch = {} } = {}) 
   };
 }
 
+/**
+ * @param {object} [options]
+ * @param {string | null} [options.updatedAt]
+ * @param {number} [options.requestedMatches]
+ * @param {number} [options.matchIds]
+ * @param {number} [options.updatedMatches]
+ * @param {MatchHistorySummarySourceMatch[]} [options.matches]
+ * @param {number} [options.failedRequests]
+ * @param {number} [options.championStats]
+ * @returns {MatchHistorySummary}
+ */
 function createMatchHistorySummary({
   updatedAt = null,
   requestedMatches = 0,
@@ -56,6 +96,17 @@ function createMatchHistorySummary({
   };
 }
 
+/**
+ * @param {object} options
+ * @param {PublicSettings} options.settings
+ * @param {ChampionPool} options.championPool
+ * @param {MatchHistoryStatus} options.matchHistoryStatus
+ * @param {ChampionStats[]} [options.matchHistoryChampionStats]
+ * @param {EnemyChampionStats[]} [options.matchHistoryEnemyChampionStats]
+ * @param {LaneOpponentStats[]} [options.matchHistoryLaneOpponentStats]
+ * @param {SelfVsLaneOpponentStats[]} [options.matchHistorySelfVsLaneOpponentStats]
+ * @returns {AppState}
+ */
 function createInitialState({
   settings,
   championPool,
@@ -89,6 +140,12 @@ function createInitialState({
   };
 }
 
+/**
+ * @param {AppState} currentState
+ * @param {Partial<AppState>} patch
+ * @param {Date} [now]
+ * @returns {AppState}
+ */
 function applyStatePatch(currentState, patch, now = new Date()) {
   return {
     ...currentState,

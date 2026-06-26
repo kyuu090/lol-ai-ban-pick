@@ -1,3 +1,5 @@
+// @ts-check
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
@@ -8,50 +10,98 @@ const {
 } = require('../riot-api');
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
-const THEME_MODES = ['system', 'light', 'dark'];
+const THEME_MODES = /** @type {readonly ThemeMode[]} */ (['system', 'light', 'dark']);
 
+/**
+ * @typedef {import('../types/domain/settings').PublicSettings} PublicSettings
+ * @typedef {import('../types/domain/settings').RiotPlatformRegion} RiotPlatformRegion
+ * @typedef {import('../types/domain/settings').RiotRegionalRoute} RiotRegionalRoute
+ * @typedef {import('../types/domain/settings').ThemeMode} ThemeMode
+ */
+
+/**
+ * @typedef {object} StoredSettings
+ * @property {string} lolInstallDir
+ * @property {RiotPlatformRegion} riotPlatformRegion
+ * @property {ThemeMode} themeMode
+ */
+
+/**
+ * @typedef {Partial<StoredSettings> & Record<string, unknown>} SettingsInput
+ */
+
+/**
+ * @typedef {object} StoreLog
+ * @property {(message: string, details?: unknown) => void} [debug]
+ */
+
+/**
+ * @returns {StoredSettings}
+ */
 function createDefaultSettings() {
   return {
     lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
-    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION,
+    riotPlatformRegion: /** @type {RiotPlatformRegion} */ (DEFAULT_RIOT_PLATFORM_REGION),
     themeMode: 'system'
   };
 }
 
+/**
+ * @param {unknown} themeMode
+ * @returns {ThemeMode}
+ */
 function normalizeThemeMode(themeMode) {
-  return THEME_MODES.includes(themeMode) ? themeMode : 'system';
+  return THEME_MODES.includes(/** @type {ThemeMode} */ (themeMode)) ? /** @type {ThemeMode} */ (themeMode) : 'system';
 }
 
+/**
+ * @param {SettingsInput} [sourceSettings]
+ * @returns {StoredSettings}
+ */
 function normalizeSettings(sourceSettings = {}) {
   const defaults = createDefaultSettings();
   return {
     lolInstallDir: typeof sourceSettings.lolInstallDir === 'string' && sourceSettings.lolInstallDir.trim()
       ? sourceSettings.lolInstallDir
       : defaults.lolInstallDir,
-    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion),
+    riotPlatformRegion: /** @type {RiotPlatformRegion} */ (normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion)),
     themeMode: normalizeThemeMode(sourceSettings.themeMode)
   };
 }
 
+/**
+ * @param {SettingsInput} sourceSettings
+ * @returns {PublicSettings}
+ */
 function createPublicSettings(sourceSettings) {
   const settings = normalizeSettings(sourceSettings);
-  const riotPlatformRegion = normalizeRiotPlatformRegion(settings.riotPlatformRegion);
-  const riotHosts = createRiotApiHosts(riotPlatformRegion);
+  const riotPlatformRegion = /** @type {RiotPlatformRegion} */ (normalizeRiotPlatformRegion(settings.riotPlatformRegion));
+  const riotHosts = /** @type {{ regionalRoute: RiotRegionalRoute }} */ (createRiotApiHosts(riotPlatformRegion));
 
   return {
     lolInstallDir: settings.lolInstallDir,
     riotPlatformRegion,
     riotRegionalRoute: riotHosts.regionalRoute,
-    riotPlatformRegions: RIOT_PLATFORM_REGIONS,
+    riotPlatformRegions: /** @type {readonly RiotPlatformRegion[]} */ (RIOT_PLATFORM_REGIONS),
     themeMode: normalizeThemeMode(settings.themeMode),
     themeModes: THEME_MODES
   };
 }
 
+/**
+ * @param {string} userDataPath
+ * @returns {string}
+ */
 function getSettingsPath(userDataPath) {
   return path.join(userDataPath, 'settings.json');
 }
 
+/**
+ * @param {object} options
+ * @param {string} options.userDataPath
+ * @param {StoreLog} [options.log]
+ * @returns {Promise<StoredSettings>}
+ */
 async function loadSettings({ userDataPath, log }) {
   const settingsPath = getSettingsPath(userDataPath);
   try {
@@ -69,6 +119,14 @@ async function loadSettings({ userDataPath, log }) {
   }
 }
 
+/**
+ * @param {object} options
+ * @param {string} options.userDataPath
+ * @param {SettingsInput} options.currentSettings
+ * @param {SettingsInput} options.nextSettings
+ * @param {StoreLog} [options.log]
+ * @returns {Promise<StoredSettings>}
+ */
 async function saveSettings({ userDataPath, currentSettings, nextSettings, log }) {
   const settingsPath = getSettingsPath(userDataPath);
   const settings = normalizeSettings({
