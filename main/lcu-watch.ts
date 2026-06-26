@@ -1,5 +1,49 @@
 const WebSocket = require('ws');
 
+import type { AppState } from '../types/domain/app-state';
+import type { LcuJsonApiEvent } from '../types/domain/lcu';
+
+interface LcuConnection {
+  port: string | number;
+  password: string;
+}
+
+type Timer = ReturnType<typeof setTimeout>;
+type WebSocketLike = InstanceType<typeof WebSocket>;
+type LcuWatchStatePatch = Omit<Partial<AppState>, 'lastEvent'> & { lastEvent?: unknown };
+
+interface LcuWatchDeps {
+  getConnection: () => LcuConnection | null;
+  setConnection: (connection: LcuConnection | null) => void;
+  updateState: (patch: LcuWatchStatePatch) => void;
+  refreshLcuState: () => Promise<void>;
+  applyWebSocketEvent: (event: LcuJsonApiEvent) => Promise<void>;
+  lockfileRetryMs: number;
+  websocketReconnectMs: number;
+  log: {
+    debug: (message: string, details?: unknown) => void;
+    warn: (message: string, details?: unknown) => void;
+  };
+  serializeForLog: (error: unknown) => unknown;
+  WebSocketImpl?: typeof WebSocket;
+}
+
+interface LcuWatch {
+  cleanup: () => void;
+  clearRetryTimer: () => void;
+  closeWebSocket: () => void;
+  connectWebSocket: () => void;
+  scheduleRetry: () => void;
+}
+
+function normalizeLcuJsonApiEvent(value: unknown): LcuJsonApiEvent | null {
+  if (!value || typeof value !== 'object') return null;
+  const event = value as { uri?: unknown; eventType?: unknown; data?: unknown };
+  return typeof event.uri === 'string'
+    ? { ...event, uri: event.uri, eventType: typeof event.eventType === 'string' ? event.eventType : undefined, data: event.data }
+    : null;
+}
+
 function createLcuWatch({
   getConnection,
   setConnection,
@@ -11,12 +55,12 @@ function createLcuWatch({
   log,
   serializeForLog,
   WebSocketImpl = WebSocket
-}) {
-  let webSocket = null;
-  let reconnectTimer = null;
-  let retryTimer = null;
+}: LcuWatchDeps): LcuWatch {
+  let webSocket: WebSocketLike | null = null;
+  let reconnectTimer: Timer | null = null;
+  let retryTimer: Timer | null = null;
 
-  function cleanup() {
+  function cleanup(): void {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -26,7 +70,7 @@ function createLcuWatch({
     closeWebSocket();
   }
 
-  function closeWebSocket() {
+  function closeWebSocket(): void {
     if (webSocket) {
       log.debug('Closing LCU WebSocket');
       webSocket.removeAllListeners();
@@ -35,14 +79,14 @@ function createLcuWatch({
     }
   }
 
-  function clearRetryTimer() {
+  function clearRetryTimer(): void {
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
     }
   }
 
-  function scheduleRetry() {
+  function scheduleRetry(): void {
     if (retryTimer) return;
     log.debug('Scheduling lockfile retry', { delayMs: lockfileRetryMs });
 
@@ -52,7 +96,7 @@ function createLcuWatch({
     }, lockfileRetryMs);
   }
 
-  function scheduleReconnect() {
+  function scheduleReconnect(): void {
     if (reconnectTimer) return;
     log.debug('Scheduling WebSocket reconnect', { delayMs: websocketReconnectMs });
 
@@ -62,7 +106,7 @@ function createLcuWatch({
     }, websocketReconnectMs);
   }
 
-  function connectWebSocket() {
+  function connectWebSocket(): void {
     const connection = getConnection();
     if (!connection || webSocket?.readyState === WebSocketImpl.OPEN) return;
 
@@ -91,9 +135,9 @@ function createLcuWatch({
       webSocket.send(JSON.stringify([5, 'OnJsonApiEvent']));
     });
 
-    webSocket.on('message', async (data) => {
+    webSocket.on('message', async (data: Buffer | string) => {
       const raw = data.toString();
-      let event;
+      let event: unknown;
 
       try {
         event = JSON.parse(raw);
@@ -103,12 +147,13 @@ function createLcuWatch({
 
       updateState({ lastEvent: event });
 
-      if (Array.isArray(event) && event[2]?.uri) {
+      const jsonApiEvent = Array.isArray(event) ? normalizeLcuJsonApiEvent(event[2]) : null;
+      if (jsonApiEvent) {
         log.debug('LCU WebSocket event received', {
-          uri: event[2].uri,
-          eventType: event[2].eventType
+          uri: jsonApiEvent.uri,
+          eventType: jsonApiEvent.eventType
         });
-        await applyWebSocketEvent(event[2]);
+        await applyWebSocketEvent(jsonApiEvent);
       }
     });
 
@@ -122,7 +167,7 @@ function createLcuWatch({
       scheduleReconnect();
     });
 
-    webSocket.on('error', (error) => {
+    webSocket.on('error', (error: Error) => {
       log.warn('LCU WebSocket error', serializeForLog(error));
       updateState({
         websocketStatus: 'error',
@@ -140,11 +185,11 @@ function createLcuWatch({
   };
 }
 
-function createLcuWebSocketUrl(connection) {
+function createLcuWebSocketUrl(connection: LcuConnection): string {
   return `wss://riot:${encodeURIComponent(connection.password)}@127.0.0.1:${connection.port}/`;
 }
 
-module.exports = {
+export = {
   createLcuWatch,
   createLcuWebSocketUrl
 };

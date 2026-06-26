@@ -3,11 +3,37 @@ const {
   requestRiotBffJson
 } = require('../riot-api');
 
-function encodePathSegment(value) {
+type HttpMethod = 'GET' | 'POST';
+type RetryCallback = (context: unknown) => void | Promise<void>;
+type RequestFn = (...args: unknown[]) => unknown;
+
+interface RequestBffJsonOptions {
+  path: string;
+  method?: HttpMethod;
+  body?: unknown;
+  timeoutMs?: number;
+  onRetry?: RetryCallback | null;
+  maxRetries?: number;
+  requestFn?: RequestFn;
+}
+
+interface AiAnalysisService {
+  createRiotBffPath: typeof createRiotBffPath;
+  requestBffJson: typeof requestBffJson;
+  requestFinalCompositionAnalysis: typeof requestFinalCompositionAnalysis;
+  requestLaneMatchupAnalysis: typeof requestLaneMatchupAnalysis;
+  requestPickPhaseAnalysis: typeof requestPickPhaseAnalysis;
+}
+
+function encodePathSegment(value: string | number): string {
   return encodeURIComponent(String(value));
 }
 
-function createRiotBffPath(region, segments, query = null) {
+function createRiotBffPath(
+  region: string,
+  segments: Array<string | number>,
+  query: Record<string, string | number | null | undefined> | null = null
+): string {
   const path = `/api/riot/${[
     region,
     ...segments
@@ -33,7 +59,7 @@ function requestBffJson({
   onRetry = null,
   maxRetries = undefined,
   requestFn = undefined
-}) {
+}: RequestBffJsonOptions): Promise<unknown> {
   return requestRiotBffJson({
     baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
     path,
@@ -46,7 +72,7 @@ function requestBffJson({
   });
 }
 
-function requestPickPhaseAnalysis(_event, draftContext) {
+function requestPickPhaseAnalysis(_event: unknown, draftContext: unknown): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/pick-phase',
     method: 'POST',
@@ -56,7 +82,7 @@ function requestPickPhaseAnalysis(_event, draftContext) {
   });
 }
 
-function requestFinalCompositionAnalysis(_event, draftContext) {
+function requestFinalCompositionAnalysis(_event: unknown, draftContext: unknown): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/final-composition',
     method: 'POST',
@@ -66,7 +92,7 @@ function requestFinalCompositionAnalysis(_event, draftContext) {
   });
 }
 
-function requestLaneMatchupAnalysis(laneMatchupPayload) {
+function requestLaneMatchupAnalysis(laneMatchupPayload: unknown): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/lane-matchup',
     method: 'POST',
@@ -76,10 +102,12 @@ function requestLaneMatchupAnalysis(laneMatchupPayload) {
   });
 }
 
-module.exports = {
+const service: AiAnalysisService = {
   createRiotBffPath,
   requestBffJson,
   requestFinalCompositionAnalysis,
   requestLaneMatchupAnalysis,
   requestPickPhaseAnalysis
 };
+
+export = service;

@@ -1,6 +1,16 @@
 const { BrowserWindow } = require('electron');
 
-function createMainWindow({ iconPath, preloadPath, log }) {
+type IpcEventWithSender = { sender: Electron.WebContents };
+
+interface CreateMainWindowDeps {
+  iconPath: string;
+  preloadPath: string;
+  log?: {
+    debug?: (message: string, details?: unknown) => void;
+  };
+}
+
+function createMainWindow({ iconPath, preloadPath, log }: CreateMainWindowDeps): Electron.BrowserWindow {
   log?.debug?.('Creating main window');
   const mainWindow = new BrowserWindow({
     width: 1180,
@@ -25,19 +35,19 @@ function createMainWindow({ iconPath, preloadPath, log }) {
   return mainWindow;
 }
 
-function hasOpenWindows() {
+function hasOpenWindows(): boolean {
   return BrowserWindow.getAllWindows().length > 0;
 }
 
-function getWindowForEvent(event) {
+function getWindowForEvent(event: IpcEventWithSender): Electron.BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-function minimizeWindow(event) {
+function minimizeWindow(event: IpcEventWithSender): void {
   getWindowForEvent(event)?.minimize();
 }
 
-function toggleMaximizeWindow(event) {
+function toggleMaximizeWindow(event: IpcEventWithSender): boolean {
   const window = getWindowForEvent(event);
   if (!window) return false;
 
@@ -50,11 +60,11 @@ function toggleMaximizeWindow(event) {
   return window.isMaximized();
 }
 
-function closeWindow(event) {
+function closeWindow(event: IpcEventWithSender): void {
   getWindowForEvent(event)?.close();
 }
 
-module.exports = {
+export = {
   closeWindow,
   createMainWindow,
   hasOpenWindows,

@@ -7,6 +7,43 @@ const {
   parseLockfile
 } = require('../lcu-logic');
 
+import type { PublicSettings } from '../types/domain/settings';
+
+interface LcuConnection {
+  processName?: string;
+  pid?: string | number;
+  port: string | number;
+  password: string;
+  protocol: 'http' | 'https' | string;
+}
+
+interface LcuClientDeps {
+  getSettings: () => PublicSettings;
+  getConnection: () => LcuConnection | null;
+  getStatus: () => string;
+  setIconUnavailableUntil: (value: number) => void;
+  getIconUnavailableUntil: () => number;
+  getIconUnavailableLogged: () => boolean;
+  setIconUnavailableLogged: (value: boolean) => void;
+  log: {
+    debug: (message: string, details?: unknown) => void;
+    warn: (message: string, details?: unknown) => void;
+  };
+  serializeForLog: (error: unknown) => unknown;
+}
+
+interface LcuHttpResponse<TBody> {
+  statusCode: number;
+  body: TBody;
+}
+
+interface LcuClient {
+  fetchBuffer: (endpoint: string) => Promise<Buffer>;
+  fetchJson: (endpoint: string) => Promise<unknown>;
+  getChampionIcon: (_event: unknown, championId: unknown) => Promise<string | null>;
+  readLockfile: () => Promise<LcuConnection>;
+}
+
 function createLcuClient({
   getSettings,
   getConnection,
@@ -17,9 +54,9 @@ function createLcuClient({
   setIconUnavailableLogged,
   log,
   serializeForLog
-}) {
-  async function readLockfile() {
-    let raw;
+}: LcuClientDeps): LcuClient {
+  async function readLockfile(): Promise<LcuConnection> {
+    let raw: string;
     const lockfilePath = path.join(getSettings().lolInstallDir, 'lockfile');
     log.debug('Reading LCU lockfile', { lockfilePath });
 
@@ -35,7 +72,7 @@ function createLcuClient({
     return { processName, pid, port, password, protocol };
   }
 
-  async function fetchJson(endpoint) {
+  async function fetchJson(endpoint: string): Promise<unknown> {
     const connection = getConnection();
     if (!connection) {
       throw new Error('LCU接続情報がありません');
@@ -63,7 +100,7 @@ function createLcuClient({
     return response.body ? JSON.parse(response.body) : null;
   }
 
-  async function fetchBuffer(endpoint) {
+  async function fetchBuffer(endpoint: string): Promise<Buffer> {
     const connection = getConnection();
     if (!connection) {
       throw new Error('LCU接続情報がありません');
@@ -88,7 +125,7 @@ function createLcuClient({
     return response.body;
   }
 
-  async function getChampionIcon(_event, championId) {
+  async function getChampionIcon(_event: unknown, championId: unknown): Promise<string | null> {
     const id = Number(championId);
     if (!Number.isInteger(id) || id <= 0) return null;
     if (!getConnection() || getStatus() !== 'connected') return null;
@@ -124,14 +161,14 @@ function createLcuClient({
   };
 }
 
-function requestLcuJson(url, headers) {
+function requestLcuJson(url: string, headers: Record<string, string>): Promise<LcuHttpResponse<string>> {
   return requestLcu(url, headers).then((response) => ({
     ...response,
     body: response.body.toString('utf8')
   }));
 }
 
-function requestLcu(url, headers) {
+function requestLcu(url: string, headers: Record<string, string>): Promise<LcuHttpResponse<Buffer>> {
   const client = url.startsWith('https:') ? https : http;
 
   return new Promise((resolve, reject) => {
@@ -146,10 +183,10 @@ function requestLcu(url, headers) {
         rejectUnauthorized: false,
         timeout: 5000
       },
-      (response) => {
-        const chunks = [];
+      (response: import('node:http').IncomingMessage) => {
+        const chunks: Buffer[] = [];
 
-        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
         response.on('end', () => {
           resolve({
             statusCode: response.statusCode ?? 0,
@@ -168,16 +205,17 @@ function requestLcu(url, headers) {
   });
 }
 
-function isTransientIconFetchError(error) {
+function isTransientIconFetchError(error: unknown): boolean {
+  const candidate = error as { code?: string; message?: string } | null | undefined;
   return [
     'ECONNREFUSED',
     'ECONNRESET',
     'ETIMEDOUT',
     'EPIPE'
-  ].includes(error?.code) || String(error?.message || '').includes('LCU request timed out');
+  ].includes(candidate?.code ?? '') || String(candidate?.message || '').includes('LCU request timed out');
 }
 
-module.exports = {
+export = {
   createLcuClient,
   isTransientIconFetchError,
   requestLcu,
