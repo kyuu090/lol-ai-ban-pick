@@ -108,6 +108,10 @@ node --check <file>
 
 `.ts` ファイルには `node --check` を使わない。TypeScript ファイルは `npm run typecheck` または `npm run compile` で確認する。
 
+## Git操作
+
+修正が完了したら、Phaseごとにコミットする。
+
 ## 作業証跡
 
 各 Phase の証跡は `docs/ts-magiration/save-data/` 配下の対応ファイルへ追記する。

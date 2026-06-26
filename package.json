@@ -12,7 +12,8 @@
     "pack:locked": "npm ci && npm run pack",
     "dev": "node scripts/run-dev.js",
     "start": "electron .",
-    "test": "node --test"
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
   },
   "build": {
     "appId": "com.banpick.ai",
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "electron": "^42.4.1",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "typescript": "^6.0.3"
   }
 }
