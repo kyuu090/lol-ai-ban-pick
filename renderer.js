@@ -23,8 +23,6 @@ let matchHistoryEnemyChampionStats = [];
 let matchHistoryLaneOpponentStats = [];
 let matchHistorySelfVsLaneOpponentStats = [];
 let championPoolDirty = false;
-let lastChampionPickerRenderKey = '';
-let lastChampionPoolListRenderKey = '';
 let markedLaneOpponentCellId = null;
 let lastRenderedState = null;
 let lastChampSelectSnapshot = null;
@@ -38,9 +36,6 @@ let finalCompositionAnalysisStatus = 'idle';
 let finalCompositionAnalysisNotes = [];
 let finalCompositionAnalysisRequestKey = null;
 let finalCompositionAnalysisError = '';
-let matchHistoryButtonTimer = null;
-let dismissedMatchHistoryButtonKey = null;
-let matchDataMenuOpen = false;
 const {
   collectBans,
   createFinalCompositionDraftContext,
@@ -86,6 +81,53 @@ const {
   loadChampionIcon,
   loadChampionIconEager
 } = window.UiChampionIcons;
+const {
+  normalizeThemeMode,
+  renderSettings
+} = window.UiSettingsView;
+const { createChampionPoolView } = window.UiChampionPoolView;
+const { createMatchDataView } = window.UiMatchDataView;
+
+const championPoolView = createChampionPoolView({
+  elements,
+  document,
+  lanes: CHAMPION_POOL_LANES,
+  laneToPosition: CHAMPION_POOL_LANE_TO_POSITION,
+  normalizeChampionPool,
+  loadChampionIcon,
+  championLabel,
+  championTitle,
+  getChampionRoleDisplayStats,
+  createChampionStatsElement,
+  getActiveLaneId: () => activeChampionPoolLane,
+  setActiveLaneId: (laneId) => {
+    activeChampionPoolLane = laneId;
+  },
+  getChampionsById: () => championsById,
+  getChampionPool: () => championPool,
+  setChampionPool: (nextChampionPool) => {
+    championPool = nextChampionPool;
+  },
+  toggleChampionInPool,
+  removeChampionFromPool
+});
+const {
+  forceRenderChampionPool,
+  getActiveChampionPoolLane,
+  getChampionPoolLaneByPosition,
+  getChampionPoolLanePosition,
+  renderChampionPool
+} = championPoolView;
+const {
+  isMatchDataMenuOpen,
+  renderMatchDataSummary,
+  renderMatchHistoryStatus,
+  setMatchDataMenuOpen,
+  toggleMatchDataMenu
+} = createMatchDataView({
+  elements,
+  formatMatchDataDate
+});
 
 function stringify(value) {
   return JSON.stringify(value ?? null, null, 2);
@@ -97,27 +139,6 @@ function logDebug(message, details) {
 
 function logWarn(message, details) {
   window.lcuApi?.log?.('warn', message, details);
-}
-
-function normalizeThemeMode(themeMode) {
-  return ['system', 'light', 'dark'].includes(themeMode) ? themeMode : 'system';
-}
-
-function applyThemeMode(themeMode) {
-  const normalizedThemeMode = normalizeThemeMode(themeMode);
-  if (normalizedThemeMode === 'system') {
-    document.documentElement.removeAttribute('data-theme');
-    return;
-  }
-
-  document.documentElement.dataset.theme = normalizedThemeMode;
-}
-
-function describeThemeMode(themeMode) {
-  const normalizedThemeMode = normalizeThemeMode(themeMode);
-  if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
-  if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
-  return 'OSの表示モードに合わせます。';
 }
 
 function renderWindowMaximizedState(isMaximized) {
@@ -251,220 +272,6 @@ function syncDraftAutoFocus(state) {
   wasInChampSelect = shouldAutoFocusDraft;
 }
 
-function renderMatchDataSummary(summary, settings) {
-  const matchCount = Number(summary?.normalizedMatches || 0);
-
-  elements.matchDataRange.classList.remove('is-error');
-
-  if (matchCount <= 0) {
-    elements.matchDataCount.textContent = 'No data';
-    elements.matchDataRange.textContent = '試合データが取得されていません';
-    elements.matchDataSeasonHint.hidden = true;
-    return;
-  }
-
-  const oldest = formatMatchDataDate(summary.oldestGameCreation);
-  const newest = formatMatchDataDate(summary.newestGameCreation);
-  elements.matchDataCount.textContent = `${matchCount} matches`;
-  elements.matchDataRange.textContent = oldest && newest
-    ? `${oldest} - ${newest}`
-    : '期間不明';
-  elements.matchDataSeasonHint.hidden = matchCount > 90;
-}
-
-function renderMatchHistoryStatus(status) {
-  const statusKey = `${status?.phase || 'idle'}:${status?.updatedAt || ''}`;
-
-  if (matchHistoryButtonTimer) {
-    clearTimeout(matchHistoryButtonTimer);
-    matchHistoryButtonTimer = null;
-  }
-
-  if (!status || status.phase === 'idle') {
-    elements.collectRiotMatchesButton.disabled = false;
-    elements.matchDataMenuButton.disabled = false;
-    elements.collectSeasonRiotMatchesButton.disabled = false;
-    elements.matchDataSeasonHint.disabled = false;
-    elements.collectRiotMatchesButton.textContent = 'Download recent match';
-    renderMatchDataProgress(null);
-    dismissedMatchHistoryButtonKey = null;
-    return;
-  }
-
-  const activePhases = ['collecting', 'normalizing', 'aggregating', 'retrying'];
-  const isActive = activePhases.includes(status.phase);
-
-  if (isActive) {
-    dismissedMatchHistoryButtonKey = null;
-  } else if (dismissedMatchHistoryButtonKey === statusKey) {
-    elements.collectRiotMatchesButton.disabled = false;
-    elements.matchDataMenuButton.disabled = false;
-    elements.collectSeasonRiotMatchesButton.disabled = false;
-    elements.matchDataSeasonHint.disabled = false;
-    elements.collectRiotMatchesButton.textContent = 'Download recent match';
-    renderMatchDataProgress(null);
-    return;
-  }
-
-  elements.collectRiotMatchesButton.disabled = isActive;
-  elements.matchDataMenuButton.disabled = isActive;
-  elements.collectSeasonRiotMatchesButton.disabled = isActive;
-  elements.matchDataSeasonHint.disabled = isActive;
-  elements.collectRiotMatchesButton.textContent = getMatchHistoryButtonText(status);
-  renderMatchDataProgress(status);
-
-  if (!isActive) {
-    const delayMs = status.phase === 'completed' ? 3000 : 5000;
-    matchHistoryButtonTimer = setTimeout(() => {
-      elements.collectRiotMatchesButton.textContent = 'Download recent match';
-      renderMatchDataProgress(null);
-      dismissedMatchHistoryButtonKey = statusKey;
-    }, delayMs);
-  }
-}
-
-function renderMatchDataProgress(status) {
-  const message = status?.message || '';
-  elements.matchDataProgress.hidden = !message;
-  elements.matchDataProgress.textContent = message;
-  elements.matchDataProgress.dataset.phase = status?.phase || '';
-}
-
-function getMatchHistoryButtonText(status) {
-  if (!status) return 'Download recent match';
-
-  if (status.phase === 'collecting') return status.mode === 'season' ? 'Downloading season...' : 'Downloading...';
-  if (status.phase === 'normalizing' || status.phase === 'aggregating') return 'Saving...';
-  if (status.phase === 'retrying') return 'Retrying...';
-  if (status.phase === 'completed') return `Downloaded ${Number(status.updatedMatches || 0)} matches`;
-  if (status.phase === 'partial') return `Downloaded ${Number(status.updatedMatches || 0)} matches`;
-  if (status.phase === 'error') return 'Download failed';
-
-  return 'Download recent match';
-}
-
-function renderSettings(settings) {
-  if (!settings) return;
-
-  const themeMode = normalizeThemeMode(settings.themeMode);
-  applyThemeMode(themeMode);
-
-  if (settings.lolInstallDir && document.activeElement !== elements.lolInstallDirInput) {
-    elements.lolInstallDirInput.value = settings.lolInstallDir;
-  }
-
-  renderRiotPlatformRegions(settings);
-  if (document.activeElement !== elements.themeModeSelect) {
-    elements.themeModeSelect.value = themeMode;
-  }
-  elements.themeModeStatus.textContent = describeThemeMode(themeMode);
-  elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
-}
-
-function renderRiotPlatformRegions(settings) {
-  const regions = Array.isArray(settings.riotPlatformRegions) ? settings.riotPlatformRegions : [];
-  const selectedRegion = settings.riotPlatformRegion || 'JP1';
-
-  if (elements.riotPlatformRegionSelect.childElementCount === 0 && regions.length > 0) {
-    elements.riotPlatformRegionSelect.replaceChildren(...regions.map((region) => {
-      const option = document.createElement('option');
-      option.value = region;
-      option.textContent = region;
-      return option;
-    }));
-  }
-
-  if (document.activeElement !== elements.riotPlatformRegionSelect) {
-    elements.riotPlatformRegionSelect.value = selectedRegion;
-  }
-}
-
-function getActiveChampionPoolLane() {
-  return CHAMPION_POOL_LANES.find((lane) => lane.id === activeChampionPoolLane) || CHAMPION_POOL_LANES[0];
-}
-
-function getChampionPoolLanePosition(laneId) {
-  return CHAMPION_POOL_LANE_TO_POSITION[laneId] || null;
-}
-
-function getChampionPoolLaneByPosition(position) {
-  const normalizedPosition = String(position || '').toUpperCase();
-  return CHAMPION_POOL_LANES.find((lane) => CHAMPION_POOL_LANE_TO_POSITION[lane.id] === normalizedPosition) || null;
-}
-
-function getChampionOptions() {
-  return Object.values(championsById)
-    .filter((champion) => Number(champion.id) > 0 && champion.name)
-    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
-}
-
-function createChampionOptionsRenderKey(options) {
-  return options
-    .map((champion) => [
-      Number(champion.id) || 0,
-      champion.name || '',
-      champion.alias || '',
-      champion.title || ''
-    ].join(':'))
-    .join('|');
-}
-
-function createChampionPoolStatsRenderKey(championIds, laneId) {
-  const position = getChampionPoolLanePosition(laneId);
-  return championIds
-    .map((championId) => {
-      const stats = getChampionRoleDisplayStats(championId, position);
-      return [
-        Number(championId) || 0,
-        championLabel(championId),
-        championTitle(championId),
-        Number(stats?.games || 0),
-        Number(stats?.wins || 0),
-        Number(stats?.winRate || 0),
-        Number(stats?.kda || 0)
-      ].join(':');
-    })
-    .join('|');
-}
-
-function updateChampionPickerSelection(selectedChampionIds) {
-  elements.championPoolPickerGrid.querySelectorAll('.champion-picker-card').forEach((button) => {
-    const championId = Number(button.dataset.championId);
-    const selected = selectedChampionIds.has(championId);
-    button.classList.toggle('selected', selected);
-    button.title = selected ? `${championLabel(championId)} は登録済みです` : championTitle(championId);
-  });
-}
-
-function normalizeSearchText(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function renderLaneTabs() {
-  if (elements.laneTabs.childElementCount > 0) {
-    elements.laneTabs.querySelectorAll('button').forEach((button) => {
-      button.classList.toggle('active', button.dataset.lane === activeChampionPoolLane);
-    });
-    return;
-  }
-
-  const buttons = CHAMPION_POOL_LANES.map((lane) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.lane = lane.id;
-    button.textContent = lane.label;
-    button.className = `lane-tab${lane.id === activeChampionPoolLane ? ' active' : ''}`;
-    button.addEventListener('click', () => {
-      activeChampionPoolLane = lane.id;
-      elements.championPoolMessage.textContent = '';
-      renderChampionPool();
-    });
-    return button;
-  });
-
-  elements.laneTabs.replaceChildren(...buttons);
-}
-
 function renderPlayedStatsLaneTabs() {
   if (elements.playedStatsLaneTabs.childElementCount > 0) {
     elements.playedStatsLaneTabs.querySelectorAll('button').forEach((button) => {
@@ -515,125 +322,6 @@ function renderOpponentStatsLaneTabs() {
   });
 
   elements.opponentStatsLaneTabs.replaceChildren(...buttons);
-}
-
-function renderChampionPicker(championIds) {
-  const options = getChampionOptions();
-  const searchText = normalizeSearchText(elements.championPoolSearchInput.value);
-  const selectedChampionIds = new Set(championIds);
-  const filteredOptions = options.filter((champion) => {
-    if (!searchText) return true;
-    return [
-      champion.name,
-      champion.alias,
-      champion.title
-    ].some((value) => normalizeSearchText(value).includes(searchText));
-  });
-  const renderKey = [
-    searchText,
-    createChampionOptionsRenderKey(options),
-    filteredOptions.map((champion) => Number(champion.id) || 0).join(',')
-  ].join('::');
-
-  if (renderKey === lastChampionPickerRenderKey) {
-    updateChampionPickerSelection(selectedChampionIds);
-    return;
-  }
-  lastChampionPickerRenderKey = renderKey;
-
-  elements.championPoolPickerGrid.replaceChildren(...filteredOptions.map((champion) => {
-    const championId = Number(champion.id);
-    const selected = selectedChampionIds.has(championId);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `champion-picker-card${selected ? ' selected' : ''}`;
-    button.title = selected ? `${champion.name} は登録済みです` : championTitle(championId);
-    button.dataset.championId = String(championId);
-
-    const portrait = document.createElement('div');
-    portrait.className = 'champion-portrait';
-
-    const image = document.createElement('img');
-    image.alt = champion.name;
-    loadChampionIcon(image, championId);
-    portrait.append(image);
-
-    const name = document.createElement('span');
-    name.textContent = champion.name;
-
-    button.append(portrait, name);
-    button.addEventListener('click', () => toggleChampionInPool(championId));
-    return button;
-  }));
-
-  elements.championPoolPickerEmpty.hidden = filteredOptions.length > 0;
-  elements.championPoolPickerEmpty.textContent = options.length > 0
-    ? '一致するチャンピオンがありません。'
-    : 'LCU接続後にチャンピオン一覧を取得します。';
-}
-
-function renderChampionPool() {
-  championPool = normalizeChampionPool(championPool);
-
-  const lane = getActiveChampionPoolLane();
-  const championIds = championPool[lane.id] || [];
-  const listRenderKey = [
-    lane.id,
-    championIds.join(','),
-    createChampionPoolStatsRenderKey(championIds, lane.id)
-  ].join('::');
-
-  renderLaneTabs();
-  renderChampionPicker(championIds);
-
-  elements.championPoolListTitle.textContent = lane.label;
-  elements.championPoolEmpty.hidden = championIds.length > 0;
-  if (listRenderKey === lastChampionPoolListRenderKey) return;
-  lastChampionPoolListRenderKey = listRenderKey;
-
-  elements.championPoolList.replaceChildren(...championIds.map((championId) => {
-    const item = document.createElement('article');
-    item.className = 'pool-champion';
-    item.title = championTitle(championId);
-
-    const portrait = document.createElement('div');
-    portrait.className = 'champion-portrait';
-
-    const image = document.createElement('img');
-    image.alt = championLabel(championId);
-    loadChampionIcon(image, championId);
-    portrait.append(image);
-
-    const meta = document.createElement('div');
-    meta.className = 'pool-champion-meta';
-
-    const name = document.createElement('strong');
-    name.textContent = championLabel(championId);
-
-    meta.append(name, createChampionStatsElement(
-      getChampionRoleDisplayStats(championId, getChampionPoolLanePosition(lane.id))
-    ));
-
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'pool-remove-button';
-    removeButton.dataset.championId = String(championId);
-    removeButton.title = `${championLabel(championId)} を削除`;
-    removeButton.setAttribute('aria-label', `${championLabel(championId)} を削除`);
-    const removeIcon = document.createElement('span');
-    removeIcon.className = 'remove-x-icon';
-    removeButton.append(removeIcon);
-    removeButton.addEventListener('click', () => removeChampionFromPool(championId));
-
-    item.append(portrait, meta, removeButton);
-    return item;
-  }));
-}
-
-function forceRenderChampionPool() {
-  lastChampionPickerRenderKey = '';
-  lastChampionPoolListRenderKey = '';
-  renderChampionPool();
 }
 
 function renderPlayedChampionStatsLegacy() {
@@ -2783,16 +2471,6 @@ async function refresh() {
   }
 }
 
-function setMatchDataMenuOpen(open) {
-  matchDataMenuOpen = Boolean(open);
-  elements.matchDataMenu.hidden = !matchDataMenuOpen;
-  elements.matchDataMenuButton.setAttribute('aria-expanded', String(matchDataMenuOpen));
-}
-
-function toggleMatchDataMenu() {
-  setMatchDataMenuOpen(!matchDataMenuOpen);
-}
-
 async function collectRiotMatchHistory(mode = 'recent') {
   setMatchDataMenuOpen(false);
   elements.collectRiotMatchesButton.disabled = true;
@@ -2830,7 +2508,7 @@ elements.matchDataMenuButton.addEventListener('click', toggleMatchDataMenu);
 elements.collectSeasonRiotMatchesButton.addEventListener('click', () => collectRiotMatchHistory('season'));
 elements.matchDataSeasonHint.addEventListener('click', () => collectRiotMatchHistory('season'));
 document.addEventListener('click', (event) => {
-  if (!matchDataMenuOpen) return;
+  if (!isMatchDataMenuOpen()) return;
   if (event.target === elements.matchDataMenuButton || elements.matchDataMenu.contains(event.target)) return;
   setMatchDataMenuOpen(false);
 });

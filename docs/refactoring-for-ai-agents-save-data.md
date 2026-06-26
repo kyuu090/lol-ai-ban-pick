@@ -49,3 +49,33 @@
   - Phase 1 候補の `ui/dom-elements.js`、`ui/formatters.js`、`ui/champion-icons.js` は完了。
   - `package.json` の build files には `ui/**/*` を追加済み。
   - Electron の実起動確認は未実施。必要なら次に `npm start` で画面ロードと champion icon 表示を確認する。
+
+## 2026-06-26: Phase 2 renderer view split started
+
+- 実施内容:
+  - `ui/settings-view.js` を追加し、テーマ正規化・テーマ適用・設定表示・Riot platform region select 描画を移動。
+  - `ui/champion-pool-view.js` を追加し、Champion Pool の lane tab / picker / selected list 描画を factory 化して移動。
+  - `ui/match-data-view.js` を追加し、ヘッダーの match data summary、match history status、progress、download menu state を移動。
+  - `renderer.js` は各 view module を `window.UiSettingsView`、`window.UiChampionPoolView`、`window.UiMatchDataView` から受け取る形に変更。
+  - `index.html` で新規 view module を `renderer.js` より前に読み込むよう変更。
+  - `test/ui-settings-view.test.js`、`test/ui-champion-pool-view.test.js`、`test/ui-match-data-view.test.js` を追加。
+- 変更した主なファイル:
+  - `ui/settings-view.js`
+  - `ui/champion-pool-view.js`
+  - `ui/match-data-view.js`
+  - `renderer.js`
+  - `index.html`
+  - `test/ui-settings-view.test.js`
+  - `test/ui-champion-pool-view.test.js`
+  - `test/ui-match-data-view.test.js`
+- 確認:
+  - `npm test`: 72 tests pass。
+  - `node --check renderer.js`: pass。
+  - `node --check ui/settings-view.js`: pass。
+  - `node --check ui/champion-pool-view.js`: pass。
+  - `node --check ui/match-data-view.js`: pass。
+  - 作業後の `renderer.js`: 2562 行。
+- 注意:
+  - Champion Pool の保存・追加・削除など状態更新処理は、まだ `renderer.js` 側に残している。view 側は描画と lane helper を担当する。
+  - Stats / Draft / In-game は未分割。次に進めるなら `ui/stats-view.js` が候補だが、依存が広いため `played stats` と `opponent stats` をさらに分けるか検討するとよい。
+  - Electron の実起動確認は未実施。
