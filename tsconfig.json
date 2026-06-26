@@ -12,14 +12,15 @@
     "ignoreDeprecations": "6.0"
   },
   "include": [
-    "*.js",
     "*.ts",
+    "logger.js",
+    "mock-lcu-api.js",
+    "preload.js",
+    "scripts/**/*.js",
     "renderer/**/*.ts",
-    "main/**/*.js",
     "main/**/*.ts",
-    "ui/**/*.js",
-    "ui/**/*.ts",
     "test/**/*.js",
+    "ui/**/*.ts",
     "types/**/*.d.ts"
   ],
   "exclude": [

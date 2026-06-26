@@ -660,6 +660,7 @@ created_at
 ```text
 match_id
 participant_id
+rank_tier
 team_id
 puuid
 summoner_id

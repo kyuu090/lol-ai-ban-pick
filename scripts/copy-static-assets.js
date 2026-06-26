@@ -1,9 +1,14 @@
+// @ts-check
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const projectRoot = path.resolve(__dirname, '..');
 const outDir = path.join(projectRoot, 'dist-app');
 
+/**
+ * @param {string} entry
+ */
 async function copyEntry(entry) {
   await fs.cp(path.join(projectRoot, entry), path.join(outDir, entry), {
     recursive: true,

@@ -1,11 +1,14 @@
+// @ts-check
+
 const { spawn } = require('node:child_process');
 const path = require('node:path');
-const electronPath = require('electron');
+const electronPath = /** @type {string} */ (/** @type {unknown} */ (require('electron')));
 
 const projectRoot = path.resolve(__dirname, '..');
 const entry = process.argv[2] || '.';
 
-const child = spawn(electronPath, [entry], {
+/** @type {import('node:child_process').SpawnOptions} */
+const spawnOptions = {
   cwd: projectRoot,
   env: {
     ...process.env,
@@ -14,8 +17,14 @@ const child = spawn(electronPath, [entry], {
   },
   shell: false,
   stdio: 'inherit'
-});
+};
 
+const child = spawn(electronPath, [entry], spawnOptions);
+
+/**
+ * @param {number | null} code
+ * @param {NodeJS.Signals | null} signal
+ */
 child.on('exit', (code, signal) => {
   if (signal) {
     process.kill(process.pid, signal);
