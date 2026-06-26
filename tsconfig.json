@@ -13,9 +13,16 @@
   },
   "include": [
     "*.js",
+    "*.ts",
     "main/**/*.js",
     "ui/**/*.js",
+    "ui/**/*.ts",
     "test/**/*.js",
     "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "dist",
+    "dist-app",
+    "node_modules"
   ]
 }

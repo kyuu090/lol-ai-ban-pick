@@ -6,6 +6,7 @@ node_modules/
 
 # Electron/build outputs
 dist/
+dist-app/
 out/
 build/
 release/

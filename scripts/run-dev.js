@@ -3,8 +3,9 @@ const path = require('node:path');
 const electronPath = require('electron');
 
 const projectRoot = path.resolve(__dirname, '..');
+const entry = process.argv[2] || '.';
 
-const child = spawn(electronPath, ['.'], {
+const child = spawn(electronPath, [entry], {
   cwd: projectRoot,
   env: {
     ...process.env,
