@@ -1,6 +1,5 @@
 const { app, dialog, ipcMain } = require('electron');
 const path = require('node:path');
-const WebSocket = require('ws');
 const {
   createChampionsById,
   createLaneMatchupAnalysisRequest,
@@ -61,6 +60,7 @@ const {
 } = require('./main/ai-analysis-service');
 const { createRiotMatchHistoryService } = require('./main/riot-match-history-service');
 const { createLcuClient } = require('./main/lcu-client');
+const { createLcuWatch } = require('./main/lcu-watch');
 
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
@@ -88,9 +88,6 @@ const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
 let mainWindow;
 let lcuConnection = null;
-let webSocket = null;
-let reconnectTimer = null;
-let retryTimer = null;
 let settings = createDefaultSettings();
 let championPool = createDefaultChampionPool();
 let matchHistoryChampionStats = [];
@@ -126,6 +123,19 @@ const lcuClient = createLcuClient({
   setIconUnavailableLogged: (value) => {
     championIconUnavailableLogged = value;
   },
+  log,
+  serializeForLog
+});
+const lcuWatch = createLcuWatch({
+  getConnection: () => lcuConnection,
+  setConnection: (connection) => {
+    lcuConnection = connection;
+  },
+  updateState,
+  refreshLcuState,
+  applyWebSocketEvent,
+  lockfileRetryMs: LOCKFILE_RETRY_MS,
+  websocketReconnectMs: WEBSOCKET_RECONNECT_MS,
   log,
   serializeForLog
 });
@@ -982,7 +992,7 @@ async function updateThemeMode(_event, themeMode) {
 
 async function reconnectWithCurrentSettings() {
   log.debug('Reconnecting with current settings');
-  closeWebSocket();
+  lcuWatch.closeWebSocket();
   lcuConnection = null;
   await refreshLcuState();
 }
@@ -991,7 +1001,7 @@ async function refreshLcuState() {
   log.debug('Refreshing LCU state');
   try {
     lcuConnection = await lcuClient.readLockfile();
-    clearRetryTimer();
+    lcuWatch.clearRetryTimer();
     championIconUnavailableUntil = 0;
     championIconUnavailableLogged = false;
     updateState({ lcuStatus: 'connecting', error: null });
@@ -1032,12 +1042,12 @@ async function refreshLcuState() {
     await syncMatchHistoryForSummoner(summoner, 'lcu-refresh');
     refreshLaneMatchupAnalysisFromSession(gameflowSession, 'lcu-refresh');
 
-    connectWebSocket();
+    lcuWatch.connectWebSocket();
     scheduleStartupRiotMatchHistoryIfReady('startup');
     return appState;
   } catch (error) {
     log.warn('Failed to refresh LCU state', serializeForLog(error));
-    closeWebSocket();
+    lcuWatch.closeWebSocket();
     lcuConnection = null;
     laneMatchupAnalysisRequestKey = null;
     laneMatchupAnalysisInFlightKey = null;
@@ -1054,127 +1064,19 @@ async function refreshLcuState() {
       error: error.message
     });
     resetMatchHistoryData({ reason: 'lcu-disconnected' });
-    scheduleRetry();
+    lcuWatch.scheduleRetry();
     return appState;
   }
 }
 
 function cleanupWebSocket() {
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-
   if (autoMatchHistoryTimer) {
     clearTimeout(autoMatchHistoryTimer);
     autoMatchHistoryTimer = null;
   }
 
-  clearRetryTimer();
   clearRiotRateLimitCountdown();
-
-  closeWebSocket();
-}
-
-function closeWebSocket() {
-  if (webSocket) {
-    log.debug('Closing LCU WebSocket');
-    webSocket.removeAllListeners();
-    webSocket.close();
-    webSocket = null;
-  }
-}
-
-function clearRetryTimer() {
-  if (retryTimer) {
-    clearTimeout(retryTimer);
-    retryTimer = null;
-  }
-}
-
-function scheduleRetry() {
-  if (retryTimer) return;
-  log.debug('Scheduling lockfile retry', { delayMs: LOCKFILE_RETRY_MS });
-
-  retryTimer = setTimeout(async () => {
-    retryTimer = null;
-    await refreshLcuState();
-  }, LOCKFILE_RETRY_MS);
-}
-
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  log.debug('Scheduling WebSocket reconnect', { delayMs: WEBSOCKET_RECONNECT_MS });
-
-  reconnectTimer = setTimeout(async () => {
-    reconnectTimer = null;
-    await refreshLcuState();
-  }, WEBSOCKET_RECONNECT_MS);
-}
-
-function connectWebSocket() {
-  if (!lcuConnection || webSocket?.readyState === WebSocket.OPEN) return;
-
-  if (webSocket) {
-    webSocket.removeAllListeners();
-    webSocket.close();
-  }
-
-  const wsUrl = `wss://riot:${encodeURIComponent(lcuConnection.password)}@127.0.0.1:${lcuConnection.port}/`;
-  log.debug('Connecting LCU WebSocket', { port: lcuConnection.port });
-
-  webSocket = new WebSocket(wsUrl, 'wamp', {
-    rejectUnauthorized: false
-  });
-
-  updateState({ websocketStatus: 'connecting' });
-
-  webSocket.on('open', () => {
-    log.debug('LCU WebSocket connected');
-    updateState({ websocketStatus: 'connected', error: null });
-
-    // WAMP subscribe format used by the League Client Update WebSocket.
-    webSocket.send(JSON.stringify([5, 'OnJsonApiEvent']));
-  });
-
-  webSocket.on('message', async (data) => {
-    const raw = data.toString();
-    let event;
-
-    try {
-      event = JSON.parse(raw);
-    } catch {
-      event = raw;
-    }
-
-    updateState({ lastEvent: event });
-
-    if (Array.isArray(event) && event[2]?.uri) {
-      log.debug('LCU WebSocket event received', {
-        uri: event[2].uri,
-        eventType: event[2].eventType
-      });
-      await applyWebSocketEvent(event[2]);
-    }
-  });
-
-  webSocket.on('close', () => {
-    log.debug('LCU WebSocket closed');
-    lcuConnection = null;
-    updateState({
-      lcuStatus: 'disconnected',
-      websocketStatus: 'disconnected'
-    });
-    scheduleReconnect();
-  });
-
-  webSocket.on('error', (error) => {
-    log.warn('LCU WebSocket error', serializeForLog(error));
-    updateState({
-      websocketStatus: 'error',
-      error: `WebSocket error: ${error.message}`
-    });
-  });
+  lcuWatch.cleanup();
 }
 
 async function applyWebSocketEvent(event) {
