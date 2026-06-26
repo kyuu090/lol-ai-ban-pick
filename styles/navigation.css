@@ -1,0 +1,69 @@
+.view-tabs {
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(25, 18, 88, 0.08);
+  display: flex;
+  padding: 2px;
+}
+
+.tab-button {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  min-height: 30px;
+  padding: 0 12px;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #ffffff, rgba(238, 235, 255, 0.96));
+  box-shadow: 0 7px 16px rgba(97, 54, 255, 0.12);
+  color: var(--text);
+}
+
+#draftTabButton.draft-live {
+  background: linear-gradient(135deg, #e5485c, #6136ff);
+  border: 1px solid rgba(4, 16, 41, 0.08);
+  box-shadow: 0 8px 20px rgba(229, 72, 92, 0.22);
+  color: #ffffff;
+  font-weight: 900;
+  padding-left: 24px;
+  position: relative;
+}
+
+#draftTabButton.draft-live.active {
+  background: linear-gradient(135deg, #e5485c, #6136ff);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 8px 20px rgba(229, 72, 92, 0.26);
+  color: #ffffff;
+}
+
+#draftTabButton.draft-live::before {
+  background: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22);
+  content: "";
+  height: 6px;
+  left: 8px;
+  position: absolute;
+  top: 8px;
+  width: 6px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: 15px;
+}
+

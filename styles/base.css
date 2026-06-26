@@ -1,0 +1,70 @@
+﻿:root {
+  color-scheme: light;
+  --bg: #f5f4ff;
+  --panel: rgba(255, 255, 255, 0.84);
+  --panel-solid: #ffffff;
+  --panel-soft: rgba(238, 235, 255, 0.82);
+  --text: #041029;
+  --muted: #687184;
+  --border: rgba(102, 85, 178, 0.18);
+  --line: rgba(120, 95, 255, 0.36);
+  --accent: #6136ff;
+  --accent-strong: #2574ff;
+  --accent-soft: rgba(110, 78, 255, 0.12);
+  --blue: #2574ff;
+  --red: #ec486a;
+  --danger: #e5485c;
+  --shadow: 0 18px 50px rgba(25, 18, 88, 0.13);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(246, 244, 255, 0.94) 42%, rgba(234, 229, 255, 0.96)),
+    radial-gradient(circle at 18% 8%, rgba(37, 116, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 22%, rgba(97, 54, 255, 0.2), transparent 32%);
+  color: var(--text);
+  font-family:
+    "Bahnschrift",
+    "Yu Gothic UI",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+
+body::before {
+  background:
+    linear-gradient(135deg, transparent 0 42%, rgba(125, 98, 255, 0.18) 42% 62%, transparent 62%),
+    linear-gradient(45deg, transparent 0 56%, rgba(37, 116, 255, 0.12) 56% 72%, transparent 72%);
+  inset: 0;
+}
+
+body::after {
+  background: linear-gradient(140deg, rgba(97, 54, 255, 0.14), rgba(37, 116, 255, 0.05));
+  bottom: -80px;
+  height: 42vh;
+  right: -120px;
+  transform: skewX(-18deg);
+  width: 44vw;
+}
+

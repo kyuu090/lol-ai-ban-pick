@@ -1,0 +1,131 @@
+.match-data-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.app-logo {
+  background: #ffffff;
+  border: 1px solid rgba(4, 16, 41, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(38, 25, 111, 0.14);
+  flex: 0 0 auto;
+  height: 48px;
+  object-fit: cover;
+  width: 48px;
+}
+
+.match-data-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.match-data-summary strong {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.match-data-summary #matchDataRange {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.match-data-summary #matchDataRange.is-error {
+  color: var(--danger);
+}
+
+.match-data-season-hint {
+  align-self: start;
+  background: rgba(97, 54, 255, 0.09);
+  border-color: rgba(97, 54, 255, 0.24);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 26px;
+  padding: 0 9px;
+}
+
+.match-data-season-hint:hover:not(:disabled) {
+  background: rgba(97, 54, 255, 0.14);
+  border-color: rgba(97, 54, 255, 0.4);
+}
+
+.match-data-progress {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 14px;
+}
+
+.match-data-progress[data-phase="error"] {
+  color: var(--danger);
+}
+
+.match-data-download {
+  display: inline-flex;
+  position: relative;
+}
+
+.match-data-update-button,
+.match-data-menu-button {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(97, 54, 255, 0.28);
+  box-shadow: 0 8px 22px rgba(97, 54, 255, 0.1);
+  color: var(--accent);
+  min-height: 30px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.match-data-update-button {
+  border-radius: 6px 0 0 6px;
+}
+
+.match-data-menu-button {
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  min-width: 34px;
+  padding: 0 9px;
+}
+
+.match-data-update-button:hover:not(:disabled),
+.match-data-menu-button:hover:not(:disabled) {
+  background: rgba(97, 54, 255, 0.1);
+  border-color: rgba(97, 54, 255, 0.46);
+}
+
+.match-data-menu {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(97, 54, 255, 0.2);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  min-width: 238px;
+  padding: 5px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+}
+
+.match-data-menu button {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text);
+  display: block;
+  font-size: 13px;
+  min-height: 34px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.match-data-menu button:hover:not(:disabled) {
+  background: rgba(97, 54, 255, 0.1);
+  color: var(--accent);
+}
+

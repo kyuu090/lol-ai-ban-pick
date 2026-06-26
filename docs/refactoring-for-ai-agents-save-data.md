@@ -150,3 +150,42 @@
 - 注意:
   - `renderer.js` はまだ 1000 行超。Phase 3 前にさらに薄くするなら、次はイベントバインドと副作用ハンドラを `ui/app-events.js` 的に分ける候補がある。ただし refactoring plan 上の Phase 2 対象画面分割は完了。
   - Electron の実起動確認は未実施。
+
+## 2026-06-26: Phase 3 CSS split completed
+
+- 実施内容:
+  - 単一の `style.css` を `styles/` 配下の責務別 CSS に分割。
+  - `index.html` は元の cascade order を保ったまま、複数の `styles/*.css` を読み込む形に変更。
+  - Electron build の `files` を `style.css` から `styles/**/*` へ変更。
+  - 旧 `style.css` を削除。
+- 追加した CSS:
+  - `styles/base.css`
+  - `styles/titlebar.css`
+  - `styles/forms.css`
+  - `styles/app-shell.css`
+  - `styles/match-data.css`
+  - `styles/navigation.css`
+  - `styles/layout.css`
+  - `styles/stats.css`
+  - `styles/champion-pool.css`
+  - `styles/settings.css`
+  - `styles/draft-state.css`
+  - `styles/in-game.css`
+  - `styles/draft.css`
+  - `styles/debug.css`
+  - `styles/theme.css`
+  - `styles/responsive.css`
+- 変更した主なファイル:
+  - `styles/*.css`
+  - `index.html`
+  - `package.json`
+  - `docs/AGENTS_CONTEXT.md`
+  - `docs/development.md`
+  - `docs/refactoring-for-ai-agents-save-data.md`
+- 確認:
+  - 分割後の CSS を `index.html` の読み込み順に結合すると、分割前の `style.css` と同一内容になることを確認。
+  - `npm test`: 76 tests pass。
+  - `index.html` の CSS link がすべて存在することを静的確認。
+- 注意:
+  - CSS は挙動変更を避けるため、既存順序を維持した機械的分割に留めている。
+  - Electron の実起動確認は未実施。

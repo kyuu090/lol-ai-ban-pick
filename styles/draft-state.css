@@ -1,0 +1,19 @@
+.center-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  min-height: 380px;
+  padding: 32px;
+  text-align: center;
+}
+
+.center-state h2 {
+  font-size: 30px;
+}
+
+.center-state p:last-child {
+  color: var(--muted);
+}
+

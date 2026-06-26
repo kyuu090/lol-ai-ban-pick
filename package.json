@@ -31,7 +31,7 @@
       "renderer.js",
       "riot-api.js",
       "riot-match-history.js",
-      "style.css",
+      "styles/**/*",
       "ui/**/*",
       "package.json"
     ],

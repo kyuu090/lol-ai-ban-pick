@@ -67,7 +67,7 @@ index.html
 renderer.js
 draft-logic.js
 lcu-logic.js
-style.css
+styles/
 logger.js
 scripts/run-dev.js
 test/
@@ -83,7 +83,7 @@ AGENTS_CONTEXT.md
 - `package.json` の `npm start` で `electron .` を起動する。
 - `package.json` の `npm run dev` でDEBUGログ付き起動を行う。
 - メインプロセスは `main.js`。
-- Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `style.css`。
+- Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `styles/`。
 - `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 
