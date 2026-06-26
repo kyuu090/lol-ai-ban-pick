@@ -89,6 +89,8 @@ AGENTS_CONTEXT.md
 - `main/champion-pool-store.js` は ChampionPool の load / save を担当する。
 - `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当する。
 - `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当する。
+- `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当する。
+- `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当する。
 - `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 

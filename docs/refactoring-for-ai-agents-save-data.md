@@ -230,3 +230,33 @@
 - 注意:
   - Electron の実起動確認は未実施。
   - Phase 5 では LCU / Riot / BFF / AI 接続系を分ける候補がある。
+
+## 2026-06-26: Phase 4.5 main window / IPC split completed
+
+- 実施内容:
+  - `main/window.js` を追加し、BrowserWindow 作成、activate 時の window 有無判定、window minimize / maximize / close handler を移動。
+  - `main/ipc-handlers.js` を追加し、Renderer 向け IPC channel 登録を `registerIpcHandlers` に集約。
+  - `main.js` は `createMainWindow` と `registerIpcHandlers` を呼び出す形に変更。
+  - `test/main-ipc-handlers.test.js` を追加し、IPC channel と handler の対応を確認。
+- 変更した主なファイル:
+  - `main/window.js`
+  - `main/ipc-handlers.js`
+  - `main.js`
+  - `test/main-ipc-handlers.test.js`
+  - `docs/AGENTS_CONTEXT.md`
+  - `docs/development.md`
+  - `docs/refactoring-for-ai-agents-save-data.md`
+  - `docs/refactoring-for-ai-agents.md`
+- 確認:
+  - `node --check main.js`: pass。
+  - `node --check main/window.js`: pass。
+  - `node --check main/ipc-handlers.js`: pass。
+  - `node --check test/main-ipc-handlers.test.js`: pass。
+  - `npm test`: 81 tests pass。
+  - 作業後の `main.js`: 1407 行。
+- Phase 4.5 完了メモ:
+  - Electron lifecycle と IPC channel 名は変更していない。
+  - `main/window.js` は Electron の `BrowserWindow` に依存するため、現時点では単体テストではなく syntax check に留めている。
+- 注意:
+  - Electron の実起動確認は未実施。
+  - 次の低リスク候補は `main/ai-analysis-service.js` への BFF request 部分の分離。

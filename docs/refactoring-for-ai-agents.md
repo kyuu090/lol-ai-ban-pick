@@ -203,6 +203,8 @@ CSS 分割時は visual regression が起きやすいので、起動確認また
 
 保存ファイルの場所や JSON 形式は変えない。
 
+### Phase 4.5
+
 Phase 4 完了後の `main/` 目標構造:
 
 ```text
