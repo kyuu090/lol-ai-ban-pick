@@ -49,6 +49,7 @@ LCU WebSocket event から作れるバンピック中・試合中・試合終了
 - Electron
 - Node.js
 - HTML/CSS/JavaScript
+- TypeScriptは未導入。AI可読性向上のための段階的移行計画は `docs/typescript-migration-for-ai-agents.md` にまとめている。
 - Reactなし
 - Windows環境想定
 - `electron-log`
@@ -72,6 +73,7 @@ styles/
 logger.js
 scripts/run-dev.js
 test/
+docs/
 README.md
 AGENTS_CONTEXT.md
 .gitignore
@@ -552,6 +554,18 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 - `match-history-workflow.js` は match history 更新時のID結合、重複排除、キャッシュ済みdetail判定を担当する。
 - `index.html` は `draft-logic.js` を `renderer.js` より先に読み込む。
 - `npm test` で Node.js 標準の `node:test` を実行する。主なテストは `test/draft-logic.test.js`, `test/lcu-logic.test.js`, `test/riot-api.test.js`, `test/riot-match-history.test.js`, `test/match-history-workflow.test.js`。
+
+### AI Readability and TypeScript Migration
+
+今後の保守では、生成AIが読む文脈を減らす目的で TypeScript 化を検討している。詳細な作業計画は `docs/typescript-migration-for-ai-agents.md` を読む。
+
+方針:
+
+- TypeScript 化は一括変換ではなく、型定義追加、IPC / preload 境界の型付け、純粋ロジック、小さい store / service、UI view、入口ファイルの順に進める。
+- 目的は型安全化そのものではなく、`AppState`、`window.lcuApi`、IPC channel、Draft context、Match history、AI analysis response の shape を生成AIが型だけで把握できるようにすること。
+- 初期段階では CommonJS 構成を維持し、ESM 移行やフレームワーク導入を同時に行わない。
+- `main.js` と `renderer.js` は型が揃ってから薄くする。大きい入口ファイルを最初に `.ts` 化しない。
+- TypeScript 作業後は `docs/refactoring-for-ai-agents-save-data.md` に作業ログを残す。
 
 ## UI
 
