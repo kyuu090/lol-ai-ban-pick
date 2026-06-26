@@ -122,3 +122,31 @@
 - 注意:
   - `parseDraftAiAnalysisNotes` と `createDraftAiAnalysisStatus` は Draft 側でも使うため、現時点では `renderer.js` に残している。
   - 次は `ui/draft-view.js` を切る。`renderChampSelect` / ban list / team / draft focus / insights 表示が対象。
+
+## 2026-06-26: Phase 2 draft view split completed
+
+- 実施内容:
+  - `ui/draft-view.js` を追加し、Champ Select 盤面、ban list、team rows、draft focus、draft self summary、draft AI analysis panel、ban / pick insight panel を移動。
+  - `renderer.js` は `window.UiDraftView.createDraftView()` から `renderChampSelect` と `renderDraftAiAnalysis` を受け取る形に変更。
+  - AI 分析リクエスト、AI response parsing、champion pool 保存などの副作用は `renderer.js` 側に残している。
+  - `test/ui-draft-view.test.js` を追加し、draft AI analysis panel の基本表示を確認。
+- 変更した主なファイル:
+  - `ui/draft-view.js`
+  - `renderer.js`
+  - `index.html`
+  - `test/ui-draft-view.test.js`
+- 確認:
+  - `npm test`: 76 tests pass。
+  - `node --check renderer.js`: pass。
+  - `node --check ui/draft-view.js`: pass。
+  - 作業後の `renderer.js`: 1237 行。
+- Phase 2 完了メモ:
+  - `ui/champion-pool-view.js`: Champion Pool 表示。
+  - `ui/stats-view.js`: Stats table / tabs / detail row。
+  - `ui/draft-view.js`: Champ Select / draft insight 表示。
+  - `ui/in-game-view.js`: In-game self card / AI analysis 表示。
+  - `ui/settings-view.js`: Settings 表示。
+  - 追加で `ui/match-data-view.js` もヘッダーの match data 表示として分離済み。
+- 注意:
+  - `renderer.js` はまだ 1000 行超。Phase 3 前にさらに薄くするなら、次はイベントバインドと副作用ハンドラを `ui/app-events.js` 的に分ける候補がある。ただし refactoring plan 上の Phase 2 対象画面分割は完了。
+  - Electron の実起動確認は未実施。
