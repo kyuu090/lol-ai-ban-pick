@@ -79,3 +79,25 @@
   - Champion Pool の保存・追加・削除など状態更新処理は、まだ `renderer.js` 側に残している。view 側は描画と lane helper を担当する。
   - Stats / Draft / In-game は未分割。次に進めるなら `ui/stats-view.js` が候補だが、依存が広いため `played stats` と `opponent stats` をさらに分けるか検討するとよい。
   - Electron の実起動確認は未実施。
+
+## 2026-06-26: Phase 2 stats table split
+
+- 実施内容:
+  - `ui/stats-view.js` を追加し、Stats 画面の played stats / opponent stats table、lane tabs、sort button state、展開 detail row を移動。
+  - `renderer.js` は `window.UiStatsView.createStatsView()` を通じて `renderPlayedChampionStats`、`renderLaneOpponentStats`、`setStatsSort` を受け取る形に変更。
+  - Stats の既存 state (`activePlayedStatsLane`、sort key、expanded row など) は `renderer.js` 側に残し、view module へ getter / setter として渡している。
+  - 未使用だった `renderPlayedChampionStatsLegacy` / `renderLaneOpponentStatsLegacy` / `renderStatsTable` も削除。
+  - `test/ui-stats-view.test.js` を追加し、stats table sort helper の基本挙動を確認。
+- 変更した主なファイル:
+  - `ui/stats-view.js`
+  - `renderer.js`
+  - `index.html`
+  - `test/ui-stats-view.test.js`
+- 確認:
+  - `npm test`: 73 tests pass。
+  - `node --check renderer.js`: pass。
+  - `node --check ui/stats-view.js`: pass。
+  - 作業後の `renderer.js`: 2193 行。
+- 注意:
+  - Weak / strong champion list と draft insight 用の stats chip 生成は、まだ `renderer.js` 側に残っている。
+  - 次に進めるなら `ui/in-game-view.js` か `ui/draft-view.js` だが、AI analysis 表示と draft state が絡むため、まず `in-game self card` のような小さい部分から切るのが安全。
