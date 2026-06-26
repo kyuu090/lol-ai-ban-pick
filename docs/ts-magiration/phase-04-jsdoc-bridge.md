@@ -5,7 +5,14 @@
 ## 作業
 
 1. 小さい純粋関数ファイルから `// @ts-check` を追加する。
-2. `@param` / `@returns` で `types/domain.d.ts` の型を参照する。
+2. `@param` / `@returns` で責務に合う `types/domain/*.d.ts` の型を参照する。
+   - settings: `types/domain/settings.d.ts`
+   - champion data / ChampionPool: `types/domain/champion.d.ts`
+   - LCU state / champ-select / gameflow: `types/domain/lcu.d.ts`
+   - match history / stats: `types/domain/match-history.d.ts`
+   - draft / in-game context: `types/domain/draft.d.ts`
+   - AI analysis / lane matchup: `types/domain/ai-analysis.d.ts`
+   - full app state: `types/domain/app-state.d.ts`
 3. 型エラーを直す場合は挙動変更を避ける。
 4. 必要なら helper 型を `types/` に追加する。
 

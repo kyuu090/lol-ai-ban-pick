@@ -12,6 +12,16 @@
 
 ## 最低限定義する LcuApi
 
+使用する domain 型は責務別ファイルから参照する。
+
+```ts
+import type { AppState } from './domain/app-state';
+import type { AiAnalysisResponse } from './domain/ai-analysis';
+import type { ChampionPool } from './domain/champion';
+import type { FinalCompositionDraftContext, PickPhaseDraftContext } from './domain/draft';
+import type { PublicSettings, ThemeMode } from './domain/settings';
+```
+
 ```ts
 interface LcuApi {
   getState(): Promise<AppState>;
