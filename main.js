@@ -11,12 +11,8 @@ const {
   describeLaneMatchupAnalysisReadiness,
   parseLockfile
 } = require('./lcu-logic');
-const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
 const {
-  RIOT_PLATFORM_REGIONS,
-  DEFAULT_RIOT_PLATFORM_REGION,
   DEFAULT_RIOT_BFF_BASE_URL,
-  createRiotApiHosts,
   normalizeRiotPlatformRegion,
   parseRetryAfterMs,
   requestRiotBffJson
@@ -33,8 +29,32 @@ const {
   createAnalysisMatchIds
 } = require('./match-history-workflow');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
+const {
+  createDefaultSettings,
+  createPublicSettings,
+  loadSettings: loadSettingsFromStore,
+  normalizeThemeMode,
+  saveSettings: saveSettingsToStore
+} = require('./main/settings-store');
+const {
+  loadChampionPool: loadChampionPoolFromStore,
+  saveChampionPool: saveChampionPoolToStore
+} = require('./main/champion-pool-store');
+const { createDefaultChampionPool } = require('./draft-logic');
+const {
+  getMatchHistoryPath: getMatchHistoryStorePath,
+  getRiotMatchCachePath: getRiotMatchCacheStorePath,
+  readJsonFile,
+  writeJsonFile
+} = require('./main/match-history-store');
+const {
+  applyStatePatch,
+  createInitialState: createAppInitialState,
+  createLaneMatchupAnalysisState,
+  createMatchHistoryStatus: createBaseMatchHistoryStatus,
+  createMatchHistorySummary
+} = require('./main/app-state');
 
-const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
@@ -59,8 +79,6 @@ const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
-const THEME_MODES = ['system', 'light', 'dark'];
-
 let mainWindow;
 let lcuConnection = null;
 let webSocket = null;
@@ -91,141 +109,36 @@ if (process.platform === 'win32') {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
 
-function createDefaultSettings() {
-  return {
-    lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
-    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION,
-    themeMode: 'system'
-  };
-}
-
 function configureAppUserDataPath() {
   const userDataPath = path.join(app.getPath('appData'), APP_USER_DATA_DIR_NAME);
   app.setPath('userData', userDataPath);
 }
 
-function normalizeThemeMode(themeMode) {
-  return THEME_MODES.includes(themeMode) ? themeMode : 'system';
-}
-
-function normalizeSettings(sourceSettings = {}) {
-  const defaults = createDefaultSettings();
-  return {
-    lolInstallDir: typeof sourceSettings.lolInstallDir === 'string' && sourceSettings.lolInstallDir.trim()
-      ? sourceSettings.lolInstallDir
-      : defaults.lolInstallDir,
-    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion),
-    themeMode: normalizeThemeMode(sourceSettings.themeMode)
-  };
-}
-
 function createInitialState() {
-  return {
+  return createAppInitialState({
     settings: createPublicSettings(settings),
-    lcuStatus: 'disconnected',
-    websocketStatus: 'disconnected',
-    gameflowPhase: null,
-    summoner: null,
-    lobby: null,
-    champSelect: null,
-    championsById: {},
     championPool,
     matchHistoryStatus: createMatchHistoryStatus(),
-    matchHistorySummary: null,
     matchHistoryChampionStats,
     matchHistoryEnemyChampionStats,
     matchHistoryLaneOpponentStats,
-    matchHistorySelfVsLaneOpponentStats,
-    gameflowSession: null,
-    laneMatchupAnalysis: createLaneMatchupAnalysisState(),
-    lastEvent: null,
-    error: null,
-    updatedAt: null
-  };
-}
-
-function createLaneMatchupAnalysisState(patch = {}) {
-  return {
-    status: 'idle',
-    requestKey: null,
-    request: null,
-    response: null,
-    error: null,
-    updatedAt: null,
-    ...patch
-  };
+    matchHistorySelfVsLaneOpponentStats
+  });
 }
 
 function createMatchHistoryStatus(patch = {}) {
-  return {
-    phase: 'idle',
-    source: 'manual',
-    mode: 'recent',
-    requestedMatches: RIOT_MATCHES_PER_RUN,
-    fetchedMatches: 0,
-    normalizedMatches: 0,
-    updatedMatches: 0,
-    failedRequests: 0,
-    retryAttempt: 0,
-    nextRetryAt: null,
-    message: '',
-    error: null,
-    startedAt: null,
-    updatedAt: null,
-    ...patch
-  };
-}
-
-function createMatchHistorySummary({ updatedAt = null, requestedMatches = 0, matchIds = 0, updatedMatches = 0, matches = [], failedRequests = 0, championStats = 0 } = {}) {
-  const gameCreations = matches
-    .map((match) => Number(match.gameCreation))
-    .filter((value) => Number.isFinite(value) && value > 0);
-
-  return {
-    updatedAt,
-    requestedMatches,
-    matchIds,
-    updatedMatches,
-    normalizedMatches: matches.length,
-    failedRequests,
-    championStats,
-    oldestGameCreation: gameCreations.length > 0 ? Math.min(...gameCreations) : null,
-    newestGameCreation: gameCreations.length > 0 ? Math.max(...gameCreations) : null
-  };
-}
-
-function createPublicSettings(sourceSettings = settings) {
-  const riotPlatformRegion = normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion);
-  const riotHosts = createRiotApiHosts(riotPlatformRegion);
-
-  return {
-    lolInstallDir: sourceSettings.lolInstallDir,
-    riotPlatformRegion,
-    riotRegionalRoute: riotHosts.regionalRoute,
-    riotPlatformRegions: RIOT_PLATFORM_REGIONS,
-    themeMode: normalizeThemeMode(sourceSettings.themeMode),
-    themeModes: THEME_MODES
-  };
-}
-
-function getSettingsPath() {
-  return path.join(app.getPath('userData'), 'settings.json');
-}
-
-function getChampionPoolPath() {
-  return path.join(app.getPath('userData'), 'champion-pool.json');
-}
-
-function getAccountDataKey(puuid) {
-  return encodeURIComponent(String(puuid || '').trim());
+  return createBaseMatchHistoryStatus({
+    defaultRequestedMatches: RIOT_MATCHES_PER_RUN,
+    patch
+  });
 }
 
 function getRiotMatchCachePath(puuid) {
-  return path.join(app.getPath('userData'), 'riot-match-cache', `${getAccountDataKey(puuid)}.json`);
+  return getRiotMatchCacheStorePath(app.getPath('userData'), puuid);
 }
 
 function getMatchHistoryPath(puuid) {
-  return path.join(app.getPath('userData'), 'match-history', `${getAccountDataKey(puuid)}.json`);
+  return getMatchHistoryStorePath(app.getPath('userData'), puuid);
 }
 
 function getPuuidFromSummoner(summoner) {
@@ -234,29 +147,13 @@ function getPuuidFromSummoner(summoner) {
 }
 
 async function loadSettings() {
-  try {
-    const raw = await fs.readFile(getSettingsPath(), 'utf8');
-    settings = normalizeSettings(JSON.parse(raw));
-    log.debug('Settings loaded', { path: getSettingsPath(), settings: createPublicSettings(settings) });
-  } catch {
-    settings = createDefaultSettings();
-    log.debug('Settings file not found or invalid; using defaults', { path: getSettingsPath(), settings: createPublicSettings(settings) });
-  }
-
+  settings = await loadSettingsFromStore({ userDataPath: app.getPath('userData'), log });
   updateState({ settings: createPublicSettings(settings) });
   return createPublicSettings(settings);
 }
 
 async function loadChampionPool() {
-  try {
-    const raw = await fs.readFile(getChampionPoolPath(), 'utf8');
-    championPool = normalizeChampionPool(JSON.parse(raw));
-    log.debug('Champion pool loaded', { path: getChampionPoolPath(), championPool });
-  } catch {
-    championPool = createDefaultChampionPool();
-    log.debug('Champion pool file not found or invalid; using empty pool', { path: getChampionPoolPath() });
-  }
-
+  championPool = await loadChampionPoolFromStore({ userDataPath: app.getPath('userData'), log });
   updateState({ championPool });
   return championPool;
 }
@@ -352,25 +249,22 @@ async function syncMatchHistoryForSummoner(summoner, reason) {
 }
 
 async function saveChampionPool(_event, nextChampionPool) {
-  championPool = normalizeChampionPool(nextChampionPool);
-
-  await fs.mkdir(path.dirname(getChampionPoolPath()), { recursive: true });
-  await fs.writeFile(getChampionPoolPath(), JSON.stringify(championPool, null, 2), 'utf8');
-  log.debug('Champion pool saved', { path: getChampionPoolPath(), championPool });
+  championPool = await saveChampionPoolToStore({
+    userDataPath: app.getPath('userData'),
+    nextChampionPool,
+    log
+  });
   updateState({ championPool });
   return championPool;
 }
 
 async function saveSettings(nextSettings) {
-  settings = {
-    ...normalizeSettings(settings),
-    ...nextSettings
-  };
-  settings = normalizeSettings(settings);
-
-  await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
-  await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
-  log.debug('Settings saved', { path: getSettingsPath(), settings: createPublicSettings(settings) });
+  settings = await saveSettingsToStore({
+    userDataPath: app.getPath('userData'),
+    currentSettings: settings,
+    nextSettings,
+    log
+  });
   updateState({ settings: createPublicSettings(settings) });
   return settings;
 }
@@ -405,11 +299,7 @@ function sendState() {
 }
 
 function updateState(patch) {
-  appState = {
-    ...appState,
-    ...patch,
-    updatedAt: new Date().toISOString()
-  };
+  appState = applyStatePatch(appState, patch);
   sendState();
 }
 
@@ -421,19 +311,6 @@ function updateMatchHistoryStatus(patch) {
       updatedAt: new Date().toISOString()
     })
   });
-}
-
-async function readJsonFile(filePath, fallback) {
-  try {
-    return JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath, value) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
 }
 
 function getRiotIdFromSummoner(summoner) {

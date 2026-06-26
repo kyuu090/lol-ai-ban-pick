@@ -148,6 +148,10 @@ git push origin v0.1.1
 - Renderer は `index.html`, `renderer.js`, `draft-logic.js`, `styles/` です。
 - Renderer から Node.js API を直接触らないように、`preload.js` と `contextBridge` で必要な IPC だけ公開しています。
 - `main.js` で LCU lockfile を読み、REST API 初期取得と `OnJsonApiEvent` の WebSocket 購読を行います。
+- `main/settings-store.js` は settings の default / normalize / load / save / public settings 作成を担当します。
+- `main/champion-pool-store.js` は ChampionPool の load / save を担当します。
+- `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当します。
+- `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当します。
 - `lcu-logic.js` に LCU 接続用の純粋関数、`draft-logic.js` にドラフト表示用の純粋関数を切り出しています。
 - `riot-api.js` は Riot API 用の request / retry 基盤です。
 - `riot-match-history.js` は Match-V5 response の正規化と自己戦績集計を担当します。

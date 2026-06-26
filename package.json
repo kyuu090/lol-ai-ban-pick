@@ -24,6 +24,7 @@
       "index.html",
       "lcu-logic.js",
       "logger.js",
+      "main/**/*",
       "main.js",
       "match-history-workflow.js",
       "mock-lcu-api.js",

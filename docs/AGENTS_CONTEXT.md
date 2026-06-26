@@ -62,6 +62,7 @@ LCU WebSocket event から作れるバンピック中・試合中・試合終了
 package.json
 package-lock.json
 main.js
+main/
 preload.js
 index.html
 renderer.js
@@ -84,6 +85,10 @@ AGENTS_CONTEXT.md
 - `package.json` の `npm run dev` でDEBUGログ付き起動を行う。
 - メインプロセスは `main.js`。
 - Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `styles/`。
+- `main/settings-store.js` は settings の default / normalize / load / save / public settings 作成を担当する。
+- `main/champion-pool-store.js` は ChampionPool の load / save を担当する。
+- `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当する。
+- `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当する。
 - `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 

@@ -189,3 +189,41 @@
 - 注意:
   - CSS は挙動変更を避けるため、既存順序を維持した機械的分割に留めている。
   - Electron の実起動確認は未実施。
+
+## 2026-06-26: Phase 4 main save/state split completed
+
+- 実施内容:
+  - `main/settings-store.js` を追加し、settings の default / normalize / load / save / public settings 作成を移動。
+  - `main/champion-pool-store.js` を追加し、ChampionPool の load / save を移動。
+  - `main/match-history-store.js` を追加し、PUUID 別 match history / cache path と JSON read / write を移動。
+  - `main/app-state.js` を追加し、initial state、match history status / summary、lane matchup analysis state、state patch を移動。
+  - `main.js` は保存・設定系モジュールを呼び出し、読み込んだ値を既存 state に反映する形へ変更。
+  - Electron build の `files` に `main/**/*` を追加。
+  - `test/main-stores.test.js` を追加し、settings / ChampionPool / match history JSON / app state helper の基本挙動を確認。
+- 変更した主なファイル:
+  - `main/settings-store.js`
+  - `main/champion-pool-store.js`
+  - `main/match-history-store.js`
+  - `main/app-state.js`
+  - `main.js`
+  - `package.json`
+  - `test/main-stores.test.js`
+  - `docs/AGENTS_CONTEXT.md`
+  - `docs/development.md`
+  - `docs/refactoring-for-ai-agents-save-data.md`
+- 確認:
+  - 作業前 `npm test`: 76 tests pass。
+  - `node --check main.js`: pass。
+  - `node --check main/settings-store.js`: pass。
+  - `node --check main/champion-pool-store.js`: pass。
+  - `node --check main/match-history-store.js`: pass。
+  - `node --check main/app-state.js`: pass。
+  - `node --check test/main-stores.test.js`: pass。
+  - 作業後 `npm test`: 80 tests pass。
+  - 作業後の `main.js`: 1428 行。
+- Phase 4 完了メモ:
+  - 保存ファイルの場所と JSON 形式は変更していない。
+  - `main.js` の Electron lifecycle、IPC 登録順序、LCU / Riot / BFF 接続系の責務は維持している。
+- 注意:
+  - Electron の実起動確認は未実施。
+  - Phase 5 では LCU / Riot / BFF / AI 接続系を分ける候補がある。
