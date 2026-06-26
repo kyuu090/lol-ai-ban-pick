@@ -101,3 +101,24 @@
 - 注意:
   - Weak / strong champion list と draft insight 用の stats chip 生成は、まだ `renderer.js` 側に残っている。
   - 次に進めるなら `ui/in-game-view.js` か `ui/draft-view.js` だが、AI analysis 表示と draft state が絡むため、まず `in-game self card` のような小さい部分から切るのが安全。
+
+## 2026-06-26: Phase 2 in-game view split
+
+- 実施内容:
+  - `ui/in-game-view.js` を追加し、In-game 自己カード、最終構成分析表示、レーン対面分析表示、lane matchup rich text 表示を移動。
+  - `renderer.js` は `window.UiInGameView.createInGameView()` から `renderInGame` と `renderInGameFinalCompositionAnalysis` を受け取る形に変更。
+  - AI 分析リクエストと draft AI パネル表示は、まだ `renderer.js` 側に残している。
+  - `test/ui-in-game-view.test.js` を追加し、lane matchup detail 正規化の基本挙動を確認。
+- 変更した主なファイル:
+  - `ui/in-game-view.js`
+  - `renderer.js`
+  - `index.html`
+  - `test/ui-in-game-view.test.js`
+- 確認:
+  - `npm test`: 74 tests pass。
+  - `node --check renderer.js`: pass。
+  - `node --check ui/in-game-view.js`: pass。
+  - 作業後の `renderer.js`: 1813 行。
+- 注意:
+  - `parseDraftAiAnalysisNotes` と `createDraftAiAnalysisStatus` は Draft 側でも使うため、現時点では `renderer.js` に残している。
+  - 次は `ui/draft-view.js` を切る。`renderChampSelect` / ban list / team / draft focus / insights 表示が対象。
