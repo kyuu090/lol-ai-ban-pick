@@ -1,0 +1,102 @@
+.app-header p,
+.label {
+  color: var(--muted);
+}
+
+.status-grid,
+.content-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.status-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.content-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-card,
+.panel,
+.center-state,
+.draft-board {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.status-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+#draftView {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+#championPoolView {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.debug-toolbar {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.settings-panel,
+.champion-pool-panel,
+.stats-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.champion-pool-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-panel h2,
+.champion-pool-panel h2,
+.stats-panel h2 {
+  font-size: 19px;
+  margin-top: 2px;
+}
+
+.settings-panel p:not(.eyebrow),
+.champion-pool-panel p:not(.eyebrow),
+.stats-panel p:not(.eyebrow) {
+  color: var(--muted);
+  margin-top: 5px;
+}
+

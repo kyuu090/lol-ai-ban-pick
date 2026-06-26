@@ -49,6 +49,7 @@ LCU WebSocket event から作れるバンピック中・試合中・試合終了
 - Electron
 - Node.js
 - HTML/CSS/JavaScript
+- TypeScriptは未導入。AI可読性向上のための段階的移行計画は `docs/ts-magiration/README.md` から Phase 別に読む。
 - Reactなし
 - Windows環境想定
 - `electron-log`
@@ -62,15 +63,17 @@ LCU WebSocket event から作れるバンピック中・試合中・試合終了
 package.json
 package-lock.json
 main.js
+main/
 preload.js
 index.html
 renderer.js
 draft-logic.js
 lcu-logic.js
-style.css
+styles/
 logger.js
 scripts/run-dev.js
 test/
+docs/
 README.md
 AGENTS_CONTEXT.md
 .gitignore
@@ -83,7 +86,17 @@ AGENTS_CONTEXT.md
 - `package.json` の `npm start` で `electron .` を起動する。
 - `package.json` の `npm run dev` でDEBUGログ付き起動を行う。
 - メインプロセスは `main.js`。
-- Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `style.css`。
+- Rendererは `index.html`, `renderer.js`, `draft-logic.js`, `styles/`。
+- `main/settings-store.js` は settings の default / normalize / load / save / public settings 作成を担当する。
+- `main/champion-pool-store.js` は ChampionPool の load / save を担当する。
+- `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当する。
+- `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当する。
+- `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当する。
+- `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当する。
+- `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当する。
+- `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当する。
+- `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当する。
+- `main/lcu-watch.js` は LCU WebSocket 接続、購読、再接続、lockfile retry timer を担当する。
 - `main.js` はLCU接続まわりの純粋関数を `lcu-logic.js` から使う。
 - RendererからNode.js APIを直接触らせず、`preload.js` で安全なAPIだけ公開している。
 
@@ -443,6 +456,7 @@ REST通信は `fetch` ではなく `http.request` / `https.request` で実装し
 - Node/Electronのglobal `fetch(url, { agent })` では `https.Agent({ rejectUnauthorized: false })` が効かなかった。
 - LCU APIは自己署名証明書なので、RESTだけ `fetch failed` になった。
 - 現在は `https.request` のオプションに `rejectUnauthorized: false` を指定している。
+- これは LCU の `127.0.0.1:<port>` 接続だけの例外。lockfile の password を使う Basic 認証が別途あり、該当行は CodeQL `js/disabling-certificate-validation` を抑制している。
 
 Basic認証:
 
@@ -541,6 +555,18 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 - `match-history-workflow.js` は match history 更新時のID結合、重複排除、キャッシュ済みdetail判定を担当する。
 - `index.html` は `draft-logic.js` を `renderer.js` より先に読み込む。
 - `npm test` で Node.js 標準の `node:test` を実行する。主なテストは `test/draft-logic.test.js`, `test/lcu-logic.test.js`, `test/riot-api.test.js`, `test/riot-match-history.test.js`, `test/match-history-workflow.test.js`。
+
+### AI Readability and TypeScript Migration
+
+今後の保守では、生成AIが読む文脈を減らす目的で TypeScript 化を検討している。詳細な作業計画は `docs/ts-magiration/README.md` から Phase 別に読む。
+
+方針:
+
+- TypeScript 化は一括変換ではなく、型定義追加、IPC / preload 境界の型付け、純粋ロジック、小さい store / service、UI view、入口ファイルの順に進める。
+- 目的は型安全化そのものではなく、`AppState`、`window.lcuApi`、IPC channel、Draft context、Match history、AI analysis response の shape を生成AIが型だけで把握できるようにすること。
+- 初期段階では CommonJS 構成を維持し、ESM 移行やフレームワーク導入を同時に行わない。
+- `main.js` と `renderer.js` は型が揃ってから薄くする。大きい入口ファイルを最初に `.ts` 化しない。
+- TypeScript 作業後は `docs/ts-magiration/save-data/` 配下の対応する Phase の save-data ファイルに作業ログを残す。
 
 ## UI
 

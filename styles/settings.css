@@ -1,0 +1,38 @@
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.path-input-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.token-input-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.settings-divider {
+  border-top: 1px solid var(--border);
+}
+
+.settings-help {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-message {
+  color: var(--accent);
+  min-height: 20px;
+}
+

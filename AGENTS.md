@@ -9,3 +9,5 @@ Get-Content "docs\<markdown-file>.md" -Encoding UTF8
 ```
 
 - Do not treat mojibake from plain `Get-Content` as file corruption. Verify by reading bytes or decoding as UTF-8 first.
+
+- After modifying the code, please update the related documents under the docs directory.

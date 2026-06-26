@@ -1,25 +1,12 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
-const fs = require('node:fs/promises');
+const { app, dialog, ipcMain } = require('electron');
 const path = require('node:path');
-const http = require('node:http');
-const https = require('node:https');
-const WebSocket = require('ws');
 const {
-  createAuthHeader,
   createChampionsById,
   createLaneMatchupAnalysisRequest,
-  describeLaneMatchupAnalysisReadiness,
-  parseLockfile
+  describeLaneMatchupAnalysisReadiness
 } = require('./lcu-logic');
-const { createDefaultChampionPool, normalizeChampionPool } = require('./draft-logic');
 const {
-  RIOT_PLATFORM_REGIONS,
-  DEFAULT_RIOT_PLATFORM_REGION,
-  DEFAULT_RIOT_BFF_BASE_URL,
-  createRiotApiHosts,
-  normalizeRiotPlatformRegion,
-  parseRetryAfterMs,
-  requestRiotBffJson
+  normalizeRiotPlatformRegion
 } = require('./riot-api');
 const {
   aggregateEnemyChampionStats,
@@ -33,8 +20,48 @@ const {
   createAnalysisMatchIds
 } = require('./match-history-workflow');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('./logger');
+const {
+  createDefaultSettings,
+  createPublicSettings,
+  loadSettings: loadSettingsFromStore,
+  normalizeThemeMode,
+  saveSettings: saveSettingsToStore
+} = require('./main/settings-store');
+const {
+  loadChampionPool: loadChampionPoolFromStore,
+  saveChampionPool: saveChampionPoolToStore
+} = require('./main/champion-pool-store');
+const { createDefaultChampionPool } = require('./draft-logic');
+const {
+  getMatchHistoryPath: getMatchHistoryStorePath,
+  getRiotMatchCachePath: getRiotMatchCacheStorePath,
+  readJsonFile,
+  writeJsonFile
+} = require('./main/match-history-store');
+const {
+  applyStatePatch,
+  createInitialState: createAppInitialState,
+  createLaneMatchupAnalysisState,
+  createMatchHistoryStatus: createBaseMatchHistoryStatus,
+  createMatchHistorySummary
+} = require('./main/app-state');
+const {
+  closeWindow,
+  createMainWindow,
+  hasOpenWindows,
+  minimizeWindow,
+  toggleMaximizeWindow
+} = require('./main/window');
+const { registerIpcHandlers } = require('./main/ipc-handlers');
+const {
+  requestFinalCompositionAnalysis,
+  requestLaneMatchupAnalysis,
+  requestPickPhaseAnalysis
+} = require('./main/ai-analysis-service');
+const { createRiotMatchHistoryService } = require('./main/riot-match-history-service');
+const { createLcuClient } = require('./main/lcu-client');
+const { createLcuWatch } = require('./main/lcu-watch');
 
-const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
@@ -59,13 +86,8 @@ const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
-const THEME_MODES = ['system', 'light', 'dark'];
-
 let mainWindow;
 let lcuConnection = null;
-let webSocket = null;
-let reconnectTimer = null;
-let retryTimer = null;
 let settings = createDefaultSettings();
 let championPool = createDefaultChampionPool();
 let matchHistoryChampionStats = [];
@@ -84,6 +106,40 @@ let laneMatchupAnalysisRequestKey = null;
 let laneMatchupAnalysisInFlightKey = null;
 let laneMatchupAnalysisRetryTimer = null;
 
+const riotMatchHistoryService = createRiotMatchHistoryService({
+  matchIdsPageSize: RIOT_MATCH_IDS_PAGE_SIZE,
+  updateMatchHistoryStatus,
+  clearRiotRateLimitCountdown
+});
+const lcuClient = createLcuClient({
+  getSettings: () => settings,
+  getConnection: () => lcuConnection,
+  getStatus: () => appState.lcuStatus,
+  setIconUnavailableUntil: (value) => {
+    championIconUnavailableUntil = value;
+  },
+  getIconUnavailableUntil: () => championIconUnavailableUntil,
+  getIconUnavailableLogged: () => championIconUnavailableLogged,
+  setIconUnavailableLogged: (value) => {
+    championIconUnavailableLogged = value;
+  },
+  log,
+  serializeForLog
+});
+const lcuWatch = createLcuWatch({
+  getConnection: () => lcuConnection,
+  setConnection: (connection) => {
+    lcuConnection = connection;
+  },
+  updateState,
+  refreshLcuState,
+  applyWebSocketEvent,
+  lockfileRetryMs: LOCKFILE_RETRY_MS,
+  websocketReconnectMs: WEBSOCKET_RECONNECT_MS,
+  log,
+  serializeForLog
+});
+
 configureAppUserDataPath();
 configureLogger();
 
@@ -91,141 +147,36 @@ if (process.platform === 'win32') {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
 
-function createDefaultSettings() {
-  return {
-    lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
-    riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION,
-    themeMode: 'system'
-  };
-}
-
 function configureAppUserDataPath() {
   const userDataPath = path.join(app.getPath('appData'), APP_USER_DATA_DIR_NAME);
   app.setPath('userData', userDataPath);
 }
 
-function normalizeThemeMode(themeMode) {
-  return THEME_MODES.includes(themeMode) ? themeMode : 'system';
-}
-
-function normalizeSettings(sourceSettings = {}) {
-  const defaults = createDefaultSettings();
-  return {
-    lolInstallDir: typeof sourceSettings.lolInstallDir === 'string' && sourceSettings.lolInstallDir.trim()
-      ? sourceSettings.lolInstallDir
-      : defaults.lolInstallDir,
-    riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion),
-    themeMode: normalizeThemeMode(sourceSettings.themeMode)
-  };
-}
-
 function createInitialState() {
-  return {
+  return createAppInitialState({
     settings: createPublicSettings(settings),
-    lcuStatus: 'disconnected',
-    websocketStatus: 'disconnected',
-    gameflowPhase: null,
-    summoner: null,
-    lobby: null,
-    champSelect: null,
-    championsById: {},
     championPool,
     matchHistoryStatus: createMatchHistoryStatus(),
-    matchHistorySummary: null,
     matchHistoryChampionStats,
     matchHistoryEnemyChampionStats,
     matchHistoryLaneOpponentStats,
-    matchHistorySelfVsLaneOpponentStats,
-    gameflowSession: null,
-    laneMatchupAnalysis: createLaneMatchupAnalysisState(),
-    lastEvent: null,
-    error: null,
-    updatedAt: null
-  };
-}
-
-function createLaneMatchupAnalysisState(patch = {}) {
-  return {
-    status: 'idle',
-    requestKey: null,
-    request: null,
-    response: null,
-    error: null,
-    updatedAt: null,
-    ...patch
-  };
+    matchHistorySelfVsLaneOpponentStats
+  });
 }
 
 function createMatchHistoryStatus(patch = {}) {
-  return {
-    phase: 'idle',
-    source: 'manual',
-    mode: 'recent',
-    requestedMatches: RIOT_MATCHES_PER_RUN,
-    fetchedMatches: 0,
-    normalizedMatches: 0,
-    updatedMatches: 0,
-    failedRequests: 0,
-    retryAttempt: 0,
-    nextRetryAt: null,
-    message: '',
-    error: null,
-    startedAt: null,
-    updatedAt: null,
-    ...patch
-  };
-}
-
-function createMatchHistorySummary({ updatedAt = null, requestedMatches = 0, matchIds = 0, updatedMatches = 0, matches = [], failedRequests = 0, championStats = 0 } = {}) {
-  const gameCreations = matches
-    .map((match) => Number(match.gameCreation))
-    .filter((value) => Number.isFinite(value) && value > 0);
-
-  return {
-    updatedAt,
-    requestedMatches,
-    matchIds,
-    updatedMatches,
-    normalizedMatches: matches.length,
-    failedRequests,
-    championStats,
-    oldestGameCreation: gameCreations.length > 0 ? Math.min(...gameCreations) : null,
-    newestGameCreation: gameCreations.length > 0 ? Math.max(...gameCreations) : null
-  };
-}
-
-function createPublicSettings(sourceSettings = settings) {
-  const riotPlatformRegion = normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion);
-  const riotHosts = createRiotApiHosts(riotPlatformRegion);
-
-  return {
-    lolInstallDir: sourceSettings.lolInstallDir,
-    riotPlatformRegion,
-    riotRegionalRoute: riotHosts.regionalRoute,
-    riotPlatformRegions: RIOT_PLATFORM_REGIONS,
-    themeMode: normalizeThemeMode(sourceSettings.themeMode),
-    themeModes: THEME_MODES
-  };
-}
-
-function getSettingsPath() {
-  return path.join(app.getPath('userData'), 'settings.json');
-}
-
-function getChampionPoolPath() {
-  return path.join(app.getPath('userData'), 'champion-pool.json');
-}
-
-function getAccountDataKey(puuid) {
-  return encodeURIComponent(String(puuid || '').trim());
+  return createBaseMatchHistoryStatus({
+    defaultRequestedMatches: RIOT_MATCHES_PER_RUN,
+    patch
+  });
 }
 
 function getRiotMatchCachePath(puuid) {
-  return path.join(app.getPath('userData'), 'riot-match-cache', `${getAccountDataKey(puuid)}.json`);
+  return getRiotMatchCacheStorePath(app.getPath('userData'), puuid);
 }
 
 function getMatchHistoryPath(puuid) {
-  return path.join(app.getPath('userData'), 'match-history', `${getAccountDataKey(puuid)}.json`);
+  return getMatchHistoryStorePath(app.getPath('userData'), puuid);
 }
 
 function getPuuidFromSummoner(summoner) {
@@ -234,29 +185,13 @@ function getPuuidFromSummoner(summoner) {
 }
 
 async function loadSettings() {
-  try {
-    const raw = await fs.readFile(getSettingsPath(), 'utf8');
-    settings = normalizeSettings(JSON.parse(raw));
-    log.debug('Settings loaded', { path: getSettingsPath(), settings: createPublicSettings(settings) });
-  } catch {
-    settings = createDefaultSettings();
-    log.debug('Settings file not found or invalid; using defaults', { path: getSettingsPath(), settings: createPublicSettings(settings) });
-  }
-
+  settings = await loadSettingsFromStore({ userDataPath: app.getPath('userData'), log });
   updateState({ settings: createPublicSettings(settings) });
   return createPublicSettings(settings);
 }
 
 async function loadChampionPool() {
-  try {
-    const raw = await fs.readFile(getChampionPoolPath(), 'utf8');
-    championPool = normalizeChampionPool(JSON.parse(raw));
-    log.debug('Champion pool loaded', { path: getChampionPoolPath(), championPool });
-  } catch {
-    championPool = createDefaultChampionPool();
-    log.debug('Champion pool file not found or invalid; using empty pool', { path: getChampionPoolPath() });
-  }
-
+  championPool = await loadChampionPoolFromStore({ userDataPath: app.getPath('userData'), log });
   updateState({ championPool });
   return championPool;
 }
@@ -352,51 +287,32 @@ async function syncMatchHistoryForSummoner(summoner, reason) {
 }
 
 async function saveChampionPool(_event, nextChampionPool) {
-  championPool = normalizeChampionPool(nextChampionPool);
-
-  await fs.mkdir(path.dirname(getChampionPoolPath()), { recursive: true });
-  await fs.writeFile(getChampionPoolPath(), JSON.stringify(championPool, null, 2), 'utf8');
-  log.debug('Champion pool saved', { path: getChampionPoolPath(), championPool });
+  championPool = await saveChampionPoolToStore({
+    userDataPath: app.getPath('userData'),
+    nextChampionPool,
+    log
+  });
   updateState({ championPool });
   return championPool;
 }
 
 async function saveSettings(nextSettings) {
-  settings = {
-    ...normalizeSettings(settings),
-    ...nextSettings
-  };
-  settings = normalizeSettings(settings);
-
-  await fs.mkdir(path.dirname(getSettingsPath()), { recursive: true });
-  await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
-  log.debug('Settings saved', { path: getSettingsPath(), settings: createPublicSettings(settings) });
+  settings = await saveSettingsToStore({
+    userDataPath: app.getPath('userData'),
+    currentSettings: settings,
+    nextSettings,
+    log
+  });
   updateState({ settings: createPublicSettings(settings) });
   return settings;
 }
 
 function createWindow() {
-  log.debug('Creating main window');
-  mainWindow = new BrowserWindow({
-    width: 1180,
-    height: 900,
-    minWidth: 980,
-    minHeight: 680,
-    title: 'BanPick.AI',
-    icon: APP_ICON_PATH,
-    frame: false,
-    backgroundColor: '#f5f4ff',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true
-    }
+  mainWindow = createMainWindow({
+    iconPath: APP_ICON_PATH,
+    preloadPath: path.join(__dirname, 'preload.js'),
+    log
   });
-
-  mainWindow.setMenu(null);
-  mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximized', true));
-  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized', false));
-  mainWindow.loadFile('index.html');
 }
 
 function sendState() {
@@ -405,11 +321,7 @@ function sendState() {
 }
 
 function updateState(patch) {
-  appState = {
-    ...appState,
-    ...patch,
-    updatedAt: new Date().toISOString()
-  };
+  appState = applyStatePatch(appState, patch);
   sendState();
 }
 
@@ -421,19 +333,6 @@ function updateMatchHistoryStatus(patch) {
       updatedAt: new Date().toISOString()
     })
   });
-}
-
-async function readJsonFile(filePath, fallback) {
-  try {
-    return JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath, value) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
 }
 
 function getRiotIdFromSummoner(summoner) {
@@ -454,132 +353,6 @@ function getRiotIdFromSummoner(summoner) {
   }
 
   throw new Error('LCU current summonerからRiot IDとTaglineを取得できませんでした');
-}
-
-function encodePathSegment(value) {
-  return encodeURIComponent(String(value));
-}
-
-function createRiotBffPath(region, segments, query = null) {
-  const path = `/api/riot/${[
-    region,
-    ...segments
-  ].map(encodePathSegment).join('/')}`;
-
-  if (!query) return path;
-
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    params.set(key, String(value));
-  });
-
-  const queryString = params.toString();
-  return queryString ? `${path}?${queryString}` : path;
-}
-
-function requestBffJson({ path, method = 'GET', body = null, timeoutMs = undefined, onRetry = null, maxRetries = undefined }) {
-  return requestRiotBffJson({
-    baseUrl: DEFAULT_RIOT_BFF_BASE_URL,
-    path,
-    method,
-    body,
-    ...(timeoutMs === undefined ? {} : { timeoutMs }),
-    onRetry,
-    ...(maxRetries === undefined ? {} : { maxRetries })
-  });
-}
-
-function requestPickPhaseAnalysis(_event, draftContext) {
-  return requestBffJson({
-    path: '/api/openai/pick-phase',
-    method: 'POST',
-    body: draftContext,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
-}
-
-function requestFinalCompositionAnalysis(_event, draftContext) {
-  return requestBffJson({
-    path: '/api/openai/final-composition',
-    method: 'POST',
-    body: draftContext,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
-}
-
-function requestLaneMatchupAnalysis(laneMatchupPayload) {
-  return requestBffJson({
-    path: '/api/openai/lane-matchup',
-    method: 'POST',
-    body: laneMatchupPayload,
-    timeoutMs: 30000,
-    maxRetries: 0
-  });
-}
-
-function requestBffHealth({ onRetry = null } = {}) {
-  return requestBffJson({
-    path: '/health',
-    onRetry
-  });
-}
-
-function requestBffAccountByRiotId({ region, riotId, onRetry = null }) {
-  return requestBffJson({
-    path: createRiotBffPath(region, ['account', 'by-riot-id', riotId.gameName, riotId.tagLine]),
-    onRetry
-  });
-}
-
-function requestBffMatchIds({ region, puuid, start, count, startTime = null, onRetry = null }) {
-  return requestBffJson({
-    path: createRiotBffPath(region, ['matches', 'by-puuid', puuid, 'ids'], {
-      start,
-      count,
-      startTime
-    }),
-    onRetry
-  });
-}
-
-function normalizeBffMatchIdsResponse(body) {
-  return Array.isArray(body?.matchIds) ? body.matchIds : [];
-}
-
-function normalizeBffMatchDetailsResponse(body) {
-  return {
-    matchesById: body?.matchesById && typeof body.matchesById === 'object' ? body.matchesById : {},
-    failedMatchIds: Array.isArray(body?.failedMatchIds) ? body.failedMatchIds : [],
-    retryAfter: body?.retryAfter ?? null
-  };
-}
-
-function applyBffMatchDetailsResponse({ response, pending, matchesById }) {
-  let fetchedMatches = 0;
-
-  Object.entries(response.matchesById).forEach(([matchId, detail]) => {
-    if (!pending.has(matchId)) return;
-    matchesById[matchId] = detail;
-    pending.delete(matchId);
-    fetchedMatches += 1;
-  });
-
-  const failedMatchIds = new Set(response.failedMatchIds);
-  [...pending].forEach((matchId) => {
-    if (!response.matchesById[matchId] && !failedMatchIds.has(matchId)) {
-      pending.delete(matchId);
-    }
-  });
-
-  return fetchedMatches;
-}
-
-function getDefaultSeasonStartAt() {
-  const year = new Date().getFullYear();
-  return new Date(`${year}-01-01T00:00:00+09:00`);
 }
 
 function clearRiotRateLimitCountdown() {
@@ -620,98 +393,6 @@ function createRiotRetryHandler({ onRateLimitStart = null } = {}) {
     if (typeof onRateLimitStart === 'function') {
       await onRateLimitStart();
     }
-  };
-}
-
-async function collectMatchIdsByMode({ region, puuid, requestedMatches, mode, onRetry }) {
-  if (mode !== 'season') {
-    const body = await requestBffMatchIds({
-      region,
-      puuid,
-      start: 0,
-      count: requestedMatches,
-      onRetry
-    });
-    clearRiotRateLimitCountdown();
-
-    return normalizeBffMatchIdsResponse(body).slice(0, requestedMatches);
-  }
-
-  const seasonStartAt = getDefaultSeasonStartAt();
-  const startTime = Math.floor(seasonStartAt.getTime() / 1000);
-  const allMatchIds = [];
-
-  for (let start = 0; ; start += RIOT_MATCH_IDS_PAGE_SIZE) {
-    const page = await requestBffMatchIds({
-      region,
-      puuid,
-      start,
-      count: RIOT_MATCH_IDS_PAGE_SIZE,
-      startTime,
-      onRetry
-    });
-    clearRiotRateLimitCountdown();
-    const pageMatchIds = normalizeBffMatchIdsResponse(page);
-    allMatchIds.push(...pageMatchIds);
-
-    updateMatchHistoryStatus({
-      phase: 'collecting',
-      requestedMatches: allMatchIds.length,
-      message: `試合IDリスト取得中... ${allMatchIds.length} 試合`
-    });
-
-    if (pageMatchIds.length < RIOT_MATCH_IDS_PAGE_SIZE) break;
-  }
-
-  return allMatchIds;
-}
-
-async function requestBffMatchDetails({ region, matchIds }) {
-  const body = await requestBffJson({
-    path: createRiotBffPath(region, ['matches', 'details'], {
-      matchIds: matchIds.join(',')
-    }),
-    maxRetries: 0
-  });
-
-  return normalizeBffMatchDetailsResponse(body);
-}
-
-async function collectBffMatchDetailsBatch({
-  region,
-  matchIds,
-  matchesById,
-  onRetry,
-  publishCurrentSnapshot,
-  maxAttempts = 3
-}) {
-  const pending = new Set(matchIds);
-  let fetchedMatches = 0;
-
-  for (let attempt = 0; attempt < maxAttempts && pending.size > 0; attempt += 1) {
-    const targetMatchIds = [...pending];
-    const response = await requestBffMatchDetails({
-      region,
-      matchIds: targetMatchIds
-    });
-
-    fetchedMatches += applyBffMatchDetailsResponse({ response, pending, matchesById });
-
-    if (pending.size === 0) break;
-
-    const retryDelayMs = parseRetryAfterMs(response.retryAfter);
-    if (retryDelayMs === null || attempt + 1 >= maxAttempts) break;
-
-    await publishCurrentSnapshot({ swallowErrors: true });
-    if (typeof onRetry === 'function') {
-      await onRetry({ attempt: attempt + 1, delayMs: retryDelayMs });
-    }
-    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-  }
-
-  return {
-    fetchedMatches,
-    failedMatchIds: [...pending]
   };
 }
 
@@ -1010,7 +691,7 @@ async function refreshGameflowSessionForLaneMatchup(reason) {
   if (!['GameStart', 'InProgress'].includes(appState.gameflowPhase)) return null;
 
   try {
-    const gameflowSession = await lcuFetch(LCU_ENDPOINTS.gameflowSession);
+    const gameflowSession = await lcuClient.fetchJson(LCU_ENDPOINTS.gameflowSession);
     updateState({ gameflowSession });
     refreshLaneMatchupAnalysisFromSession(gameflowSession, reason);
     return gameflowSession;
@@ -1084,11 +765,11 @@ async function collectRiotMatchHistory(_event, options = {}) {
     const region = normalizeRiotPlatformRegion(settings.riotPlatformRegion);
     const onRetry = createRiotRetryHandler();
     const storagePuuid = currentSummonerPuuid;
-    await requestBffHealth({
+    await riotMatchHistoryService.requestBffHealth({
       onRetry
     });
 
-    const account = await requestBffAccountByRiotId({
+    const account = await riotMatchHistoryService.requestBffAccountByRiotId({
       region,
       riotId,
       onRetry
@@ -1100,7 +781,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
     clearRiotRateLimitCountdown();
     const targetPuuid = account.puuid;
 
-    const normalizedMatchIds = await collectMatchIdsByMode({
+    const normalizedMatchIds = await riotMatchHistoryService.collectMatchIdsByMode({
       region,
       puuid: targetPuuid,
       requestedMatches,
@@ -1190,7 +871,7 @@ async function collectRiotMatchHistory(_event, options = {}) {
       clearRiotRateLimitCountdown();
 
       try {
-        const result = await collectBffMatchDetailsBatch({
+        const result = await riotMatchHistoryService.collectBffMatchDetailsBatch({
           region,
           matchIds: batch,
           matchesById,
@@ -1272,23 +953,6 @@ async function collectRiotMatchHistory(_event, options = {}) {
   }
 }
 
-async function readLockfile() {
-  let raw;
-  const lockfilePath = path.join(settings.lolInstallDir, 'lockfile');
-  log.debug('Reading LCU lockfile', { lockfilePath });
-
-  try {
-    raw = await fs.readFile(lockfilePath, 'utf8');
-  } catch (error) {
-    throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
-  }
-
-  const { processName, pid, port, password, protocol } = parseLockfile(raw);
-
-  log.debug('LCU lockfile parsed', { processName, pid, port, protocol });
-  return { processName, pid, port, password, protocol };
-}
-
 async function chooseLolInstallDir() {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'League of Legends のインストールディレクトリを選択',
@@ -1326,181 +990,29 @@ async function updateThemeMode(_event, themeMode) {
   return createPublicSettings(settings);
 }
 
-function getWindowForEvent(event) {
-  return BrowserWindow.fromWebContents(event.sender);
-}
-
-function minimizeWindow(event) {
-  getWindowForEvent(event)?.minimize();
-}
-
-function toggleMaximizeWindow(event) {
-  const window = getWindowForEvent(event);
-  if (!window) return false;
-
-  if (window.isMaximized()) {
-    window.unmaximize();
-  } else {
-    window.maximize();
-  }
-
-  return window.isMaximized();
-}
-
-function closeWindow(event) {
-  getWindowForEvent(event)?.close();
-}
-
 async function reconnectWithCurrentSettings() {
   log.debug('Reconnecting with current settings');
-  closeWebSocket();
+  lcuWatch.closeWebSocket();
   lcuConnection = null;
   await refreshLcuState();
-}
-
-async function lcuFetch(endpoint) {
-  if (!lcuConnection) {
-    throw new Error('LCU接続情報がありません');
-  }
-
-  const startedAt = Date.now();
-  const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
-  log.debug('LCU request started', { endpoint, port: lcuConnection.port });
-  const response = await requestLcuJson(url, {
-    Authorization: createAuthHeader(lcuConnection.password),
-    Accept: 'application/json'
-  });
-  log.debug('LCU request finished', {
-    endpoint,
-    statusCode: response.statusCode,
-    durationMs: Date.now() - startedAt
-  });
-
-  if (response.statusCode === 404) return null;
-
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`${endpoint} returned HTTP ${response.statusCode}: ${response.body}`);
-  }
-
-  return response.body ? JSON.parse(response.body) : null;
-}
-
-async function lcuFetchBuffer(endpoint) {
-  if (!lcuConnection) {
-    throw new Error('LCU謗･邯壽ュ蝣ｱ縺後≠繧翫∪縺帙ｓ');
-  }
-
-  const startedAt = Date.now();
-  const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
-  const response = await requestLcu(url, {
-    Authorization: createAuthHeader(lcuConnection.password),
-    Accept: '*/*'
-  });
-  log.debug('LCU asset request finished', {
-    endpoint,
-    statusCode: response.statusCode,
-    durationMs: Date.now() - startedAt
-  });
-
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`${endpoint} returned HTTP ${response.statusCode}`);
-  }
-
-  return response.body;
-}
-
-function requestLcuJson(url, headers) {
-  return requestLcu(url, headers).then((response) => ({
-    ...response,
-    body: response.body.toString('utf8')
-  }));
-}
-
-function requestLcu(url, headers) {
-  const client = url.startsWith('https:') ? https : http;
-
-  return new Promise((resolve, reject) => {
-    const request = client.request(
-      url,
-      {
-        method: 'GET',
-        headers,
-        // LCU uses a self-signed certificate. Keep this scoped to local LCU requests.
-        rejectUnauthorized: false,
-        timeout: 5000
-      },
-      (response) => {
-        const chunks = [];
-
-        response.on('data', (chunk) => chunks.push(chunk));
-        response.on('end', () => {
-          resolve({
-            statusCode: response.statusCode ?? 0,
-            body: Buffer.concat(chunks)
-          });
-        });
-      }
-    );
-
-    request.on('timeout', () => {
-      request.destroy(new Error(`LCU request timed out: ${url}`));
-    });
-
-    request.on('error', reject);
-    request.end();
-  });
-}
-
-async function getChampionIcon(_event, championId) {
-  const id = Number(championId);
-  if (!Number.isInteger(id) || id <= 0) return null;
-  if (!lcuConnection || appState.lcuStatus !== 'connected') return null;
-  if (Date.now() < championIconUnavailableUntil) return null;
-
-  try {
-    const buffer = await lcuFetchBuffer(`/lol-game-data/assets/v1/champion-icons/${id}.png`);
-    return `data:image/png;base64,${buffer.toString('base64')}`;
-  } catch (error) {
-    if (isTransientIconFetchError(error)) {
-      championIconUnavailableUntil = Date.now() + 10000;
-
-      if (!championIconUnavailableLogged) {
-        championIconUnavailableLogged = true;
-        log.warn(`Champion icon fetch is temporarily unavailable; suppressing repeated icon errors. First failed championId=${id}`, serializeForLog(error));
-      }
-    } else {
-      log.warn(`Failed to fetch champion icon for championId=${id}`, serializeForLog(error));
-    }
-
-    return null;
-  }
-}
-
-function isTransientIconFetchError(error) {
-  return [
-    'ECONNREFUSED',
-    'ECONNRESET',
-    'ETIMEDOUT',
-    'EPIPE'
-  ].includes(error?.code) || String(error?.message || '').includes('LCU request timed out');
 }
 
 async function refreshLcuState() {
   log.debug('Refreshing LCU state');
   try {
-    lcuConnection = await readLockfile();
-    clearRetryTimer();
+    lcuConnection = await lcuClient.readLockfile();
+    lcuWatch.clearRetryTimer();
     championIconUnavailableUntil = 0;
     championIconUnavailableLogged = false;
     updateState({ lcuStatus: 'connecting', error: null });
 
     const [lobby, champSelect, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
-      lcuFetch(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.gameflowSession).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.championSummary).catch(() => [])
+      lcuClient.fetchJson(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.gameflowSession).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.championSummary).catch(() => [])
     ]);
 
     if (summoner?.error && gameflowPhase?.error) {
@@ -1530,12 +1042,12 @@ async function refreshLcuState() {
     await syncMatchHistoryForSummoner(summoner, 'lcu-refresh');
     refreshLaneMatchupAnalysisFromSession(gameflowSession, 'lcu-refresh');
 
-    connectWebSocket();
+    lcuWatch.connectWebSocket();
     scheduleStartupRiotMatchHistoryIfReady('startup');
     return appState;
   } catch (error) {
     log.warn('Failed to refresh LCU state', serializeForLog(error));
-    closeWebSocket();
+    lcuWatch.closeWebSocket();
     lcuConnection = null;
     laneMatchupAnalysisRequestKey = null;
     laneMatchupAnalysisInFlightKey = null;
@@ -1552,127 +1064,19 @@ async function refreshLcuState() {
       error: error.message
     });
     resetMatchHistoryData({ reason: 'lcu-disconnected' });
-    scheduleRetry();
+    lcuWatch.scheduleRetry();
     return appState;
   }
 }
 
 function cleanupWebSocket() {
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-
   if (autoMatchHistoryTimer) {
     clearTimeout(autoMatchHistoryTimer);
     autoMatchHistoryTimer = null;
   }
 
-  clearRetryTimer();
   clearRiotRateLimitCountdown();
-
-  closeWebSocket();
-}
-
-function closeWebSocket() {
-  if (webSocket) {
-    log.debug('Closing LCU WebSocket');
-    webSocket.removeAllListeners();
-    webSocket.close();
-    webSocket = null;
-  }
-}
-
-function clearRetryTimer() {
-  if (retryTimer) {
-    clearTimeout(retryTimer);
-    retryTimer = null;
-  }
-}
-
-function scheduleRetry() {
-  if (retryTimer) return;
-  log.debug('Scheduling lockfile retry', { delayMs: LOCKFILE_RETRY_MS });
-
-  retryTimer = setTimeout(async () => {
-    retryTimer = null;
-    await refreshLcuState();
-  }, LOCKFILE_RETRY_MS);
-}
-
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  log.debug('Scheduling WebSocket reconnect', { delayMs: WEBSOCKET_RECONNECT_MS });
-
-  reconnectTimer = setTimeout(async () => {
-    reconnectTimer = null;
-    await refreshLcuState();
-  }, WEBSOCKET_RECONNECT_MS);
-}
-
-function connectWebSocket() {
-  if (!lcuConnection || webSocket?.readyState === WebSocket.OPEN) return;
-
-  if (webSocket) {
-    webSocket.removeAllListeners();
-    webSocket.close();
-  }
-
-  const wsUrl = `wss://riot:${encodeURIComponent(lcuConnection.password)}@127.0.0.1:${lcuConnection.port}/`;
-  log.debug('Connecting LCU WebSocket', { port: lcuConnection.port });
-
-  webSocket = new WebSocket(wsUrl, 'wamp', {
-    rejectUnauthorized: false
-  });
-
-  updateState({ websocketStatus: 'connecting' });
-
-  webSocket.on('open', () => {
-    log.debug('LCU WebSocket connected');
-    updateState({ websocketStatus: 'connected', error: null });
-
-    // WAMP subscribe format used by the League Client Update WebSocket.
-    webSocket.send(JSON.stringify([5, 'OnJsonApiEvent']));
-  });
-
-  webSocket.on('message', async (data) => {
-    const raw = data.toString();
-    let event;
-
-    try {
-      event = JSON.parse(raw);
-    } catch {
-      event = raw;
-    }
-
-    updateState({ lastEvent: event });
-
-    if (Array.isArray(event) && event[2]?.uri) {
-      log.debug('LCU WebSocket event received', {
-        uri: event[2].uri,
-        eventType: event[2].eventType
-      });
-      await applyWebSocketEvent(event[2]);
-    }
-  });
-
-  webSocket.on('close', () => {
-    log.debug('LCU WebSocket closed');
-    lcuConnection = null;
-    updateState({
-      lcuStatus: 'disconnected',
-      websocketStatus: 'disconnected'
-    });
-    scheduleReconnect();
-  });
-
-  webSocket.on('error', (error) => {
-    log.warn('LCU WebSocket error', serializeForLog(error));
-    updateState({
-      websocketStatus: 'error',
-      error: `WebSocket error: ${error.message}`
-    });
-  });
+  lcuWatch.cleanup();
 }
 
 async function applyWebSocketEvent(event) {
@@ -1714,29 +1118,34 @@ app.whenReady().then(async () => {
   await loadSettings();
   await loadChampionPool();
 
-  ipcMain.handle('lcu:get-state', () => appState);
-  ipcMain.handle('lcu:refresh', refreshLcuState);
-  ipcMain.handle('lcu:get-champion-icon', getChampionIcon);
-  ipcMain.handle('champion-pool:get', () => championPool);
-  ipcMain.handle('champion-pool:save', saveChampionPool);
-  ipcMain.handle('settings:get', () => createPublicSettings(settings));
-  ipcMain.handle('settings:choose-lol-install-dir', chooseLolInstallDir);
-  ipcMain.handle('settings:update-lol-install-dir', updateLolInstallDir);
-  ipcMain.handle('settings:update-riot-platform-region', updateRiotPlatformRegion);
-  ipcMain.handle('settings:update-theme-mode', updateThemeMode);
-  ipcMain.handle('window:minimize', minimizeWindow);
-  ipcMain.handle('window:toggle-maximize', toggleMaximizeWindow);
-  ipcMain.handle('window:close', closeWindow);
-  ipcMain.handle('riot-match-history:collect', collectRiotMatchHistory);
-  ipcMain.handle('openai:pick-phase', requestPickPhaseAnalysis);
-  ipcMain.handle('openai:final-composition', requestFinalCompositionAnalysis);
-  ipcMain.on('log:renderer', logRendererMessage);
+  registerIpcHandlers({
+    ipcMain,
+    logRendererMessage,
+    handlers: {
+      getState: () => appState,
+      refreshLcuState,
+      getChampionIcon: lcuClient.getChampionIcon,
+      getChampionPool: () => championPool,
+      saveChampionPool,
+      getSettings: () => createPublicSettings(settings),
+      chooseLolInstallDir,
+      updateLolInstallDir,
+      updateRiotPlatformRegion,
+      updateThemeMode,
+      minimizeWindow,
+      toggleMaximizeWindow,
+      closeWindow,
+      collectRiotMatchHistory,
+      requestPickPhaseAnalysis,
+      requestFinalCompositionAnalysis
+    }
+  });
 
   createWindow();
   await refreshLcuState();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (!hasOpenWindows()) {
       createWindow();
       sendState();
     }

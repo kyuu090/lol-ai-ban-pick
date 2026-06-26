@@ -145,9 +145,19 @@ git push origin v0.1.1
 ## 実装概要
 
 - Electron のメインプロセスは `main.js` です。
-- Renderer は `index.html`, `renderer.js`, `draft-logic.js`, `style.css` です。
+- Renderer は `index.html`, `renderer.js`, `draft-logic.js`, `styles/` です。
 - Renderer から Node.js API を直接触らないように、`preload.js` と `contextBridge` で必要な IPC だけ公開しています。
 - `main.js` で LCU lockfile を読み、REST API 初期取得と `OnJsonApiEvent` の WebSocket 購読を行います。
+- `main/settings-store.js` は settings の default / normalize / load / save / public settings 作成を担当します。
+- `main/champion-pool-store.js` は ChampionPool の load / save を担当します。
+- `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当します。
+- `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当します。
+- `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当します。
+- `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当します。
+- `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当します。
+- `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当します。
+- `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当します。
+- `main/lcu-watch.js` は LCU WebSocket 接続、購読、再接続、lockfile retry timer を担当します。
 - `lcu-logic.js` に LCU 接続用の純粋関数、`draft-logic.js` にドラフト表示用の純粋関数を切り出しています。
 - `riot-api.js` は Riot API 用の request / retry 基盤です。
 - `riot-match-history.js` は Match-V5 response の正規化と自己戦績集計を担当します。
@@ -242,7 +252,7 @@ const LCU_ENDPOINTS = {
 };
 ```
 
-REST 通信は `fetch` ではなく `http.request` / `https.request` で実装しています。LCU API は自己署名証明書を使うため、開発用途として LCU へのローカル接続だけ証明書検証を緩和しています。
+REST 通信は `fetch` ではなく `http.request` / `https.request` で実装しています。LCU API は自己署名証明書を使うため、LCU へのローカル接続だけ証明書検証を緩和しています。接続先は lockfile 由来の `127.0.0.1:<port>` で、認証は lockfile の password を使う Basic 認証です。この用途に限定した既知の例外として、該当行には CodeQL の `js/disabling-certificate-validation` 抑制コメントを付けています。
 
 404 は `null` として扱います。ロビー未参加やチャンピオン選択外では、`lobby` や `champSelect` が `null` になることがあります。
 

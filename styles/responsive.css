@@ -1,0 +1,131 @@
+@media (max-width: 1000px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .app-header,
+  .header-actions,
+  .match-data-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .status-grid,
+  .content-grid,
+  .draft-header,
+  .teams-layout,
+  .in-game-hero,
+  .in-game-grid,
+  .counters-grid,
+  .strengths-grid,
+  .path-input-row,
+  .token-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .in-game-hero {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .in-game-main {
+    justify-items: center;
+  }
+
+  .in-game-main h2 {
+    font-size: 28px;
+  }
+
+  .in-game-stat-row,
+  .in-game-self-stats {
+    justify-content: center;
+  }
+
+  .weak-lane-matchup-item,
+  .strong-lane-matchup-item {
+    grid-template-columns: 1fr;
+  }
+
+  .weak-self-pick-summary {
+    border-left: 0;
+    border-top: 1px solid rgba(154, 167, 184, 0.14);
+    padding-left: 0;
+    padding-top: 7px;
+  }
+
+  .champion-pool-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stats-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stats-subtabs {
+    width: 100%;
+  }
+
+  .stats-subtab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .enemy h3,
+  .pick-row.enemy {
+    text-align: left;
+  }
+
+  .draft-board {
+    height: auto;
+    min-height: calc(100vh - 120px);
+    overflow: visible;
+  }
+
+  .teams-layout {
+    overflow: visible;
+  }
+
+  .pick-row.enemy {
+    border-left: 4px solid var(--red);
+    border-right: 1px solid var(--border);
+    flex-direction: row;
+  }
+
+  .pick-row {
+    flex-basis: 72px;
+  }
+
+  .draft-focus {
+    min-height: 300px;
+  }
+
+  .champion-focus.has-ban-insights {
+    max-height: 360px;
+  }
+
+  .draft-ai-analysis-panel {
+    flex-basis: 220px;
+  }
+
+  .draft-ai-analysis-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .draft-ai-analysis-notes {
+    grid-template-columns: 1fr;
+  }
+
+  .in-game-ai-analysis-notes {
+    grid-template-columns: 1fr;
+  }
+
+  .ban-insight-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
