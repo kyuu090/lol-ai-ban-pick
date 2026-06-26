@@ -1,15 +1,10 @@
 const { app, dialog, ipcMain } = require('electron');
-const fs = require('node:fs/promises');
 const path = require('node:path');
-const http = require('node:http');
-const https = require('node:https');
 const WebSocket = require('ws');
 const {
-  createAuthHeader,
   createChampionsById,
   createLaneMatchupAnalysisRequest,
-  describeLaneMatchupAnalysisReadiness,
-  parseLockfile
+  describeLaneMatchupAnalysisReadiness
 } = require('./lcu-logic');
 const {
   normalizeRiotPlatformRegion
@@ -65,6 +60,7 @@ const {
   requestPickPhaseAnalysis
 } = require('./main/ai-analysis-service');
 const { createRiotMatchHistoryService } = require('./main/riot-match-history-service');
+const { createLcuClient } = require('./main/lcu-client');
 
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
@@ -117,6 +113,21 @@ const riotMatchHistoryService = createRiotMatchHistoryService({
   matchIdsPageSize: RIOT_MATCH_IDS_PAGE_SIZE,
   updateMatchHistoryStatus,
   clearRiotRateLimitCountdown
+});
+const lcuClient = createLcuClient({
+  getSettings: () => settings,
+  getConnection: () => lcuConnection,
+  getStatus: () => appState.lcuStatus,
+  setIconUnavailableUntil: (value) => {
+    championIconUnavailableUntil = value;
+  },
+  getIconUnavailableUntil: () => championIconUnavailableUntil,
+  getIconUnavailableLogged: () => championIconUnavailableLogged,
+  setIconUnavailableLogged: (value) => {
+    championIconUnavailableLogged = value;
+  },
+  log,
+  serializeForLog
 });
 
 configureAppUserDataPath();
@@ -670,7 +681,7 @@ async function refreshGameflowSessionForLaneMatchup(reason) {
   if (!['GameStart', 'InProgress'].includes(appState.gameflowPhase)) return null;
 
   try {
-    const gameflowSession = await lcuFetch(LCU_ENDPOINTS.gameflowSession);
+    const gameflowSession = await lcuClient.fetchJson(LCU_ENDPOINTS.gameflowSession);
     updateState({ gameflowSession });
     refreshLaneMatchupAnalysisFromSession(gameflowSession, reason);
     return gameflowSession;
@@ -932,23 +943,6 @@ async function collectRiotMatchHistory(_event, options = {}) {
   }
 }
 
-async function readLockfile() {
-  let raw;
-  const lockfilePath = path.join(settings.lolInstallDir, 'lockfile');
-  log.debug('Reading LCU lockfile', { lockfilePath });
-
-  try {
-    raw = await fs.readFile(lockfilePath, 'utf8');
-  } catch (error) {
-    throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
-  }
-
-  const { processName, pid, port, password, protocol } = parseLockfile(raw);
-
-  log.debug('LCU lockfile parsed', { processName, pid, port, protocol });
-  return { processName, pid, port, password, protocol };
-}
-
 async function chooseLolInstallDir() {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'League of Legends のインストールディレクトリを選択',
@@ -993,149 +987,22 @@ async function reconnectWithCurrentSettings() {
   await refreshLcuState();
 }
 
-async function lcuFetch(endpoint) {
-  if (!lcuConnection) {
-    throw new Error('LCU接続情報がありません');
-  }
-
-  const startedAt = Date.now();
-  const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
-  log.debug('LCU request started', { endpoint, port: lcuConnection.port });
-  const response = await requestLcuJson(url, {
-    Authorization: createAuthHeader(lcuConnection.password),
-    Accept: 'application/json'
-  });
-  log.debug('LCU request finished', {
-    endpoint,
-    statusCode: response.statusCode,
-    durationMs: Date.now() - startedAt
-  });
-
-  if (response.statusCode === 404) return null;
-
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`${endpoint} returned HTTP ${response.statusCode}: ${response.body}`);
-  }
-
-  return response.body ? JSON.parse(response.body) : null;
-}
-
-async function lcuFetchBuffer(endpoint) {
-  if (!lcuConnection) {
-    throw new Error('LCU謗･邯壽ュ蝣ｱ縺後≠繧翫∪縺帙ｓ');
-  }
-
-  const startedAt = Date.now();
-  const url = `${lcuConnection.protocol}://127.0.0.1:${lcuConnection.port}${endpoint}`;
-  const response = await requestLcu(url, {
-    Authorization: createAuthHeader(lcuConnection.password),
-    Accept: '*/*'
-  });
-  log.debug('LCU asset request finished', {
-    endpoint,
-    statusCode: response.statusCode,
-    durationMs: Date.now() - startedAt
-  });
-
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`${endpoint} returned HTTP ${response.statusCode}`);
-  }
-
-  return response.body;
-}
-
-function requestLcuJson(url, headers) {
-  return requestLcu(url, headers).then((response) => ({
-    ...response,
-    body: response.body.toString('utf8')
-  }));
-}
-
-function requestLcu(url, headers) {
-  const client = url.startsWith('https:') ? https : http;
-
-  return new Promise((resolve, reject) => {
-    const request = client.request(
-      url,
-      {
-        method: 'GET',
-        headers,
-        // LCU uses a self-signed certificate. Keep this scoped to local LCU requests.
-        rejectUnauthorized: false,
-        timeout: 5000
-      },
-      (response) => {
-        const chunks = [];
-
-        response.on('data', (chunk) => chunks.push(chunk));
-        response.on('end', () => {
-          resolve({
-            statusCode: response.statusCode ?? 0,
-            body: Buffer.concat(chunks)
-          });
-        });
-      }
-    );
-
-    request.on('timeout', () => {
-      request.destroy(new Error(`LCU request timed out: ${url}`));
-    });
-
-    request.on('error', reject);
-    request.end();
-  });
-}
-
-async function getChampionIcon(_event, championId) {
-  const id = Number(championId);
-  if (!Number.isInteger(id) || id <= 0) return null;
-  if (!lcuConnection || appState.lcuStatus !== 'connected') return null;
-  if (Date.now() < championIconUnavailableUntil) return null;
-
-  try {
-    const buffer = await lcuFetchBuffer(`/lol-game-data/assets/v1/champion-icons/${id}.png`);
-    return `data:image/png;base64,${buffer.toString('base64')}`;
-  } catch (error) {
-    if (isTransientIconFetchError(error)) {
-      championIconUnavailableUntil = Date.now() + 10000;
-
-      if (!championIconUnavailableLogged) {
-        championIconUnavailableLogged = true;
-        log.warn(`Champion icon fetch is temporarily unavailable; suppressing repeated icon errors. First failed championId=${id}`, serializeForLog(error));
-      }
-    } else {
-      log.warn(`Failed to fetch champion icon for championId=${id}`, serializeForLog(error));
-    }
-
-    return null;
-  }
-}
-
-function isTransientIconFetchError(error) {
-  return [
-    'ECONNREFUSED',
-    'ECONNRESET',
-    'ETIMEDOUT',
-    'EPIPE'
-  ].includes(error?.code) || String(error?.message || '').includes('LCU request timed out');
-}
-
 async function refreshLcuState() {
   log.debug('Refreshing LCU state');
   try {
-    lcuConnection = await readLockfile();
+    lcuConnection = await lcuClient.readLockfile();
     clearRetryTimer();
     championIconUnavailableUntil = 0;
     championIconUnavailableLogged = false;
     updateState({ lcuStatus: 'connecting', error: null });
 
     const [lobby, champSelect, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
-      lcuFetch(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.gameflowSession).catch((error) => ({ error: error.message })),
-      lcuFetch(LCU_ENDPOINTS.championSummary).catch(() => [])
+      lcuClient.fetchJson(LCU_ENDPOINTS.lobby).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.champSelect).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.summoner).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.gameflowPhase).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.gameflowSession).catch((error) => ({ error: error.message })),
+      lcuClient.fetchJson(LCU_ENDPOINTS.championSummary).catch(() => [])
     ]);
 
     if (summoner?.error && gameflowPhase?.error) {
@@ -1355,7 +1222,7 @@ app.whenReady().then(async () => {
     handlers: {
       getState: () => appState,
       refreshLcuState,
-      getChampionIcon,
+      getChampionIcon: lcuClient.getChampionIcon,
       getChampionPool: () => championPool,
       saveChampionPool,
       getSettings: () => createPublicSettings(settings),
