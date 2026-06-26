@@ -252,7 +252,7 @@ const LCU_ENDPOINTS = {
 };
 ```
 
-REST 通信は `fetch` ではなく `http.request` / `https.request` で実装しています。LCU API は自己署名証明書を使うため、開発用途として LCU へのローカル接続だけ証明書検証を緩和しています。
+REST 通信は `fetch` ではなく `http.request` / `https.request` で実装しています。LCU API は自己署名証明書を使うため、LCU へのローカル接続だけ証明書検証を緩和しています。接続先は lockfile 由来の `127.0.0.1:<port>` で、認証は lockfile の password を使う Basic 認証です。この用途に限定した既知の例外として、該当行には CodeQL の `js/disabling-certificate-validation` 抑制コメントを付けています。
 
 404 は `null` として扱います。ロビー未参加やチャンピオン選択外では、`lobby` や `champSelect` が `null` になることがあります。
 

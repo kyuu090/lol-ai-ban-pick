@@ -456,6 +456,7 @@ REST通信は `fetch` ではなく `http.request` / `https.request` で実装し
 - Node/Electronのglobal `fetch(url, { agent })` では `https.Agent({ rejectUnauthorized: false })` が効かなかった。
 - LCU APIは自己署名証明書なので、RESTだけ `fetch failed` になった。
 - 現在は `https.request` のオプションに `rejectUnauthorized: false` を指定している。
+- これは LCU の `127.0.0.1:<port>` 接続だけの例外。lockfile の password を使う Basic 認証が別途あり、該当行は CodeQL `js/disabling-certificate-validation` を抑制している。
 
 Basic認証:
 

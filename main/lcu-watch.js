@@ -75,6 +75,9 @@ function createLcuWatch({
     log.debug('Connecting LCU WebSocket', { port: connection.port });
 
     webSocket = new WebSocketImpl(wsUrl, 'wamp', {
+      // LCU is a loopback-only local WebSocket that uses a self-signed certificate.
+      // Authentication is embedded in the URL from the lockfile credentials.
+      // lgtm[js/disabling-certificate-validation]
       rejectUnauthorized: false
     });
 

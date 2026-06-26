@@ -140,7 +140,9 @@ function requestLcu(url, headers) {
       {
         method: 'GET',
         headers,
-        // LCU uses a self-signed certificate. Keep this scoped to local LCU requests.
+        // LCU is a loopback-only local API that uses a self-signed certificate.
+        // Authentication is the lockfile password in the Basic auth header.
+        // lgtm[js/disabling-certificate-validation]
         rejectUnauthorized: false,
         timeout: 5000
       },
