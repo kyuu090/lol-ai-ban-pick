@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0"
+  },
+  "include": [
+    "*.ts",
+    "logger.js",
+    "mock-lcu-api.js",
+    "preload.js",
+    "scripts/**/*.js",
+    "renderer/**/*.ts",
+    "main/**/*.ts",
+    "test/**/*.js",
+    "ui/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "dist",
+    "dist-app",
+    "node_modules"
+  ]
+}

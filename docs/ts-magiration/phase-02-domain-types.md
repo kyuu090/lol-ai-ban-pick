@@ -4,11 +4,19 @@
 
 ## 作業
 
-1. `types/domain.d.ts` を追加する。
-2. 既存コードの実データ shape に合わせて型を定義する。
-3. 不確かな型には `unknown` を使い、推測で細かくしすぎない。
-4. null になり得る値は明示的に `null` を含める。
-5. 外部 API raw response は必要最小限だけ型にする。
+1. `types/domain/` 配下に責務別 domain 型ファイルを追加する。
+   - `types/domain/settings.d.ts`
+   - `types/domain/champion.d.ts`
+   - `types/domain/lcu.d.ts`
+   - `types/domain/match-history.d.ts`
+   - `types/domain/draft.d.ts`
+   - `types/domain/ai-analysis.d.ts`
+   - `types/domain/app-state.d.ts`
+2. `types/domain.d.ts` は責務別ファイルの再 export 入口として薄く保つ。
+3. 既存コードの実データ shape に合わせて型を定義する。
+4. 不確かな型には `unknown` を使い、推測で細かくしすぎない。
+5. null になり得る値は明示的に `null` を含める。
+6. 外部 API raw response は必要最小限だけ型にする。
 
 ## 優先して定義する型
 
@@ -55,7 +63,8 @@
 
 ## 完了条件
 
-- `types/domain.d.ts` に主要 state / domain 型が定義されている。
+- `types/domain/*.d.ts` に主要 state / domain 型が責務別に定義されている。
+- `types/domain.d.ts` は責務別ファイルを再 export する入口になっている。
 - 既存コードの shape と矛盾していない。
 - `npm run typecheck` が通る。
 - `npm test` が通る。

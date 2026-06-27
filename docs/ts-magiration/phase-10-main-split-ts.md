@@ -15,12 +15,12 @@ main/
 
 ## 作業順
 
-1. state publish / window broadcast を `main/state-publisher.ts` へ移す。
-2. LCU refresh / reconnect / gameflow update orchestration を `main/lcu-controller.ts` へ移す。
-3. Riot match history collect orchestration を `main/match-history-controller.ts` へ移す。
-4. lane matchup analysis readiness / request / retry / result apply を `main/lane-matchup-controller.ts` へ移す。
-5. Electron app lifecycle と service construction を `main/bootstrap.ts` へ整理する。
-6. `main.ts` は bootstrap 呼び出しだけに近づける。
+1. [x] state publish / window broadcast を `main/state-publisher.ts` へ移す。
+2. [x] LCU refresh / reconnect / gameflow update orchestration を `main/lcu-controller.ts` へ移す。
+3. [x] Riot match history collect orchestration を `main/match-history-controller.ts` へ移す。
+4. [x] lane matchup analysis readiness / request / retry / result apply を `main/lane-matchup-controller.ts` へ移す。
+5. [x] Electron app lifecycle と service construction を `main/bootstrap.ts` へ整理する。
+6. [x] `main.ts` は bootstrap 呼び出しだけに近づける。
 
 ## 注意
 
@@ -34,11 +34,14 @@ main/
 
 ## 完了条件
 
-- `main` 入口が 200-400 行程度を目指して薄くなっている。
-- orchestration 単位の型が明示されている。
-- `npm run typecheck` が通る。
-- `npm test` が通る。
-- Electron 起動確認を行う。
+- [x] `main` 入口が 200-400 行程度を目指して薄くなっている。
+  - `main.ts`: 2 行。
+  - `main/bootstrap.ts`: 327 行。
+- [x] orchestration 単位の型が明示されている。
+- [x] `npm run typecheck` が通る。
+- [x] `npm test` が通る。
+- [x] Electron 起動確認を行う。
+  - この環境では通常起動が Chromium GPU process の初期化で終了したため、`BANPICK_AI_DISABLE_GPU=1` と Chromium GPU 無効化フラグ付きで 8 秒 smoke 起動を確認した。
 
 ## 作業証跡
 
