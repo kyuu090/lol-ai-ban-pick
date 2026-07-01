@@ -17,6 +17,7 @@
       deps.logDebug('Active view changed', { viewName });
       elements.draftView.hidden = state.activeView !== 'draft';
       elements.championPoolView.hidden = state.activeView !== 'championPool';
+      elements.championsView.hidden = state.activeView !== 'champions';
       elements.statsView.hidden = state.activeView !== 'stats';
       elements.debugView.hidden = state.activeView !== 'debug';
       elements.settingsView.hidden = state.activeView !== 'settings';

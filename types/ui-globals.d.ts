@@ -101,6 +101,17 @@ declare global {
     formatAverageKda(stats: any): string;
   }
 
+  interface ChampionsViewDeps {
+    [key: string]: any;
+    clearTimeout?: typeof clearTimeout;
+    document?: Document;
+    elements: UiDomElements;
+    fetch?: typeof fetch;
+    requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
+    setTimeout?: typeof setTimeout;
+    createInlineChampionName(championId: number, className?: string): HTMLElement;
+  }
+
   interface InGameViewDeps {
     [key: string]: any;
     document?: Document;
@@ -127,6 +138,7 @@ declare global {
     IntersectionObserver?: typeof IntersectionObserver;
     lcuApi?: {
       getChampionIcon?(championId: number): Promise<string | null>;
+      requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     };
     UiDomElements?: UiDomElementsApi;
     UiFormatters?: UiFormattersApi;
@@ -134,6 +146,7 @@ declare global {
     UiSettingsView?: UiSettingsViewApi;
     UiChampionPoolView?: { createChampionPoolView(deps: ChampionPoolViewDeps): any };
     UiMatchDataView?: { createMatchDataView(deps: MatchDataViewDeps): any };
+    UiChampionsView?: { createChampionsView(deps: ChampionsViewDeps): any };
     UiStatsView?: { createStatsView(deps: StatsViewDeps): any };
     UiInGameView?: { createInGameView(deps: InGameViewDeps): any };
     UiDraftView?: { createDraftView(deps: DraftViewDeps): any };

@@ -56,6 +56,7 @@
           <nav class="view-tabs" aria-label="view switcher">
             <button class="tab-button active" id="draftTabButton" type="button" data-view="draft">Draft</button>
             <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool">ChampionPool</button>
+            <button class="tab-button" id="championsTabButton" type="button" data-view="champions">Champions</button>
             <button class="tab-button" id="statsTabButton" type="button" data-view="stats">Stats</button>
             <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
             <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
@@ -227,6 +228,59 @@
         </section>
       </section>
 
+      <section id="championsView" class="view-panel" hidden>
+        <section class="champions-panel">
+          <section class="stats-table-section stats-api-champions-panel" aria-labelledby="statsApiChampionsTitle">
+            <div class="stats-api-heading">
+              <button id="statsApiRefreshButton" class="stats-api-refresh-button" type="button" aria-label="チャンピオン一覧を再取得">更新</button>              
+            </div>
+
+            <div class="stats-api-filters">
+              <label class="stats-api-field" for="statsApiPatchSelect">
+                <span>Patch</span>
+                <select id="statsApiPatchSelect"></select>
+              </label>
+
+              <label class="stats-api-field" for="statsApiLaneSelect">
+                <span>Lane</span>
+                <select id="statsApiLaneSelect">
+                  <option value="">All lane</option>
+                </select>
+              </label>
+
+              <div class="stats-api-rank-dropdown">
+                <span class="stats-api-rank-label">Rank</span>
+                <button id="statsApiRankDropdownButton" class="stats-api-rank-dropdown-button" type="button" aria-expanded="false" aria-controls="statsApiRankDropdown">
+                  <span id="statsApiRankSummary">All rank</span>
+                </button>
+                <div id="statsApiRankDropdown" class="stats-api-rank-dropdown-panel" hidden>
+                  <div id="statsApiRankOptions" class="stats-api-rank-options"></div>
+                </div>
+              </div>
+            </div>
+
+            <p id="statsApiStatus" class="stats-api-status" role="status">StatsAPIのメタ情報を取得しています。</p>
+
+            <div class="stats-table-wrap">
+              <table class="stats-table stats-api-table">
+                <thead>
+                  <tr>
+                    <th scope="col">チャンピオン</th>
+                    <th scope="col">Lane</th>
+                    <th scope="col">Games</th>
+                    <th scope="col">WR</th>
+                    <th scope="col">Pick</th>
+                    <th scope="col">Ban</th>
+                  </tr>
+                </thead>
+                <tbody id="statsApiChampionsTableBody"></tbody>
+              </table>
+            </div>
+            <p id="statsApiChampionsEmpty" class="pool-empty">条件に合うチャンピオンがありません。</p>
+          </section>
+        </section>
+      </section>
+
       <section id="statsView" class="view-panel" hidden>
         <section class="stats-panel">
           <div class="stats-toolbar">
@@ -360,6 +414,7 @@
     <script src="./ui/settings-view.js"></script>
     <script src="./ui/champion-pool-view.js"></script>
     <script src="./ui/match-data-view.js"></script>
+    <script src="./ui/champions-view.js"></script>
     <script src="./ui/stats-view.js"></script>
     <script src="./ui/in-game-view.js"></script>
     <script src="./ui/draft-view.js"></script>

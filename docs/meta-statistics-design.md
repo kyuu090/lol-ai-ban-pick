@@ -782,6 +782,36 @@ min_reliable_games = 300
 
 ## 注意点
 
+### Champions タブの StatsAPI チャンピオン一覧
+
+Champions タブには、外部 StatsAPI のチャンピオン一覧を表示する。タブは ChampionPool と Stats の間に配置する。
+
+利用する API ドメイン:
+
+```text
+https://db.banpick-ai.lol
+```
+
+画面初期化時に `GET /v1/stats/meta` を取得し、`data.patches`, `data.positions`, `data.ranks` をフィルタ候補として使う。チャンピオン一覧は `GET /v1/stats/champions` から取得し、次のフィルタを UI から変更できる。
+
+- `patch`: 単一選択
+- `position`: 単一選択。未選択時は `All lane` として query に含めない
+- `ranks`: ドロップダウン内で複数選択。Patch / Lane と同じ form control 系の色味で表示する。全 rank 選択時は API 既定値と同じ扱いとして query に含めない。全 rank を Off にした場合は API へ投げず、選択を促す。
+
+固定 query:
+
+```text
+minPickRate=0.005
+limit=200
+sort=games:desc
+```
+
+表示項目は champion, most played lane, games, win rate, pick rate, ban rate とする。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせる。
+
+Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
+
+429 レート制限時は `Retry-After` ヘッダを秒数に正規化し、UI にレート制限中であることと自動再試行までの秒数を表示する。`Retry-After` がない 429 は 5 秒後に再試行する。`/v1/stats/meta` の 429 は meta 取得から、`/v1/stats/champions` の 429 は champion 一覧取得から再試行する。5xx は自動再試行せず、StatsAPI サーバーエラーとして表示する。
+
 ### BAN 率の取得は難しい
 
 通常の Match-V5 データだけでは、ranked solo queue 全体の ban rate を簡単に集計するには多くの試合データが必要になる。
