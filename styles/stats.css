@@ -165,15 +165,44 @@
 }
 
 .stats-api-filters {
-  display: grid;
-  gap: 9px;
-  grid-template-columns: minmax(160px, 0.7fr) minmax(160px, 0.7fr) minmax(220px, 1fr);
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 
 .stats-api-field {
   display: grid;
   gap: 5px;
   min-width: 0;
+}
+
+.stats-api-field.compact {
+  flex: 0 0 auto;
+}
+
+.stats-api-field.compact select {
+  min-width: 0;
+  width: 8ch;
+}
+
+.stats-api-lane-filter {
+  flex: 1 1 100%;
+}
+
+.stats-api-lane-tabs {
+  border-bottom: 0;
+  gap: 10px;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.stats-api-lane-tabs .lane-tab {
+  font-size: 13px;
+  font-weight: 900;
+  height: 36px;
+  min-width: 68px;
+  padding: 0 14px;
 }
 
 .stats-api-field span,
@@ -186,6 +215,7 @@
 
 .stats-api-rank-dropdown {
   display: grid;
+  flex: 0 1 240px;
   gap: 5px;
   min-width: 0;
   position: relative;
@@ -280,6 +310,20 @@
 
 .stats-api-table {
   min-width: 640px;
+}
+
+.stats-api-table .stats-table-champion {
+  font-size: 15px;
+  gap: 8px;
+}
+
+.stats-api-table .stats-table-champion .inline-champion-icon {
+  height: 24px;
+  width: 24px;
+}
+
+.stats-api-sort-button {
+  text-align: left;
 }
 
 .stats-table-wrap {

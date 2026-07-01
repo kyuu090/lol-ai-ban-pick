@@ -77,6 +77,7 @@ matchHistoryController = window.RendererMatchHistoryController.createMatchHistor
 const { initializeStatsApiChampionList, refreshStatsApiChampionList } = createChampionsView({
     elements,
     document,
+    championLabel,
     createInlineChampionName,
     requestStatsApiJson: window.lcuApi.requestStatsApiJson,
     fetch: window.fetch?.bind(window)
@@ -805,12 +806,6 @@ elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
     setStatsSort('opponents', 'winRate');
 });
 elements.statsApiPatchSelect.addEventListener('change', () => {
-    refreshStatsApiChampionList();
-});
-elements.statsApiLaneSelect.addEventListener('change', () => {
-    refreshStatsApiChampionList();
-});
-elements.statsApiRefreshButton.addEventListener('click', () => {
     refreshStatsApiChampionList();
 });
 setActiveView(rendererState.activeView);

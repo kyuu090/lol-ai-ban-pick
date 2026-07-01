@@ -4,8 +4,10 @@ const assert = require('node:assert/strict');
 const {
   buildStatsApiChampionsUrl,
   formatStatsApiErrorMessage,
+  getStatsApiLaneLabel,
   parseStatsApiErrorInfo,
-  parseStatsApiRetryAfterSeconds
+  parseStatsApiRetryAfterSeconds,
+  sortStatsApiChampionRows
 } = require('../ui/champions-view');
 
 test('champions view stats api URL includes selected filters and fixed min pick rate', () => {
@@ -38,5 +40,32 @@ test('champions view retry helpers read Retry-After and identify rate limits', (
   assert.equal(
     formatStatsApiErrorMessage(new Error('StatsAPI request failed: 429; retryAfterSeconds=7')),
     'レート制限に達しました。7秒後に再試行できます。'
+  );
+});
+
+test('champions view lane labels use compact stats tab naming', () => {
+  assert.equal(getStatsApiLaneLabel('TOP'), 'TOP');
+  assert.equal(getStatsApiLaneLabel('JUNGLE'), 'JG');
+  assert.equal(getStatsApiLaneLabel('MIDDLE'), 'MID');
+  assert.equal(getStatsApiLaneLabel('BOTTOM'), 'BOT');
+  assert.equal(getStatsApiLaneLabel('UTILITY'), 'SUP');
+  assert.equal(getStatsApiLaneLabel(''), '-');
+});
+
+test('champions view sort helper defaults cleanly across numeric and text columns', () => {
+  const stats = [
+    { championId: 1, mostPlayedLane: 'MIDDLE', games: 120, winRate: 0.515, pickRate: 0.083, banRate: 0.021 },
+    { championId: 2, mostPlayedLane: 'TOP', games: 88, winRate: 0.553, pickRate: 0.044, banRate: 0.012 },
+    { championId: 3, mostPlayedLane: 'JUNGLE', games: 88, winRate: 0.553, pickRate: 0.041, banRate: 0.018 }
+  ];
+  const championLabel = (championId) => ({ 1: 'Ahri', 2: 'Garen', 3: 'Amumu' }[championId]);
+
+  assert.deepEqual(
+    sortStatsApiChampionRows(stats, 'winRate', 'desc', championLabel).map((entry) => entry.championId),
+    [3, 2, 1]
+  );
+  assert.deepEqual(
+    sortStatsApiChampionRows(stats, 'champion', 'asc', championLabel).map((entry) => entry.championId),
+    [1, 3, 2]
   );
 });

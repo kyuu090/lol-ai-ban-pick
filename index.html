@@ -231,22 +231,16 @@
       <section id="championsView" class="view-panel" hidden>
         <section class="champions-panel">
           <section class="stats-table-section stats-api-champions-panel" aria-labelledby="statsApiChampionsTitle">
-            <div class="stats-api-heading">
-              <button id="statsApiRefreshButton" class="stats-api-refresh-button" type="button" aria-label="チャンピオン一覧を再取得">更新</button>              
-            </div>
-
             <div class="stats-api-filters">
-              <label class="stats-api-field" for="statsApiPatchSelect">
+              <label class="stats-api-field compact" for="statsApiPatchSelect">
                 <span>Patch</span>
                 <select id="statsApiPatchSelect"></select>
               </label>
 
-              <label class="stats-api-field" for="statsApiLaneSelect">
+              <div class="stats-api-field stats-api-lane-filter">
                 <span>Lane</span>
-                <select id="statsApiLaneSelect">
-                  <option value="">All lane</option>
-                </select>
-              </label>
+                <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter"></nav>
+              </div>
 
               <div class="stats-api-rank-dropdown">
                 <span class="stats-api-rank-label">Rank</span>
@@ -265,12 +259,12 @@
               <table class="stats-table stats-api-table">
                 <thead>
                   <tr>
-                    <th scope="col">チャンピオン</th>
-                    <th scope="col">Lane</th>
-                    <th scope="col">Games</th>
-                    <th scope="col">WR</th>
-                    <th scope="col">Pick</th>
-                    <th scope="col">Ban</th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion">チャンピオン</button></th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane">Lane</button></th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games">Games</button></th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="winRate">WR</button></th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="pickRate">Pick</button></th>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="banRate">Ban</button></th>
                   </tr>
                 </thead>
                 <tbody id="statsApiChampionsTableBody"></tbody>

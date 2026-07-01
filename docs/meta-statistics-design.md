@@ -795,8 +795,8 @@ https://db.banpick-ai.lol
 画面初期化時に `GET /v1/stats/meta` を取得し、`data.patches`, `data.positions`, `data.ranks` をフィルタ候補として使う。チャンピオン一覧は `GET /v1/stats/champions` から取得し、次のフィルタを UI から変更できる。
 
 - `patch`: 単一選択
-- `position`: 単一選択。未選択時は `All lane` として query に含めない
-- `ranks`: ドロップダウン内で複数選択。Patch / Lane と同じ form control 系の色味で表示する。全 rank 選択時は API 既定値と同じ扱いとして query に含めない。全 rank を Off にした場合は API へ投げず、選択を促す。
+- `position`: レーンタブで単一選択。表示文言は `ALL / TOP / JG / MID / BOT / SUP` を使い、未選択時は `ALL` として query に含めない
+- `ranks`: ドロップダウン内で複数選択。Patch / Lane と同じ form control 系の色味で表示する。全 rank 選択時は API 既定値と同じ扱いとして query に含めない。全 rank を Off にした場合は API へ投げず、選択を促す。チェック変更中は即時再取得せず、ドロップダウンを閉じた時点で反映する。
 
 固定 query:
 
@@ -806,7 +806,7 @@ limit=200
 sort=games:desc
 ```
 
-表示項目は champion, most played lane, games, win rate, pick rate, ban rate とする。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせる。
+表示項目は champion, most played lane, games, win rate, pick rate, ban rate とする。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせる。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は win rate の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
 
 Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
 

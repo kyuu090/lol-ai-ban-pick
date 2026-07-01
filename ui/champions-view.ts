@@ -2,6 +2,16 @@
   const STATS_API_BASE_URL = 'https://db.banpick-ai.lol';
   const STATS_API_MIN_PICK_RATE = 0.005;
   const STATS_API_DEFAULT_RETRY_AFTER_SECONDS = 5;
+  const STATS_API_LANES = [
+    { id: '', label: 'ALL' },
+    { id: 'TOP', label: 'TOP' },
+    { id: 'JUNGLE', label: 'JG' },
+    { id: 'MIDDLE', label: 'MID' },
+    { id: 'BOTTOM', label: 'BOT' },
+    { id: 'UTILITY', label: 'SUP' }
+  ] as const;
+
+  type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate';
 
   interface StatsApiMetaData {
     latestPatch?: string | null;
@@ -29,6 +39,47 @@
     message: string;
     retryAfterSeconds: number | null;
     status: number | null;
+  }
+
+  function normalizeStatsApiPosition(value: unknown): string {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function getStatsApiLaneLabel(position: unknown): string {
+    const normalized = normalizeStatsApiPosition(position);
+    if (!normalized) return '-';
+    return STATS_API_LANES.find((lane) => lane.id === normalized)?.label || normalized || '-';
+  }
+
+  function sortStatsApiChampionRows(
+    statsList: StatsApiChampionStats[],
+    sortKey: StatsApiSortKey,
+    sortDirection: UiSortDirection = 'desc',
+    championLabel: (championId: number) => string = (championId) => `Champion ${championId}`
+  ): StatsApiChampionStats[] {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...statsList].sort((a, b) => {
+      let primary = 0;
+      if (sortKey === 'champion') {
+        primary = championLabel(a.championId).localeCompare(championLabel(b.championId), 'en');
+      } else if (sortKey === 'lane') {
+        primary = getStatsApiLaneLabel(a.mostPlayedLane).localeCompare(getStatsApiLaneLabel(b.mostPlayedLane), 'en');
+      } else {
+        primary = Number(a[sortKey] || 0) - Number(b[sortKey] || 0);
+      }
+      if (primary !== 0) return primary * direction;
+
+      const winRateFallback = Number(b.winRate || 0) - Number(a.winRate || 0);
+      if (winRateFallback !== 0 && sortKey !== 'winRate') return winRateFallback;
+
+      const gamesFallback = Number(b.games || 0) - Number(a.games || 0);
+      if (gamesFallback !== 0 && sortKey !== 'games') return gamesFallback;
+
+      const laneFallback = getStatsApiLaneLabel(a.mostPlayedLane).localeCompare(getStatsApiLaneLabel(b.mostPlayedLane), 'en');
+      if (laneFallback !== 0 && sortKey !== 'lane') return laneFallback;
+
+      return championLabel(a.championId).localeCompare(championLabel(b.championId), 'en');
+    });
   }
 
   function buildStatsApiChampionsUrl(filters: StatsApiFilters, baseUrl = STATS_API_BASE_URL): string {
@@ -116,10 +167,15 @@
     const fetchImpl = deps.fetch || root.fetch?.bind(root);
     let statsApiMeta: StatsApiMetaData | null = null;
     let statsApiSelectedPatch = '';
+    let statsApiSelectedPosition = '';
     let statsApiSelectedRanks = new Set<string>();
     let statsApiRequestId = 0;
     let statsApiRankDropdownInitialized = false;
     let statsApiRetryTimer: UiTimerHandle | null = null;
+    let statsApiSortButtonsInitialized = false;
+    let statsApiSortKey: StatsApiSortKey = 'winRate';
+    let statsApiSortDirection: UiSortDirection = 'desc';
+    let statsApiRankSelectionDirty = false;
 
     function formatStatsApiRate(value: unknown): string {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -160,10 +216,41 @@
       });
     }
 
+    function initializeStatsApiSortButtons(): void {
+      if (statsApiSortButtonsInitialized) return;
+      statsApiSortButtonsInitialized = true;
+
+      doc.querySelectorAll<HTMLButtonElement>('[data-stats-api-sort-key]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const sortKey = String(button.dataset.statsApiSortKey || '') as StatsApiSortKey;
+          if (!sortKey) return;
+          statsApiSortDirection = statsApiSortKey === sortKey && statsApiSortDirection === 'desc' ? 'asc' : 'desc';
+          statsApiSortKey = sortKey;
+          refreshStatsApiChampionList();
+        });
+      });
+    }
+
+    function renderStatsApiSortButtons(): void {
+      doc.querySelectorAll<HTMLButtonElement>('[data-stats-api-sort-key]').forEach((button) => {
+        const sortKey = String(button.dataset.statsApiSortKey || '') as StatsApiSortKey;
+        const active = sortKey === statsApiSortKey;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+        button.dataset.sortDirection = active ? statsApiSortDirection : '';
+        button.setAttribute('aria-sort', active ? (statsApiSortDirection === 'asc' ? 'ascending' : 'descending') : 'none');
+      });
+    }
+
     function setStatsApiRankDropdownOpen(isOpen: boolean): void {
       if (!elements.statsApiRankDropdown || !elements.statsApiRankDropdownButton) return;
+      const wasOpen = !elements.statsApiRankDropdown.hidden;
       elements.statsApiRankDropdown.hidden = !isOpen;
       elements.statsApiRankDropdownButton.setAttribute('aria-expanded', String(isOpen));
+      if (wasOpen && !isOpen && statsApiRankSelectionDirty) {
+        statsApiRankSelectionDirty = false;
+        refreshStatsApiChampionList();
+      }
     }
 
     function updateStatsApiRankSummary(): void {
@@ -194,7 +281,7 @@
       const selectedRanks = getStatsApiSelectedRanks();
       return {
         patch: elements.statsApiPatchSelect?.value || statsApiSelectedPatch || statsApiMeta?.latestPatch || undefined,
-        position: elements.statsApiLaneSelect?.value || undefined,
+        position: statsApiSelectedPosition || undefined,
         ranks: selectedRanks.length < allRanks.length ? selectedRanks : undefined
       };
     }
@@ -216,6 +303,7 @@
     async function initializeStatsApiChampionList(): Promise<void> {
       clearStatsApiRetryTimer();
       initializeStatsApiRankDropdown();
+      initializeStatsApiSortButtons();
       setStatsApiLoading(true);
       setStatsApiStatus('StatsAPIのメタ情報を取得しています。');
       clearStatsApiChampionRows();
@@ -223,6 +311,7 @@
         const response = await fetchStatsApiJson('/v1/stats/meta');
         statsApiMeta = response?.data || {};
         statsApiSelectedPatch = statsApiMeta?.latestPatch || statsApiMeta?.patches?.[0] || '';
+        statsApiSelectedPosition = '';
         statsApiSelectedRanks = new Set(statsApiMeta?.ranks || []);
         renderStatsApiFilters();
         updateStatsApiRankSummary();
@@ -238,8 +327,9 @@
 
     function renderStatsApiFilters(): void {
       renderStatsApiPatchOptions(statsApiMeta?.patches || []);
-      renderStatsApiLaneOptions(statsApiMeta?.positions || []);
+      renderStatsApiLaneTabs(statsApiMeta?.positions || []);
       renderStatsApiRankOptions(statsApiMeta?.ranks || []);
+      renderStatsApiSortButtons();
     }
 
     function renderStatsApiPatchOptions(patches: string[]): void {
@@ -254,18 +344,83 @@
       elements.statsApiPatchSelect.replaceChildren(...options);
     }
 
-    function renderStatsApiLaneOptions(positions: string[]): void {
-      if (!elements.statsApiLaneSelect) return;
-      const allLaneOption = doc.createElement('option');
-      allLaneOption.value = '';
-      allLaneOption.textContent = 'All lane';
-      const options = positions.map((position) => {
-        const option = doc.createElement('option');
-        option.value = position;
-        option.textContent = position;
-        return option;
-      });
-      elements.statsApiLaneSelect.replaceChildren(allLaneOption, ...options);
+    function renderStatsApiLaneTabs(positions: string[]): void {
+      if (!elements.statsApiLaneTabs) return;
+      const availablePositions = new Set(positions.map((position) => normalizeStatsApiPosition(position)));
+      const buttons = STATS_API_LANES
+        .filter((lane) => lane.id === '' || availablePositions.has(lane.id))
+        .map((lane) => {
+          const button = doc.createElement('button');
+          button.type = 'button';
+          button.dataset.lane = lane.id;
+          button.textContent = lane.label;
+          button.className = `lane-tab${lane.id === statsApiSelectedPosition ? ' active' : ''}`;
+          button.addEventListener('click', () => {
+            if (statsApiSelectedPosition === lane.id) return;
+            statsApiSelectedPosition = lane.id;
+            renderStatsApiLaneTabs(positions);
+            refreshStatsApiChampionList();
+          });
+          return button;
+        });
+      elements.statsApiLaneTabs.replaceChildren(...buttons);
+    }
+
+    function createStatsApiStatusText(count: number, watermark: string | null | undefined): string {
+      const filters = getStatsApiSelectedFilters();
+      const rankText = filters.ranks?.length ? filters.ranks.join(', ') : 'All rank';
+      const laneText = filters.position ? getStatsApiLaneLabel(filters.position) : 'ALL';
+      const updated = watermark ? ` / data ${new Date(watermark).toLocaleDateString('ja-JP')}` : '';
+      return `${count} champions / ${filters.patch || 'latest'} / ${laneText} / ${rankText}${updated}`;
+    }
+
+    function clearStatsApiChampionRows(): void {
+      elements.statsApiChampionsTableBody?.replaceChildren();
+      if (elements.statsApiChampionsEmpty) {
+        elements.statsApiChampionsEmpty.hidden = false;
+      }
+    }
+
+    function renderStatsApiChampionTable(statsList: StatsApiChampionStats[]): void {
+      const sortedStatsList = sortStatsApiChampionRows(
+        statsList,
+        statsApiSortKey,
+        statsApiSortDirection,
+        (championId) => deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`
+      );
+      const rows = sortedStatsList.map((stats) => createStatsApiChampionRow(stats));
+      elements.statsApiChampionsTableBody?.replaceChildren(...rows);
+      if (elements.statsApiChampionsEmpty) {
+        elements.statsApiChampionsEmpty.hidden = sortedStatsList.length > 0;
+        elements.statsApiChampionsEmpty.textContent = '条件に合うチャンピオンがありません。';
+      }
+      renderStatsApiSortButtons();
+    }
+
+    function createStatsApiChampionRow(stats: StatsApiChampionStats): HTMLTableRowElement {
+      const row = doc.createElement('tr');
+
+      const championCell = doc.createElement('th');
+      championCell.scope = 'row';
+      championCell.append(deps.createInlineChampionName(stats.championId, 'inline-champion-name stats-table-champion'));
+
+      const laneCell = doc.createElement('td');
+      laneCell.textContent = getStatsApiLaneLabel(stats.mostPlayedLane);
+
+      const gamesCell = doc.createElement('td');
+      gamesCell.textContent = String(Number(stats.games || 0));
+
+      const winRateCell = doc.createElement('td');
+      winRateCell.textContent = formatStatsApiRate(stats.winRate);
+
+      const pickRateCell = doc.createElement('td');
+      pickRateCell.textContent = formatStatsApiRate(stats.pickRate);
+
+      const banRateCell = doc.createElement('td');
+      banRateCell.textContent = formatStatsApiRate(stats.banRate);
+
+      row.append(championCell, laneCell, gamesCell, winRateCell, pickRateCell, banRateCell);
+      return row;
     }
 
     function renderStatsApiRankOptions(ranks: string[]): void {
@@ -280,8 +435,8 @@
         checkbox.checked = statsApiSelectedRanks.has(rank);
         checkbox.addEventListener('change', () => {
           statsApiSelectedRanks = new Set(getStatsApiSelectedRanks());
+          statsApiRankSelectionDirty = true;
           updateStatsApiRankSummary();
-          refreshStatsApiChampionList();
         });
 
         const text = doc.createElement('span');
@@ -345,56 +500,6 @@
       return true;
     }
 
-    function createStatsApiStatusText(count: number, watermark: string | null | undefined): string {
-      const filters = getStatsApiSelectedFilters();
-      const rankText = filters.ranks?.length ? filters.ranks.join(', ') : 'All rank';
-      const laneText = filters.position || 'All lane';
-      const updated = watermark ? ` / data ${new Date(watermark).toLocaleDateString('ja-JP')}` : '';
-      return `${count} champions / ${filters.patch || 'latest'} / ${laneText} / ${rankText}${updated}`;
-    }
-
-    function clearStatsApiChampionRows(): void {
-      elements.statsApiChampionsTableBody?.replaceChildren();
-      if (elements.statsApiChampionsEmpty) {
-        elements.statsApiChampionsEmpty.hidden = false;
-      }
-    }
-
-    function renderStatsApiChampionTable(statsList: StatsApiChampionStats[]): void {
-      const rows = statsList.map((stats) => createStatsApiChampionRow(stats));
-      elements.statsApiChampionsTableBody?.replaceChildren(...rows);
-      if (elements.statsApiChampionsEmpty) {
-        elements.statsApiChampionsEmpty.hidden = statsList.length > 0;
-        elements.statsApiChampionsEmpty.textContent = '条件に合うチャンピオンがありません。';
-      }
-    }
-
-    function createStatsApiChampionRow(stats: StatsApiChampionStats): HTMLTableRowElement {
-      const row = doc.createElement('tr');
-
-      const championCell = doc.createElement('th');
-      championCell.scope = 'row';
-      championCell.append(deps.createInlineChampionName(stats.championId, 'inline-champion-name stats-table-champion'));
-
-      const laneCell = doc.createElement('td');
-      laneCell.textContent = stats.mostPlayedLane || '-';
-
-      const gamesCell = doc.createElement('td');
-      gamesCell.textContent = String(Number(stats.games || 0));
-
-      const winRateCell = doc.createElement('td');
-      winRateCell.textContent = formatStatsApiRate(stats.winRate);
-
-      const pickRateCell = doc.createElement('td');
-      pickRateCell.textContent = formatStatsApiRate(stats.pickRate);
-
-      const banRateCell = doc.createElement('td');
-      banRateCell.textContent = formatStatsApiRate(stats.banRate);
-
-      row.append(championCell, laneCell, gamesCell, winRateCell, pickRateCell, banRateCell);
-      return row;
-    }
-
     return {
       initializeStatsApiChampionList,
       refreshStatsApiChampionList
@@ -405,8 +510,10 @@
     buildStatsApiChampionsUrl,
     createChampionsView,
     formatStatsApiErrorMessage,
+    getStatsApiLaneLabel,
     parseStatsApiErrorInfo,
-    parseStatsApiRetryAfterSeconds
+    parseStatsApiRetryAfterSeconds,
+    sortStatsApiChampionRows
   };
 
   if (typeof module !== 'undefined' && module.exports) {

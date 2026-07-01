@@ -48,7 +48,7 @@
       opponentStatsTableBody: doc.querySelector('#opponentStatsTableBody'),
       opponentStatsEmpty: doc.querySelector('#opponentStatsEmpty'),
       statsApiPatchSelect: doc.querySelector('#statsApiPatchSelect'),
-      statsApiLaneSelect: doc.querySelector('#statsApiLaneSelect'),
+      statsApiLaneTabs: doc.querySelector('#statsApiLaneTabs'),
       statsApiRankDropdownButton: doc.querySelector('#statsApiRankDropdownButton'),
       statsApiRankSummary: doc.querySelector('#statsApiRankSummary'),
       statsApiRankDropdown: doc.querySelector('#statsApiRankDropdown'),

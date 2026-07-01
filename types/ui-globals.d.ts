@@ -107,6 +107,7 @@ declare global {
     document?: Document;
     elements: UiDomElements;
     fetch?: typeof fetch;
+    championLabel?(championId: number): string;
     requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     setTimeout?: typeof setTimeout;
     createInlineChampionName(championId: number, className?: string): HTMLElement;
