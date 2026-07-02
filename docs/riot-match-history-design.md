@@ -520,7 +520,7 @@ ChampionPool画面とバンピック中の候補表示では、戦績はチッ�
 
 ChampSelect 中も、自分の行だけ現在の `assignedPosition + championId` のロール別戦績を表示する。味方全員や敵側には、自分の使用戦績を表示しない。
 
-ChampSelect 中の候補名、`Best into ...`、`Threats for your ...` などの champion 名には、LCU champion icon を小さく帯同表示する。画像取得は既存の icon cache / queue を使い、一度に大量取得しない。
+ChampSelect 中の候補名、`Best into ...`、`Threats for your ...` などの champion 名には、champion icon を小さく帯同表示する。画像取得は既存の icon cache / queue を使い、一度に大量取得しない。通常は LCU の `/lol-game-data/assets/v1/champion-icons/<id>.png` を使い、LCU 未接続時や一時的な取得失敗時は Data Dragon へフォールバックする。
 
 表示・推薦では次を判定する。
 

@@ -11,7 +11,7 @@
     { id: 'UTILITY', label: 'SUP' }
   ] as const;
 
-  type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate';
+  type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate' | 'tierScore';
 
   interface StatsApiMetaData {
     latestPatch?: string | null;
@@ -26,6 +26,8 @@
     games: number;
     mostPlayedLane?: string | null;
     pickRate: number;
+    tier?: string | null;
+    tierScore?: number;
     winRate: number;
   }
 
@@ -42,6 +44,10 @@
   }
 
   function normalizeStatsApiPosition(value: unknown): string {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function normalizeStatsApiTier(value: unknown): string {
     return String(value || '').trim().toUpperCase();
   }
 
@@ -69,6 +75,9 @@
       }
       if (primary !== 0) return primary * direction;
 
+      const tierScoreFallback = Number(b.tierScore || 0) - Number(a.tierScore || 0);
+      if (tierScoreFallback !== 0 && sortKey !== 'tierScore') return tierScoreFallback;
+
       const winRateFallback = Number(b.winRate || 0) - Number(a.winRate || 0);
       if (winRateFallback !== 0 && sortKey !== 'winRate') return winRateFallback;
 
@@ -95,7 +104,7 @@
     }
     url.searchParams.set('minPickRate', String(STATS_API_MIN_PICK_RATE));
     url.searchParams.set('limit', '200');
-    url.searchParams.set('sort', 'games:desc');
+    url.searchParams.set('sort', 'tierScore:desc');
     return url.toString();
   }
 
@@ -173,7 +182,7 @@
     let statsApiRankDropdownInitialized = false;
     let statsApiRetryTimer: UiTimerHandle | null = null;
     let statsApiSortButtonsInitialized = false;
-    let statsApiSortKey: StatsApiSortKey = 'winRate';
+    let statsApiSortKey: StatsApiSortKey = 'tierScore';
     let statsApiSortDirection: UiSortDirection = 'desc';
     let statsApiRankSelectionDirty = false;
 
@@ -400,6 +409,14 @@
     function createStatsApiChampionRow(stats: StatsApiChampionStats): HTMLTableRowElement {
       const row = doc.createElement('tr');
 
+      const tierCell = doc.createElement('td');
+      const tier = normalizeStatsApiTier(stats.tier);
+      tierCell.textContent = tier || '-';
+      tierCell.className = `stats-api-tier-cell${tier ? ` tier-${tier}` : ''}`;
+      if (Number.isFinite(Number(stats.tierScore))) {
+        tierCell.title = `Tier Score: ${Number(stats.tierScore).toFixed(2)}`;
+      }
+
       const championCell = doc.createElement('th');
       championCell.scope = 'row';
       championCell.append(deps.createInlineChampionName(stats.championId, 'inline-champion-name stats-table-champion'));
@@ -419,7 +436,7 @@
       const banRateCell = doc.createElement('td');
       banRateCell.textContent = formatStatsApiRate(stats.banRate);
 
-      row.append(championCell, laneCell, gamesCell, winRateCell, pickRateCell, banRateCell);
+      row.append(tierCell, championCell, laneCell, gamesCell, winRateCell, pickRateCell, banRateCell);
       return row;
     }
 

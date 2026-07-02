@@ -46,8 +46,11 @@
 }
 
 .champions-panel {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 14px;
+  min-height: 0;
 }
 
 .lane-tabs {
@@ -144,8 +147,11 @@
 
 .stats-api-champions-panel {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .stats-api-heading {
@@ -187,7 +193,8 @@
 }
 
 .stats-api-lane-filter {
-  flex: 1 1 100%;
+  flex: 1 1 320px;
+  min-width: 280px;
 }
 
 .stats-api-lane-tabs {
@@ -313,13 +320,44 @@
 }
 
 .stats-api-table .stats-table-champion {
-  font-size: 15px;
-  gap: 8px;
+  font-size: 16px;
+  gap: 10px;
 }
 
 .stats-api-table .stats-table-champion .inline-champion-icon {
-  height: 24px;
-  width: 24px;
+  height: 42px;
+  width: 42px;
+}
+
+.stats-api-table th,
+.stats-api-table td {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.stats-api-tier-cell {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.stats-api-tier-cell.tier-S {
+  color: #d4af37;
+}
+
+.stats-api-tier-cell.tier-A {
+  color: #ef4444;
+}
+
+.stats-api-tier-cell.tier-B {
+  color: #3b82f6;
+}
+
+.stats-api-tier-cell.tier-C {
+  color: #22c55e;
+}
+
+.stats-api-tier-cell.tier-D {
+  color: #9ca3af;
 }
 
 .stats-api-sort-button {
@@ -327,7 +365,17 @@
 }
 
 .stats-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: auto;
+}
+
+.stats-api-table thead th {
+  background: rgba(24, 27, 55, 0.96);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .stats-table {
@@ -339,7 +387,7 @@
 .stats-table th,
 .stats-table td {
   border-bottom: 1px solid rgba(154, 167, 184, 0.14);
-  padding: 9px 10px;
+  padding: 4px 4px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;

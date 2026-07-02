@@ -156,7 +156,7 @@ git push origin v0.1.1
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当します。
 - `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当します。
 - `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当します。
-- `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当します。
+- `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当します。champion icon は通常 `/lol-game-data/assets/v1/champion-icons/<id>.png` を使い、LCU 未接続時や icon endpoint が一時的に失敗している間は Data Dragon へフォールバックします。champion 名も `championsById` が LCU から取れない場合は Data Dragon の champion catalog で補完します。
 - `main/lcu-watch.js` は LCU WebSocket 接続、購読、再接続、lockfile retry timer を担当します。
 - `lcu-logic.js` に LCU 接続用の純粋関数、`draft-logic.js` にドラフト表示用の純粋関数を切り出しています。
 - `riot-api.js` は Riot API 用の request / retry 基盤です。

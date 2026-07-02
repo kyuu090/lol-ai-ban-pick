@@ -237,11 +237,6 @@
                 <select id="statsApiPatchSelect"></select>
               </label>
 
-              <div class="stats-api-field stats-api-lane-filter">
-                <span>Lane</span>
-                <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter"></nav>
-              </div>
-
               <div class="stats-api-rank-dropdown">
                 <span class="stats-api-rank-label">Rank</span>
                 <button id="statsApiRankDropdownButton" class="stats-api-rank-dropdown-button" type="button" aria-expanded="false" aria-controls="statsApiRankDropdown">
@@ -251,6 +246,11 @@
                   <div id="statsApiRankOptions" class="stats-api-rank-options"></div>
                 </div>
               </div>
+
+              <div class="stats-api-field stats-api-lane-filter">
+                <span>Lane</span>
+                <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter"></nav>
+              </div>
             </div>
 
             <p id="statsApiStatus" class="stats-api-status" role="status">StatsAPIのメタ情報を取得しています。</p>
@@ -259,6 +259,7 @@
               <table class="stats-table stats-api-table">
                 <thead>
                   <tr>
+                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="tierScore">Tier</button></th>
                     <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion">チャンピオン</button></th>
                     <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane">Lane</button></th>
                     <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games">Games</button></th>

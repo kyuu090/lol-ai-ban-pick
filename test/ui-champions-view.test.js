@@ -24,7 +24,7 @@ test('champions view stats api URL includes selected filters and fixed min pick 
   assert.equal(url.searchParams.get('ranks'), 'DIAMOND,MASTER');
   assert.equal(url.searchParams.get('minPickRate'), '0.005');
   assert.equal(url.searchParams.get('limit'), '200');
-  assert.equal(url.searchParams.get('sort'), 'games:desc');
+  assert.equal(url.searchParams.get('sort'), 'tierScore:desc');
 });
 
 test('champions view retry helpers read Retry-After and identify rate limits', () => {
@@ -54,12 +54,16 @@ test('champions view lane labels use compact stats tab naming', () => {
 
 test('champions view sort helper defaults cleanly across numeric and text columns', () => {
   const stats = [
-    { championId: 1, mostPlayedLane: 'MIDDLE', games: 120, winRate: 0.515, pickRate: 0.083, banRate: 0.021 },
-    { championId: 2, mostPlayedLane: 'TOP', games: 88, winRate: 0.553, pickRate: 0.044, banRate: 0.012 },
-    { championId: 3, mostPlayedLane: 'JUNGLE', games: 88, winRate: 0.553, pickRate: 0.041, banRate: 0.018 }
+    { championId: 1, mostPlayedLane: 'MIDDLE', games: 120, winRate: 0.515, pickRate: 0.083, banRate: 0.021, tier: 'A', tierScore: 52.12 },
+    { championId: 2, mostPlayedLane: 'TOP', games: 88, winRate: 0.553, pickRate: 0.044, banRate: 0.012, tier: 'S', tierScore: 55.32 },
+    { championId: 3, mostPlayedLane: 'JUNGLE', games: 88, winRate: 0.553, pickRate: 0.041, banRate: 0.018, tier: 'S', tierScore: 55.32 }
   ];
   const championLabel = (championId) => ({ 1: 'Ahri', 2: 'Garen', 3: 'Amumu' }[championId]);
 
+  assert.deepEqual(
+    sortStatsApiChampionRows(stats, 'tierScore', 'desc', championLabel).map((entry) => entry.championId),
+    [3, 2, 1]
+  );
   assert.deepEqual(
     sortStatsApiChampionRows(stats, 'winRate', 'desc', championLabel).map((entry) => entry.championId),
     [3, 2, 1]

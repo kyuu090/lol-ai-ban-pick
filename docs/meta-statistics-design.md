@@ -803,10 +803,10 @@ https://db.banpick-ai.lol
 ```text
 minPickRate=0.005
 limit=200
-sort=games:desc
+sort=tierScore:desc
 ```
 
-表示項目は champion, most played lane, games, win rate, pick rate, ban rate とする。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせる。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は win rate の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
+`championsAPI` では各 champion 行に `tierScore` と `tier` も含める。表示項目は tier, champion, most played lane, games, win rate, pick rate, ban rate とする。左端の列は `tier` を表示し、この列ヘッダ操作では `tierScore` による昇順 / 降順ソートを行う。`tier` の文字色は `S=金`, `A=赤`, `B=青`, `C=緑`, `D=グレー` とする。フィルター行は `Patch`、`Rank`、`Lane` の順で同じ行に並べる。Champions タブでは上部フィルター領域とテーブルヘッダは固定し、チャンピオン一覧の行だけを内部スクロールさせる。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせ、一覧では視認性を優先してやや大きめに表示する。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は `tierScore` の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
 
 Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
 
