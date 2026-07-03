@@ -792,10 +792,10 @@ Champions タブには、外部 StatsAPI のチャンピオン一覧を表示す
 https://db.banpick-ai.lol
 ```
 
-画面初期化時に `GET /v1/stats/meta` を取得し、`data.patches`, `data.positions`, `data.ranks` をフィルタ候補として使う。チャンピオン一覧は `GET /v1/stats/champions` から取得し、次のフィルタを UI から変更できる。
+画面初期化時に `GET /v1/stats/meta` を取得し、`data.patches`, `data.positions`, `data.ranks` をフィルタ候補として使う。チャンピオン一覧は `GET /v1/stats/positions/:position/champions` から取得し、次のフィルタを UI から変更できる。
 
 - `patch`: 単一選択
-- `position`: レーンタブで単一選択。表示文言は `ALL / TOP / JG / MID / BOT / SUP` を使い、未選択時は `ALL` として query に含めない
+- `position`: レーンタブで単一選択。表示文言は `TOP / JG / MID / BOT / SUP` を使い、選択値は path parameter に埋め込む。`TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY` のいずれかを必ず選択する
 - `ranks`: ドロップダウン内で複数選択。Patch / Lane と同じ form control 系の色味で表示する。全 rank 選択時は API 既定値と同じ扱いとして query に含めない。全 rank を Off にした場合は API へ投げず、選択を促す。チェック変更中は即時再取得せず、ドロップダウンを閉じた時点で反映する。
 
 固定 query:
@@ -806,11 +806,11 @@ limit=200
 sort=tierScore:desc
 ```
 
-`championsAPI` では各 champion 行に `tierScore` と `tier` も含める。表示項目は tier, champion, most played lane, games, win rate, pick rate, ban rate とする。左端の列は `tier` を表示し、この列ヘッダ操作では `tierScore` による昇順 / 降順ソートを行う。`tier` の文字色は `S=金`, `A=赤`, `B=青`, `C=緑`, `D=グレー` とする。フィルター行は `Patch`、`Rank`、`Lane` の順で同じ行に並べる。Champions タブでは上部フィルター領域とテーブルヘッダは固定し、チャンピオン一覧の行だけを内部スクロールさせる。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせ、一覧では視認性を優先してやや大きめに表示する。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は `tierScore` の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
+`championsAPI` では各 champion 行に `tierScore` と `tier` も含める。表示項目は tier, champion, most played lane, games, win rate, pick rate, ban rate とする。左端の列は `tier` を表示し、この列ヘッダ操作では `tierScore` による昇順 / 降順ソートを行う。`tier` の文字色は `S=金`, `A=赤`, `B=青`, `C=緑`, `D=グレー` とする。フィルター行は `Patch`、`Rank`、`Lane` の順で同じ行に並べる。Lane タブに全レーンは置かず、`TOP / JG / MID / BOT / SUP` のみを表示する。Champions タブでは上部フィルター領域とテーブルヘッダは固定し、チャンピオン一覧の行だけを内部スクロールさせる。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせ、一覧では視認性を優先してやや大きめに表示する。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は `tierScore` の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
 
-Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
+Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/positions/:position/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
 
-429 レート制限時は `Retry-After` ヘッダを秒数に正規化し、UI にレート制限中であることと自動再試行までの秒数を表示する。`Retry-After` がない 429 は 5 秒後に再試行する。`/v1/stats/meta` の 429 は meta 取得から、`/v1/stats/champions` の 429 は champion 一覧取得から再試行する。5xx は自動再試行せず、StatsAPI サーバーエラーとして表示する。
+429 レート制限時は `Retry-After` ヘッダを秒数に正規化し、UI にレート制限中であることと自動再試行までの秒数を表示する。`Retry-After` がない 429 は 5 秒後に再試行する。`/v1/stats/meta` の 429 は meta 取得から、`/v1/stats/positions/:position/champions` の 429 は champion 一覧取得から再試行する。5xx は自動再試行せず、StatsAPI サーバーエラーとして表示する。
 
 ### BAN 率の取得は難しい
 

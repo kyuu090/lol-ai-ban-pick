@@ -3,13 +3,13 @@
   const STATS_API_MIN_PICK_RATE = 0.005;
   const STATS_API_DEFAULT_RETRY_AFTER_SECONDS = 5;
   const STATS_API_LANES = [
-    { id: '', label: 'ALL' },
     { id: 'TOP', label: 'TOP' },
     { id: 'JUNGLE', label: 'JG' },
     { id: 'MIDDLE', label: 'MID' },
     { id: 'BOTTOM', label: 'BOT' },
     { id: 'UTILITY', label: 'SUP' }
   ] as const;
+  type StatsApiLaneOption = (typeof STATS_API_LANES)[number];
 
   type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate' | 'tierScore';
 
@@ -57,6 +57,20 @@
     return STATS_API_LANES.find((lane) => lane.id === normalized)?.label || normalized || '-';
   }
 
+  function getAvailableStatsApiLanes(positions: unknown): readonly StatsApiLaneOption[] {
+    const availablePositions = Array.isArray(positions)
+      ? positions
+        .map((position) => normalizeStatsApiPosition(position))
+        .filter(Boolean)
+      : [];
+    if (availablePositions.length === 0) {
+      return STATS_API_LANES;
+    }
+
+    const availablePositionSet = new Set(availablePositions);
+    return STATS_API_LANES.filter((lane) => availablePositionSet.has(lane.id));
+  }
+
   function sortStatsApiChampionRows(
     statsList: StatsApiChampionStats[],
     sortKey: StatsApiSortKey,
@@ -92,12 +106,14 @@
   }
 
   function buildStatsApiChampionsUrl(filters: StatsApiFilters, baseUrl = STATS_API_BASE_URL): string {
-    const url = new URL('/v1/stats/champions', baseUrl);
+    const position = normalizeStatsApiPosition(filters.position);
+    if (!position) {
+      throw new Error('StatsAPI position is required.');
+    }
+
+    const url = new URL(`/v1/stats/positions/${encodeURIComponent(position)}/champions`, baseUrl);
     if (filters.patch) {
       url.searchParams.set('patch', filters.patch);
-    }
-    if (filters.position) {
-      url.searchParams.set('position', filters.position);
     }
     if (filters.ranks && filters.ranks.length > 0) {
       url.searchParams.set('ranks', filters.ranks.join(','));
@@ -288,9 +304,11 @@
     function getStatsApiSelectedFilters(): StatsApiFilters {
       const allRanks = statsApiMeta?.ranks || [];
       const selectedRanks = getStatsApiSelectedRanks();
+      const availableLanes = getAvailableStatsApiLanes(statsApiMeta?.positions);
+      const fallbackPosition = availableLanes[0]?.id || '';
       return {
         patch: elements.statsApiPatchSelect?.value || statsApiSelectedPatch || statsApiMeta?.latestPatch || undefined,
-        position: statsApiSelectedPosition || undefined,
+        position: statsApiSelectedPosition || fallbackPosition || undefined,
         ranks: selectedRanks.length < allRanks.length ? selectedRanks : undefined
       };
     }
@@ -320,7 +338,7 @@
         const response = await fetchStatsApiJson('/v1/stats/meta');
         statsApiMeta = response?.data || {};
         statsApiSelectedPatch = statsApiMeta?.latestPatch || statsApiMeta?.patches?.[0] || '';
-        statsApiSelectedPosition = '';
+        statsApiSelectedPosition = getAvailableStatsApiLanes(statsApiMeta?.positions)[0]?.id || '';
         statsApiSelectedRanks = new Set(statsApiMeta?.ranks || []);
         renderStatsApiFilters();
         updateStatsApiRankSummary();
@@ -355,9 +373,11 @@
 
     function renderStatsApiLaneTabs(positions: string[]): void {
       if (!elements.statsApiLaneTabs) return;
-      const availablePositions = new Set(positions.map((position) => normalizeStatsApiPosition(position)));
-      const buttons = STATS_API_LANES
-        .filter((lane) => lane.id === '' || availablePositions.has(lane.id))
+      const availableLanes = getAvailableStatsApiLanes(positions);
+      if (!availableLanes.some((lane) => lane.id === statsApiSelectedPosition)) {
+        statsApiSelectedPosition = availableLanes[0]?.id || '';
+      }
+      const buttons = availableLanes
         .map((lane) => {
           const button = doc.createElement('button');
           button.type = 'button';
@@ -378,7 +398,7 @@
     function createStatsApiStatusText(count: number, watermark: string | null | undefined): string {
       const filters = getStatsApiSelectedFilters();
       const rankText = filters.ranks?.length ? filters.ranks.join(', ') : 'All rank';
-      const laneText = filters.position ? getStatsApiLaneLabel(filters.position) : 'ALL';
+      const laneText = filters.position ? getStatsApiLaneLabel(filters.position) : '-';
       const updated = watermark ? ` / data ${new Date(watermark).toLocaleDateString('ja-JP')}` : '';
       return `${count} champions / ${filters.patch || 'latest'} / ${laneText} / ${rankText}${updated}`;
     }
@@ -469,6 +489,12 @@
       clearStatsApiRetryTimer();
       if (!statsApiMeta) return;
       const filters = getStatsApiSelectedFilters();
+      if (!filters.position) {
+        clearStatsApiChampionRows();
+        setStatsApiLoading(false);
+        setStatsApiStatus('利用可能なLaneが取得できませんでした。');
+        return;
+      }
       if (filters.ranks && filters.ranks.length === 0) {
         clearStatsApiChampionRows();
         setStatsApiLoading(false);
