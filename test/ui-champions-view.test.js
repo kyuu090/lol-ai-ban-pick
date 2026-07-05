@@ -8,7 +8,9 @@ const {
   buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
   getStatsApiLaneLabel,
+  getStatsApiShardRowIndex,
   normalizeStatsApiRuneCatalog,
+  normalizeStatsApiSelectedShardIds,
   parseStatsApiErrorInfo,
   parseStatsApiRetryAfterSeconds,
   sortStatsApiChampionRows
@@ -128,6 +130,60 @@ test('champions view lane labels use compact stats tab naming', () => {
   assert.equal(getStatsApiLaneLabel('BOTTOM'), 'BOT');
   assert.equal(getStatsApiLaneLabel('UTILITY'), 'SUP');
   assert.equal(getStatsApiLaneLabel(''), '-');
+});
+
+test('champions view shard helper maps each shard id to the expected row', () => {
+  assert.equal(getStatsApiShardRowIndex(5008), 0);
+  assert.equal(getStatsApiShardRowIndex(5005), 0);
+  assert.equal(getStatsApiShardRowIndex(5007), 0);
+  assert.equal(getStatsApiShardRowIndex(5010), 1);
+  assert.equal(getStatsApiShardRowIndex(5011), 2);
+  assert.equal(getStatsApiShardRowIndex(5013), 2);
+  assert.equal(getStatsApiShardRowIndex(5001), 1);
+  assert.equal(getStatsApiShardRowIndex(5002), -1);
+  assert.equal(getStatsApiShardRowIndex(5003), -1);
+  assert.equal(getStatsApiShardRowIndex(9999), -1);
+});
+
+test('champions view shard helper keeps one selected shard per row when a preferred entry contains all rows', () => {
+  assert.deepEqual(
+    normalizeStatsApiSelectedShardIds([
+      { shardIds: [5008, 5010, 5001] }
+    ]),
+    [5008, 5010, 5001]
+  );
+});
+
+test('champions view shard helper reconstructs row selections from split stat shard entries', () => {
+  assert.deepEqual(
+    normalizeStatsApiSelectedShardIds([
+      { shardIds: [5008] },
+      { shardIds: [5010] },
+      { shardIds: [5001] }
+    ]),
+    [5008, 5010, 0]
+  );
+});
+
+test('champions view shard helper resolves the reported [5008, 5010, 5001] case without leaving rows dark', () => {
+  assert.deepEqual(
+    normalizeStatsApiSelectedShardIds([
+      { shardIds: [5008, 5010, 5001] }
+    ]),
+    [5008, 5010, 5001]
+  );
+});
+
+test('champions view shard helper falls back by greedily resolving mixed shard entries', () => {
+  assert.deepEqual(
+    normalizeStatsApiSelectedShardIds([
+      { shardIds: [5008, 5005] },
+      { shardIds: [5002] },
+      { shardIds: [] },
+      { shardIds: [5011, 5010] }
+    ]),
+    [5005, 5008, 5011]
+  );
 });
 
 test('champions view sort helper defaults cleanly across numeric and text columns', () => {

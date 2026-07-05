@@ -83,7 +83,13 @@
   }
 
   .stats-api-keystone-list,
-  .stats-api-rune-page-styles {
+  .stats-api-rune-page {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-api-detail-card-build .stats-api-detail-card-body,
+  .stats-api-detail-card-runes .stats-api-detail-card-body,
+  .stats-api-detail-card-summoners .stats-api-detail-card-body {
     grid-template-columns: 1fr;
   }
 
