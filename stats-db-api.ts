@@ -13,6 +13,7 @@ type RequestStatsDbApiJsonOptions = {
 const DEFAULT_STATS_DB_API_BASE_URL = 'https://db.banpick-ai.lol';
 const STATS_DB_API_DEFAULT_RETRY_AFTER_SECONDS = 5;
 const STATS_DB_API_POSITION_CHAMPIONS_PATH_PATTERN = /^\/v1\/stats\/positions\/[A-Z]+\/champions$/;
+const STATS_DB_API_CHAMPION_DETAILS_PATH_PATTERN = /^\/v1\/stats\/positions\/[A-Z]+\/champions\/\d+\/details$/;
 
 class StatsDbApiError extends Error {
   body: string;
@@ -50,10 +51,12 @@ function normalizeStatsDbApiBaseUrl(value: any): string {
 
 function createStatsDbApiUrl(pathOrUrl: unknown, baseUrl = DEFAULT_STATS_DB_API_BASE_URL): URL {
   const normalizedBaseUrl = normalizeStatsDbApiBaseUrl(baseUrl);
-  const url = new URL(String(pathOrUrl || ''), `${normalizedBaseUrl}/`);
+  const normalizedBase = new URL(`${normalizedBaseUrl}/`);
+  const url = new URL(String(pathOrUrl || ''), normalizedBase);
   const isAllowedPath = url.pathname === '/v1/stats/meta' ||
-    STATS_DB_API_POSITION_CHAMPIONS_PATH_PATTERN.test(url.pathname);
-  if (url.origin !== normalizedBaseUrl || !isAllowedPath) {
+    STATS_DB_API_POSITION_CHAMPIONS_PATH_PATTERN.test(url.pathname) ||
+    STATS_DB_API_CHAMPION_DETAILS_PATH_PATTERN.test(url.pathname);
+  if (url.origin !== normalizedBase.origin || !isAllowedPath) {
     throw new Error('StatsAPI endpoint is not allowed.');
   }
   return url;

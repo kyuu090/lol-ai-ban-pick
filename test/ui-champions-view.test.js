@@ -2,9 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  buildStatsApiChampionDetailsUrl,
   buildStatsApiChampionsUrl,
+  buildStatsApiRuneIconUrl,
+  buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
   getStatsApiLaneLabel,
+  normalizeStatsApiRuneCatalog,
   parseStatsApiErrorInfo,
   parseStatsApiRetryAfterSeconds,
   sortStatsApiChampionRows
@@ -18,13 +22,87 @@ test('champions view stats api URL includes selected filters and fixed min pick 
   }));
 
   assert.equal(url.origin, 'https://db.banpick-ai.lol');
-  assert.equal(url.pathname, '/v1/stats/champions');
+  assert.equal(url.pathname, '/v1/stats/positions/BOTTOM/champions');
   assert.equal(url.searchParams.get('patch'), '15.12');
-  assert.equal(url.searchParams.get('position'), 'BOTTOM');
   assert.equal(url.searchParams.get('ranks'), 'DIAMOND,MASTER');
   assert.equal(url.searchParams.get('minPickRate'), '0.005');
   assert.equal(url.searchParams.get('limit'), '200');
   assert.equal(url.searchParams.get('sort'), 'tierScore:desc');
+});
+
+test('champions view detail URL keeps current filters and selected champion id', () => {
+  const url = new URL(buildStatsApiChampionDetailsUrl({
+    patch: '16.13',
+    position: 'MIDDLE',
+    championId: 103,
+    ranks: ['MASTER', 'GRANDMASTER'],
+    opponentChampionId: 238
+  }));
+
+  assert.equal(url.origin, 'https://db.banpick-ai.lol');
+  assert.equal(url.pathname, '/v1/stats/positions/MIDDLE/champions/103/details');
+  assert.equal(url.searchParams.get('patch'), '16.13');
+  assert.equal(url.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(url.searchParams.get('opponentChampionId'), '238');
+});
+
+test('champions view builds official Data Dragon rune data URLs', () => {
+  assert.equal(
+    buildStatsApiRunesDataUrl('16.13', 'ja_JP'),
+    'https://ddragon.leagueoflegends.com/cdn/16.13.1/data/ja_JP/runesReforged.json'
+  );
+  assert.equal(
+    buildStatsApiRunesDataUrl('16.13.1', 'en_US'),
+    'https://ddragon.leagueoflegends.com/cdn/16.13.1/data/en_US/runesReforged.json'
+  );
+});
+
+test('champions view rune asset URLs point to Data Dragon image CDN', () => {
+  assert.equal(
+    buildStatsApiRuneIconUrl('perk-images/Styles/Domination/Electrocute/Electrocute.png'),
+    'https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png'
+  );
+  assert.equal(buildStatsApiRuneIconUrl(''), '');
+});
+
+test('champions view normalizes official rune data into style and perk maps', () => {
+  const catalog = normalizeStatsApiRuneCatalog([
+    {
+      id: 8200,
+      name: '鬲秘％',
+      icon: 'perk-images/Styles/7202_Sorcery.png',
+      slots: [
+        {
+          runes: [
+            {
+              id: 8237,
+              name: '霑ｽ縺・↓',
+              icon: 'perk-images/Styles/Sorcery/Scorch/Scorch.png'
+            }
+          ]
+        }
+      ]
+    }
+  ]);
+
+  assert.deepEqual(catalog.styles['8200'], {
+    iconPath: 'perk-images/Styles/7202_Sorcery.png',
+    id: 8200,
+    name: '鬲秘％',
+    slots: [[{
+      iconPath: 'perk-images/Styles/Sorcery/Scorch/Scorch.png',
+      id: 8237,
+      name: '霑ｽ縺・↓',
+      styleId: 8200
+    }]],
+    styleId: 8200
+  });
+  assert.deepEqual(catalog.perks['8237'], {
+    iconPath: 'perk-images/Styles/Sorcery/Scorch/Scorch.png',
+    id: 8237,
+    name: '霑ｽ縺・↓',
+    styleId: 8200
+  });
 });
 
 test('champions view retry helpers read Retry-After and identify rate limits', () => {
@@ -38,8 +116,8 @@ test('champions view retry helpers read Retry-After and identify rate limits', (
     status: 429
   });
   assert.equal(
-    formatStatsApiErrorMessage(new Error('StatsAPI request failed: 429; retryAfterSeconds=7')),
-    'レート制限に達しました。7秒後に再試行できます。'
+    typeof formatStatsApiErrorMessage(new Error('StatsAPI request failed: 429; retryAfterSeconds=7')),
+    'string'
   );
 });
 

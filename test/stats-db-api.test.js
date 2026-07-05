@@ -11,8 +11,12 @@ const {
 test('createStatsDbApiUrl allows only StatsAPI endpoints on the configured host', () => {
   assert.equal(createStatsDbApiUrl('/v1/stats/meta').toString(), 'https://db.banpick-ai.lol/v1/stats/meta');
   assert.equal(
-    createStatsDbApiUrl('https://db.banpick-ai.lol/v1/stats/champions?patch=15.12').toString(),
-    'https://db.banpick-ai.lol/v1/stats/champions?patch=15.12'
+    createStatsDbApiUrl('https://db.banpick-ai.lol/v1/stats/positions/MIDDLE/champions?patch=15.12').toString(),
+    'https://db.banpick-ai.lol/v1/stats/positions/MIDDLE/champions?patch=15.12'
+  );
+  assert.equal(
+    createStatsDbApiUrl('/v1/stats/positions/MIDDLE/champions/103/details?patch=16.13').toString(),
+    'https://db.banpick-ai.lol/v1/stats/positions/MIDDLE/champions/103/details?patch=16.13'
   );
   assert.throws(() => createStatsDbApiUrl('https://example.com/v1/stats/meta'), /not allowed/);
   assert.throws(() => createStatsDbApiUrl('/v1/stats/coverage'), /not allowed/);

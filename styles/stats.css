@@ -154,6 +154,13 @@
   overflow: hidden;
 }
 
+.stats-api-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .stats-api-heading {
   align-items: center;
   display: flex;
@@ -362,6 +369,628 @@
 
 .stats-api-sort-button {
   text-align: left;
+}
+
+.stats-api-details-view {
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.stats-api-details-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.stats-api-details-toolbar,
+.stats-api-details-heading {
+  display: none;
+}
+
+.stats-api-back-button {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--text);
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.stats-api-filters-back-button {
+  align-self: end;
+  justify-self: end;
+  margin-left: auto;
+}
+
+.stats-api-details-heading {
+  min-width: 0;
+}
+
+.stats-api-details-heading h2 {
+  font-size: 28px;
+  margin: 2px 0 0;
+}
+
+.stats-api-details-content {
+  display: grid;
+  gap: 12px;
+}
+
+.stats-api-details-top {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(200px, 0.68fr) minmax(0, 1.32fr);
+}
+
+.stats-api-champion-hero {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(238, 245, 255, 0.76));
+  border: 1px solid rgba(154, 167, 184, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  padding: 10px 12px;
+}
+
+.stats-api-champion-portrait {
+  align-items: center;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  border-radius: 12px;
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  overflow: hidden;
+  width: 64px;
+}
+
+.stats-api-champion-portrait-image {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.stats-api-champion-hero-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stats-api-champion-name {
+  font-size: 20px;
+  line-height: 1;
+  margin: 0;
+}
+
+.stats-api-champion-subtitle {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+
+.stats-api-champion-hero-metrics,
+.stats-api-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stats-api-summary-chip {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(154, 167, 184, 0.22);
+  border-radius: 8px;
+  display: grid;
+  gap: 1px;
+  min-width: 58px;
+  padding: 4px 6px;
+}
+
+.stats-api-summary-chip.accent .stats-api-summary-chip-value {
+  color: #16a34a;
+}
+
+.stats-api-summary-chip-label {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.stats-api-summary-chip-value {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.stats-api-keystone-panel {
+  align-content: start;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(154, 167, 184, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.stats-api-keystone-panel .stats-api-section-title,
+.stats-api-keystone-panel .stats-api-section-subtitle {
+  display: none;
+}
+
+.stats-api-section-title,
+.stats-api-detail-card-title {
+  font-size: 16px;
+  margin: 0;
+}
+
+.stats-api-section-subtitle,
+.stats-api-detail-card-subtitle,
+.stats-api-detail-option-text {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.stats-api-keystone-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stats-api-keystone-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(154, 167, 184, 0.22);
+  border-radius: 10px;
+  box-shadow: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.stats-api-keystone-card-header {
+  min-width: 0;
+}
+
+.stats-api-keystone-card-body {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.stats-api-keystone-card .stats-api-option-meta {
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.stats-api-keystone-card .stats-api-summary-chip {
+  min-width: 50px;
+  padding: 3px 5px;
+}
+
+.stats-api-keystone-card .stats-api-summary-chip-value {
+  font-size: 10px;
+}
+
+.stats-api-keystone-card.active {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.1);
+}
+
+.stats-api-keystone-name {
+  font-size: 17px;
+}
+
+.stats-api-detail-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+}
+
+.stats-api-detail-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(154, 167, 184, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.stats-api-detail-card-compact {
+  align-content: start;
+}
+
+.stats-api-detail-card-runes {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.stats-api-detail-card-summoners {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.stats-api-detail-card-build {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.stats-api-detail-card-build .stats-api-detail-card-body {
+  gap: 6px;
+}
+
+.stats-api-detail-card-build .stats-api-detail-subsection {
+  gap: 4px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-list {
+  gap: 4px;
+}
+
+.stats-api-detail-card-build .stats-api-detail-subtitle {
+  font-size: 11px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-row {
+  border-radius: 8px;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-body {
+  gap: 2px;
+}
+
+.stats-api-detail-card-build .stats-api-item-icon {
+  height: 24px;
+  width: 24px;
+}
+
+.stats-api-detail-card-build .stats-api-item-id {
+  font-size: 8px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-row .stats-api-option-meta {
+  gap: 3px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip {
+  min-width: 46px;
+  padding: 3px 5px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-label {
+  font-size: 7px;
+}
+
+.stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-value {
+  font-size: 9px;
+}
+
+.stats-api-detail-card-skill {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.stats-api-detail-card-header {
+  display: grid;
+  gap: 2px;
+}
+
+.stats-api-detail-card-body,
+.stats-api-detail-subsection,
+.stats-api-item-set-list {
+  display: grid;
+  gap: 8px;
+}
+
+.stats-api-detail-option {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(154, 167, 184, 0.16);
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.stats-api-detail-option-title,
+.stats-api-detail-subtitle,
+.stats-api-item-set-title {
+  font-size: 12px;
+  margin: 0;
+}
+
+.stats-api-tag-list,
+.stats-api-skill-order,
+.stats-api-item-token-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stats-api-rune-style-row {
+  display: grid;
+  gap: 10px;
+}
+
+.stats-api-rune-style-badge {
+  justify-self: start;
+}
+
+.stats-api-rune-page {
+  display: grid;
+  gap: 10px;
+}
+
+.stats-api-rune-page-styles {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.64fr);
+}
+
+.stats-api-rune-page-shards {
+  border-top: 1px solid rgba(154, 167, 184, 0.18);
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.stats-api-rune-page-shards-title {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+.stats-api-rune-tree {
+  align-content: start;
+  background: linear-gradient(180deg, rgba(13, 17, 28, 0.96), rgba(27, 34, 51, 0.94));
+  border: 1px solid rgba(99, 115, 140, 0.34);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.stats-api-rune-tree.secondary {
+  background: linear-gradient(180deg, rgba(17, 21, 30, 0.92), rgba(35, 41, 56, 0.9));
+}
+
+.stats-api-rune-tree-slots {
+  display: grid;
+  gap: 8px;
+}
+
+.stats-api-rune-tree-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stats-api-rune-node {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 2px;
+  transition: opacity 120ms ease, filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.stats-api-rune-node.keystone {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.stats-api-rune-node.secondary {
+  min-height: 30px;
+  min-width: 30px;
+}
+
+.stats-api-rune-node.selected {
+  background: radial-gradient(circle, rgba(255, 196, 93, 0.24), rgba(255, 196, 93, 0.02));
+  box-shadow: 0 0 0 1px rgba(255, 205, 96, 0.3), 0 10px 20px rgba(6, 10, 18, 0.32);
+}
+
+.stats-api-rune-node.muted {
+  filter: grayscale(1) brightness(0.56);
+  opacity: 0.52;
+}
+
+.stats-api-rune-node-icon {
+  display: block;
+  height: 100%;
+  max-height: 40px;
+  max-width: 40px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.stats-api-rune-node.keystone .stats-api-rune-node-icon {
+  max-height: 44px;
+  max-width: 44px;
+}
+
+.stats-api-shard-tree {
+  display: grid;
+  gap: 6px;
+}
+
+.stats-api-shard-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stats-api-shard-node {
+  align-items: center;
+  background: rgba(17, 24, 39, 0.06);
+  border: 1px solid rgba(154, 167, 184, 0.22);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  min-height: 24px;
+  padding: 0 8px;
+}
+
+.stats-api-shard-node.selected {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #1d4ed8;
+}
+
+.stats-api-shard-node-label {
+  line-height: 1;
+}
+
+.stats-api-rune-token {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(154, 167, 184, 0.18);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  gap: 6px;
+  min-height: 28px;
+  min-width: 0;
+  padding: 3px 8px 3px 3px;
+}
+
+.stats-api-rune-token.keystone {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.stats-api-rune-token.style {
+  justify-self: start;
+}
+
+.stats-api-rune-icon {
+  background: rgba(20, 24, 36, 0.06);
+  border: 1px solid rgba(154, 167, 184, 0.14);
+  border-radius: 999px;
+  display: block;
+  flex: 0 0 auto;
+  height: 22px;
+  object-fit: cover;
+  width: 22px;
+}
+
+.stats-api-rune-token.keystone .stats-api-rune-icon {
+  height: 32px;
+  width: 32px;
+}
+
+.stats-api-rune-token-label {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stats-api-tag {
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 999px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  min-height: 24px;
+  padding: 0 8px;
+  align-items: center;
+}
+
+.stats-api-item-set-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(154, 167, 184, 0.16);
+  border-radius: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px;
+}
+
+.stats-api-item-set-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stats-api-item-arrow {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 32px;
+}
+
+.stats-api-item-token {
+  align-items: center;
+  display: inline-flex;
+  gap: 3px;
+}
+
+.stats-api-item-icon {
+  background: rgba(20, 24, 36, 0.06);
+  border: 1px solid rgba(154, 167, 184, 0.16);
+  border-radius: 7px;
+  display: block;
+  height: 28px;
+  width: 28px;
+}
+
+.stats-api-item-id {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.stats-api-item-set-row .stats-api-option-meta {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.stats-api-item-set-row .stats-api-summary-chip {
+  min-width: 50px;
+  padding: 4px 5px;
+}
+
+.stats-api-item-set-row .stats-api-summary-chip-value {
+  font-size: 10px;
+}
+
+.stats-api-detail-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0;
 }
 
 .stats-table-wrap {

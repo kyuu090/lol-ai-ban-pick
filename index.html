@@ -251,27 +251,42 @@
                 <span>Lane</span>
                 <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter"></nav>
               </div>
+              <button id="statsApiDetailsBackButton" class="stats-api-back-button stats-api-filters-back-button" type="button" hidden>← 一覧へ戻る</button>
             </div>
 
             <p id="statsApiStatus" class="stats-api-status" role="status">StatsAPIのメタ情報を取得しています。</p>
 
-            <div class="stats-table-wrap">
-              <table class="stats-table stats-api-table">
-                <thead>
-                  <tr>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="tierScore">Tier</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion">チャンピオン</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane">Lane</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games">Games</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="winRate">WR</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="pickRate">Pick</button></th>
-                    <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="banRate">Ban</button></th>
-                  </tr>
-                </thead>
-                <tbody id="statsApiChampionsTableBody"></tbody>
-              </table>
+            <div id="statsApiChampionsListView" class="stats-api-view">
+              <div class="stats-table-wrap">
+                <table class="stats-table stats-api-table">
+                  <thead>
+                    <tr>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="tierScore">Tier</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion">チャンピオン</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane">Lane</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games">Games</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="winRate">WR</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="pickRate">Pick</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="banRate">Ban</button></th>
+                    </tr>
+                  </thead>
+                  <tbody id="statsApiChampionsTableBody"></tbody>
+                </table>
+              </div>
+              <p id="statsApiChampionsEmpty" class="pool-empty">条件に合うチャンピオンがありません。</p>
             </div>
-            <p id="statsApiChampionsEmpty" class="pool-empty">条件に合うチャンピオンがありません。</p>
+
+            <section id="statsApiDetailsView" class="stats-api-view stats-api-details-view" hidden>
+              <div class="stats-api-details-toolbar">
+                <button id="statsApiDetailsBackButton" class="stats-api-back-button" type="button">← 一覧へ戻る</button>
+                <div class="stats-api-details-heading">
+                  <p class="eyebrow">Champion Details</p>
+                  <h2 id="statsApiDetailsTitle">-</h2>
+                </div>
+              </div>
+              <p id="statsApiDetailsStatus" class="stats-api-status" role="status" hidden></p>
+              <div id="statsApiDetailsContent" class="stats-api-details-content"></div>
+            </section>
           </section>
         </section>
       </section>

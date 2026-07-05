@@ -79,6 +79,7 @@ const { initializeStatsApiChampionList, refreshStatsApiChampionList } = createCh
     document,
     championLabel,
     createInlineChampionName,
+    loadChampionIcon,
     requestStatsApiJson: window.lcuApi.requestStatsApiJson,
     fetch: window.fetch?.bind(window)
 });

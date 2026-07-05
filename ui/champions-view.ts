@@ -9,8 +9,60 @@
     { id: 'BOTTOM', label: 'BOT' },
     { id: 'UTILITY', label: 'SUP' }
   ] as const;
+  const KEYSTONE_LABELS: Record<number, string> = {
+    8005: 'プレスアタック',
+    8008: 'リーサルテンポ',
+    8010: '征服者',
+    8021: 'フリートフットワーク',
+    8112: '電撃',
+    8124: '捕食者',
+    8128: 'ダークハーベスト',
+    8214: 'エアリー',
+    8229: '秘儀の彗星',
+    8230: 'フェイズラッシュ',
+    8437: '不死者の握撃',
+    8439: 'アフターショック',
+    8465: 'ガーディアン',
+    9923: 'ヘイルブレード'
+  };
+  const RUNE_STYLE_LABELS: Record<number, string> = {
+    8000: '栄華',
+    8100: '覇道',
+    8200: '魔道',
+    8300: '天啓',
+    8400: '不滅',
+    8500: '栄華'
+  };
+  const SHARD_LABELS: Record<number, string> = {
+    5001: '攻撃速度',
+    5002: 'アダプティブ',
+    5003: '移動速度',
+    5005: 'アダプティブ',
+    5007: 'スケーリングCD',
+    5008: '体力',
+    5010: '耐久',
+    5011: '体力',
+    5013: '行動妨害耐性'
+  };
+  const STATS_API_SHARD_ROWS = [
+    [5008, 5005, 5007],
+    [5008, 5002, 5003],
+    [5011, 5010, 5013]
+  ] as const;
+  const SUMMONER_SPELL_LABELS: Record<number, string> = {
+    1: 'クレンズ',
+    3: 'イグゾースト',
+    4: 'フラッシュ',
+    6: 'ゴースト',
+    7: 'ヒール',
+    11: 'スマイト',
+    12: 'テレポート',
+    13: 'クラリティ',
+    14: 'イグナイト',
+    21: 'バリア',
+    32: 'マーク'
+  };
   type StatsApiLaneOption = (typeof STATS_API_LANES)[number];
-
   type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate' | 'tierScore';
 
   interface StatsApiMetaData {
@@ -37,10 +89,109 @@
     ranks?: string[];
   }
 
+  interface StatsApiChampionDetailsFilters extends StatsApiFilters {
+    championId?: number;
+    opponentChampionId?: number;
+  }
+
   interface StatsApiErrorInfo {
     message: string;
     retryAfterSeconds: number | null;
     status: number | null;
+  }
+
+  interface StatsApiChampionSummary {
+    championId: number;
+    games: number;
+    wins: number;
+    pickRate: number;
+    winRate: number;
+  }
+
+  interface StatsApiOptionStat {
+    games: number;
+    wins: number;
+    pickRate: number;
+    winRate: number;
+  }
+
+  interface StatsApiRuneSet extends StatsApiOptionStat {
+    primaryStyleId: number;
+    primaryRuneIds: number[];
+    secondaryStyleId: number;
+    secondaryRuneIds: number[];
+  }
+
+  interface StatsApiStatShards extends StatsApiOptionStat {
+    shardIds: number[];
+  }
+
+  interface StatsApiSummonerSpells extends StatsApiOptionStat {
+    spellIds: number[];
+  }
+
+  interface StatsApiItemSet extends StatsApiOptionStat {
+    itemIds: number[];
+  }
+
+  interface StatsApiSingleItem extends StatsApiOptionStat {
+    itemId: number;
+  }
+
+  interface StatsApiSkillOrder extends StatsApiOptionStat {
+    skillOrder: string[];
+  }
+
+  interface StatsApiKeystoneDetails extends StatsApiOptionStat {
+    keystoneId: number;
+    runes?: StatsApiRuneSet[];
+    statShards?: StatsApiStatShards[];
+    summonerSpells?: StatsApiSummonerSpells[];
+    startingItems?: StatsApiItemSet[];
+    boots?: StatsApiSingleItem[];
+    firstSecondCoreItems?: StatsApiItemSet[];
+    thirdItems?: StatsApiSingleItem[];
+    fourthItems?: StatsApiSingleItem[];
+    fifthItems?: StatsApiSingleItem[];
+    sixthItems?: StatsApiSingleItem[];
+    skillOrders?: StatsApiSkillOrder[];
+  }
+
+  interface StatsApiChampionDetailsData {
+    champion?: StatsApiChampionSummary | null;
+    keystones?: StatsApiKeystoneDetails[];
+  }
+
+  interface DataDragonRunePerk {
+    icon?: string;
+    id?: number;
+    key?: string;
+    longDesc?: string;
+    name?: string;
+    shortDesc?: string;
+  }
+
+  interface DataDragonRuneStyle {
+    icon?: string;
+    id?: number;
+    key?: string;
+    name?: string;
+    slots?: Array<{
+      runes?: DataDragonRunePerk[];
+    }>;
+  }
+
+  interface StatsApiRuneAssetEntry {
+    iconPath?: string;
+    id: number;
+    name?: string;
+    slots?: StatsApiRuneAssetEntry[][];
+    styleId?: number;
+  }
+
+  interface StatsApiRuneAssetCatalog {
+    perks?: Record<string, StatsApiRuneAssetEntry>;
+    styles?: Record<string, StatsApiRuneAssetEntry>;
   }
 
   function normalizeStatsApiPosition(value: unknown): string {
@@ -49,6 +200,11 @@
 
   function normalizeStatsApiTier(value: unknown): string {
     return String(value || '').trim().toUpperCase();
+  }
+
+  function normalizeChampionId(value: unknown): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0;
   }
 
   function getStatsApiLaneLabel(position: unknown): string {
@@ -124,6 +280,33 @@
     return url.toString();
   }
 
+  function buildStatsApiChampionDetailsUrl(filters: StatsApiChampionDetailsFilters, baseUrl = STATS_API_BASE_URL): string {
+    const position = normalizeStatsApiPosition(filters.position);
+    const championId = normalizeChampionId(filters.championId);
+    if (!position) {
+      throw new Error('StatsAPI position is required.');
+    }
+    if (!championId) {
+      throw new Error('StatsAPI championId is required.');
+    }
+
+    const url = new URL(
+      `/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/details`,
+      baseUrl
+    );
+    if (filters.patch) {
+      url.searchParams.set('patch', filters.patch);
+    }
+    if (filters.ranks && filters.ranks.length > 0) {
+      url.searchParams.set('ranks', filters.ranks.join(','));
+    }
+    const opponentChampionId = normalizeChampionId(filters.opponentChampionId);
+    if (opponentChampionId) {
+      url.searchParams.set('opponentChampionId', String(opponentChampionId));
+    }
+    return url.toString();
+  }
+
   function parseStatsApiRetryAfterSeconds(value: string | null | undefined, now = Date.now()): number | null {
     if (!value) return null;
 
@@ -185,30 +368,115 @@
     return errorInfo.message;
   }
 
+  function buildStatsApiRuneIconUrl(iconPath: unknown): string {
+    const normalizedPath = String(iconPath || '').replace(/^\/+/, '');
+    if (!normalizedPath) return '';
+    return `https://ddragon.leagueoflegends.com/cdn/img/${normalizedPath}`;
+  }
+
+  function buildStatsApiRunesDataUrl(patch: unknown, locale = 'ja_JP'): string {
+    const normalizedPatch = String(patch || '').trim();
+    const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
+      ? normalizedPatch
+      : /^\d+\.\d+$/.test(normalizedPatch)
+        ? `${normalizedPatch}.1`
+        : normalizedPatch;
+    if (!version) {
+      throw new Error('Data Dragon rune version is required.');
+    }
+    return `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/runesReforged.json`;
+  }
+
+  function normalizeStatsApiRuneCatalog(data: unknown): StatsApiRuneAssetCatalog {
+    const catalog: StatsApiRuneAssetCatalog = {
+      perks: {},
+      styles: {}
+    };
+    const styles = Array.isArray(data) ? data as DataDragonRuneStyle[] : [];
+    styles.forEach((style) => {
+      const styleId = normalizeChampionId(style?.id);
+      if (!styleId) return;
+      const normalizedSlots: StatsApiRuneAssetEntry[][] = [];
+      catalog.styles![String(styleId)] = {
+        iconPath: String(style?.icon || ''),
+        id: styleId,
+        name: String(style?.name || ''),
+        slots: normalizedSlots,
+        styleId
+      };
+      const slots = Array.isArray(style?.slots) ? style.slots : [];
+      slots.forEach((slot) => {
+        const runes = Array.isArray(slot?.runes) ? slot.runes : [];
+        const normalizedRunes: StatsApiRuneAssetEntry[] = [];
+        runes.forEach((rune) => {
+          const runeId = normalizeChampionId(rune?.id);
+          if (!runeId) return;
+          const normalizedRune = {
+            iconPath: String(rune?.icon || ''),
+            id: runeId,
+            name: String(rune?.name || ''),
+            styleId
+          };
+          catalog.perks![String(runeId)] = normalizedRune;
+          normalizedRunes.push(normalizedRune);
+        });
+        if (normalizedRunes.length) {
+          normalizedSlots.push(normalizedRunes);
+        }
+      });
+    });
+    return catalog;
+  }
+
   function createChampionsView(deps: ChampionsViewDeps) {
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
     const requestStatsApiJson = deps.requestStatsApiJson || root.lcuApi?.requestStatsApiJson;
     const fetchImpl = deps.fetch || root.fetch?.bind(root);
+    const detailsView = doc.querySelector<HTMLElement>('#statsApiDetailsView');
+    const detailsBackButton = doc.querySelector<HTMLButtonElement>('#statsApiDetailsBackButton');
+    const detailsTitle = doc.querySelector<HTMLElement>('#statsApiDetailsTitle');
+    const detailsStatus = doc.querySelector<HTMLElement>('#statsApiDetailsStatus');
+    const detailsContent = doc.querySelector<HTMLElement>('#statsApiDetailsContent');
+    const listView = doc.querySelector<HTMLElement>('#statsApiChampionsListView');
     let statsApiMeta: StatsApiMetaData | null = null;
     let statsApiSelectedPatch = '';
     let statsApiSelectedPosition = '';
     let statsApiSelectedRanks = new Set<string>();
     let statsApiRequestId = 0;
+    let statsApiDetailsRequestId = 0;
     let statsApiRankDropdownInitialized = false;
     let statsApiRetryTimer: UiTimerHandle | null = null;
     let statsApiSortButtonsInitialized = false;
     let statsApiSortKey: StatsApiSortKey = 'tierScore';
     let statsApiSortDirection: UiSortDirection = 'desc';
     let statsApiRankSelectionDirty = false;
+    let selectedChampionId = 0;
+    let selectedChampionStats: StatsApiChampionStats | null = null;
+    let selectedKeystoneId = 0;
+    let lastDetailsData: StatsApiChampionDetailsData | null = null;
+    let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
+    let statsApiRuneCatalogUrl = '';
+    let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
 
     function formatStatsApiRate(value: unknown): string {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
     }
 
+    function formatStatsApiGames(value: unknown): string {
+      return Number(value || 0).toLocaleString('ja-JP');
+    }
+
     function setStatsApiStatus(message: string): void {
       if (elements.statsApiStatus) {
         elements.statsApiStatus.textContent = message;
+      }
+    }
+
+    function setStatsApiDetailsStatus(message: string): void {
+      if (detailsStatus) {
+        detailsStatus.textContent = message;
+        detailsStatus.hidden = !message;
       }
     }
 
@@ -219,10 +487,397 @@
       }
     }
 
+    function setStatsApiDetailsVisible(isVisible: boolean): void {
+      if (detailsView) detailsView.hidden = !isVisible;
+      if (listView) listView.hidden = isVisible;
+      if (detailsBackButton) detailsBackButton.hidden = !isVisible;
+    }
+
     function clearStatsApiRetryTimer(): void {
       if (!statsApiRetryTimer) return;
       (deps.clearTimeout || root.clearTimeout || clearTimeout)(statsApiRetryTimer);
       statsApiRetryTimer = null;
+    }
+
+    function getStatsApiDataDragonVersion(patch: string): string {
+      if (/^\d+\.\d+\.\d+$/.test(patch)) return patch;
+      if (/^\d+\.\d+$/.test(patch)) return `${patch}.1`;
+      return 'latest';
+    }
+
+    async function ensureStatsApiRuneCatalog(): Promise<StatsApiRuneAssetCatalog | null> {
+      const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || '';
+      const runesDataUrl = buildStatsApiRunesDataUrl(getStatsApiDataDragonVersion(String(patch)));
+      if (statsApiRuneCatalog && statsApiRuneCatalogUrl === runesDataUrl) {
+        return statsApiRuneCatalog;
+      }
+      if (statsApiRuneCatalogPromise && statsApiRuneCatalogUrl === runesDataUrl) {
+        return statsApiRuneCatalogPromise;
+      }
+      if (!fetchImpl) {
+        return null;
+      }
+
+      statsApiRuneCatalogUrl = runesDataUrl;
+      statsApiRuneCatalogPromise = fetchImpl(runesDataUrl)
+        .then((response: Response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load rune asset catalog: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((catalog: unknown) => {
+          statsApiRuneCatalog = normalizeStatsApiRuneCatalog(catalog);
+          return statsApiRuneCatalog;
+        })
+        .catch(() => {
+          statsApiRuneCatalog = null;
+          return null;
+        })
+        .finally(() => {
+          statsApiRuneCatalogPromise = null;
+        });
+      return statsApiRuneCatalogPromise;
+    }
+
+    function getItemIconUrl(itemId: unknown): string {
+      const numericItemId = normalizeChampionId(itemId);
+      if (!numericItemId) return '';
+      const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || 'latest';
+      const version = getStatsApiDataDragonVersion(String(patch));
+      return version === 'latest'
+        ? `https://ddragon.leagueoflegends.com/cdn/img/item/${numericItemId}.png`
+        : `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${numericItemId}.png`;
+    }
+
+    function getRuneAssetEntry(type: 'perks' | 'styles', runeId: unknown): StatsApiRuneAssetEntry | null {
+      const numericRuneId = normalizeChampionId(runeId);
+      if (!numericRuneId || !statsApiRuneCatalog?.[type]) return null;
+      return statsApiRuneCatalog[type]?.[String(numericRuneId)] || null;
+    }
+
+    function getRuneIconUrl(runeId: unknown): string {
+      return buildStatsApiRuneIconUrl(getRuneAssetEntry('perks', runeId)?.iconPath);
+    }
+
+    function getRuneStyleIconUrl(styleId: unknown): string {
+      return buildStatsApiRuneIconUrl(getRuneAssetEntry('styles', styleId)?.iconPath);
+    }
+
+    function getKeystoneLabel(keystoneId: unknown): string {
+      const numericKeystoneId = normalizeChampionId(keystoneId);
+      const assetName = getRuneAssetEntry('perks', numericKeystoneId)?.name;
+      return assetName || KEYSTONE_LABELS[numericKeystoneId] || `Keystone ${numericKeystoneId || '-'}`;
+    }
+
+    function getRuneStyleLabel(styleId: unknown): string {
+      const numericStyleId = normalizeChampionId(styleId);
+      const assetName = getRuneAssetEntry('styles', numericStyleId)?.name;
+      return assetName || RUNE_STYLE_LABELS[numericStyleId] || `Style ${numericStyleId || '-'}`;
+    }
+
+    function getRuneLabel(runeId: unknown): string {
+      const numericRuneId = normalizeChampionId(runeId);
+      const assetName = getRuneAssetEntry('perks', numericRuneId)?.name;
+      return assetName || `#${numericRuneId || '-'}`;
+    }
+
+    function getShardLabel(shardId: unknown): string {
+      const numericShardId = normalizeChampionId(shardId);
+      return SHARD_LABELS[numericShardId] || `Shard ${numericShardId || '-'}`;
+    }
+
+    function getSummonerSpellLabel(spellId: unknown): string {
+      const numericSpellId = normalizeChampionId(spellId);
+      return SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
+    }
+
+    function formatSkillLetter(skillId: unknown): string {
+      const normalizedSkillId = String(skillId || '').trim();
+      if (normalizedSkillId === '1') return 'Q';
+      if (normalizedSkillId === '2') return 'W';
+      if (normalizedSkillId === '3') return 'E';
+      if (normalizedSkillId === '4') return 'R';
+      return '-';
+    }
+
+    function createText(className: string, text: string, tagName = 'span'): HTMLElement {
+      const element = doc.createElement(tagName);
+      element.className = className;
+      element.textContent = text;
+      return element;
+    }
+
+    function createStatsApiSummaryChip(label: string, value: string, accent = false): HTMLElement {
+      const chip = doc.createElement('div');
+      chip.className = `stats-api-summary-chip${accent ? ' accent' : ''}`;
+      chip.append(
+        createText('stats-api-summary-chip-label', label, 'small'),
+        createText('stats-api-summary-chip-value', value, 'strong')
+      );
+      return chip;
+    }
+
+    function createStatsApiOptionMeta(entry: StatsApiOptionStat): HTMLElement {
+      const meta = doc.createElement('div');
+      meta.className = 'stats-api-option-meta';
+      meta.append(
+        createStatsApiSummaryChip('PR', formatStatsApiRate(entry.pickRate)),
+        createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), true),
+        createStatsApiSummaryChip('Games', formatStatsApiGames(entry.games))
+      );
+      return meta;
+    }
+
+    function createStatsApiTagList(items: string[], className = 'stats-api-tag-list'): HTMLElement {
+      const container = doc.createElement('div');
+      container.className = className;
+      container.append(...items.map((item) => createText('stats-api-tag', item)));
+      return container;
+    }
+
+    function createStatsApiRuneToken(label: string, iconUrl = '', className = 'stats-api-rune-token'): HTMLElement {
+      const token = doc.createElement('span');
+      token.className = className;
+      if (iconUrl) {
+        const image = doc.createElement('img');
+        image.alt = '';
+        image.className = 'stats-api-rune-icon';
+        image.loading = 'lazy';
+        image.src = iconUrl;
+        token.append(image);
+      }
+      token.append(createText('stats-api-rune-token-label', label));
+      return token;
+    }
+
+    function createStatsApiRuneList(
+      runeIds: unknown[],
+      resolver: (runeId: unknown) => string,
+      labelResolver: (runeId: unknown) => string,
+      className = 'stats-api-tag-list'
+    ): HTMLElement {
+      const container = doc.createElement('div');
+      container.className = className;
+      container.append(...runeIds.map((runeId) => createStatsApiRuneToken(labelResolver(runeId), resolver(runeId))));
+      return container;
+    }
+
+    function createStatsApiRuneStyleRow(styleId: unknown, runeIds: unknown[]): HTMLElement {
+      const row = doc.createElement('div');
+      row.className = 'stats-api-rune-style-row';
+      row.append(
+        createStatsApiRuneToken(getRuneStyleLabel(styleId), getRuneStyleIconUrl(styleId), 'stats-api-rune-token style'),
+        createStatsApiRuneList(
+          runeIds,
+          (runeId) => getRuneIconUrl(runeId),
+          (runeId) => getRuneLabel(runeId)
+        )
+      );
+      return row;
+    }
+
+    function createStatsApiRuneStyleBadge(styleId: unknown): HTMLElement {
+      return createStatsApiRuneToken(
+        getRuneStyleLabel(styleId),
+        getRuneStyleIconUrl(styleId),
+        'stats-api-rune-token style stats-api-rune-style-badge'
+      );
+    }
+
+    function createStatsApiRuneNode(
+      runeEntry: StatsApiRuneAssetEntry,
+      isSelected: boolean,
+      options: { keystone?: boolean; secondary?: boolean } = {}
+    ): HTMLElement {
+      const node = doc.createElement('div');
+      node.className = [
+        'stats-api-rune-node',
+        isSelected ? 'selected' : 'muted',
+        options.keystone ? 'keystone' : '',
+        options.secondary ? 'secondary' : ''
+      ].filter(Boolean).join(' ');
+
+      const image = doc.createElement('img');
+      image.alt = runeEntry.name || `Rune ${runeEntry.id}`;
+      image.className = 'stats-api-rune-node-icon';
+      image.loading = 'lazy';
+      image.src = buildStatsApiRuneIconUrl(runeEntry.iconPath);
+      node.append(image);
+      return node;
+    }
+
+    function createStatsApiShardNode(shardId: unknown, isSelected: boolean): HTMLElement {
+      const node = doc.createElement('div');
+      node.className = `stats-api-shard-node${isSelected ? ' selected' : ''}`;
+      node.title = getShardLabel(shardId);
+      node.setAttribute('aria-label', getShardLabel(shardId));
+      node.append(createText('stats-api-shard-node-label', getShardLabel(shardId)));
+      return node;
+    }
+
+    function createStatsApiShardTree(selectedShardIds: unknown[]): HTMLElement {
+      const wrap = doc.createElement('div');
+      wrap.className = 'stats-api-shard-tree';
+      const selectedIds = new Set((Array.isArray(selectedShardIds) ? selectedShardIds : []).map((id) => normalizeChampionId(id)).filter(Boolean));
+      STATS_API_SHARD_ROWS.forEach((rowShardIds) => {
+        const row = doc.createElement('div');
+        row.className = 'stats-api-shard-row';
+        row.append(...rowShardIds.map((shardId) => createStatsApiShardNode(shardId, selectedIds.has(shardId))));
+        wrap.append(row);
+      });
+      return wrap;
+    }
+
+    function createStatsApiRuneStyleTree(
+      styleId: unknown,
+      selectedRuneIds: unknown[],
+      options: { omitKeystone?: boolean; secondary?: boolean } = {}
+    ): HTMLElement {
+      const numericStyleId = normalizeChampionId(styleId);
+      const styleEntry = getRuneAssetEntry('styles', numericStyleId);
+      const selectedIds = new Set((Array.isArray(selectedRuneIds) ? selectedRuneIds : []).map((id) => normalizeChampionId(id)).filter(Boolean));
+      const tree = doc.createElement('section');
+      tree.className = `stats-api-rune-tree${options.secondary ? ' secondary' : ' primary'}`;
+      tree.append(createStatsApiRuneStyleBadge(numericStyleId));
+
+      const slotsWrap = doc.createElement('div');
+      slotsWrap.className = 'stats-api-rune-tree-slots';
+      const slots = Array.isArray(styleEntry?.slots) ? styleEntry.slots : [];
+      slots.forEach((slotRunes, slotIndex) => {
+        if (options.omitKeystone && slotIndex === 0) {
+          return;
+        }
+        const row = doc.createElement('div');
+        row.className = 'stats-api-rune-tree-row';
+        row.append(...slotRunes.map((runeEntry) => createStatsApiRuneNode(
+          runeEntry,
+          selectedIds.has(runeEntry.id),
+          {
+            keystone: slotIndex === 0,
+            secondary: options.secondary
+          }
+        )));
+        slotsWrap.append(row);
+      });
+      if (!slots.length && selectedIds.size) {
+        const fallbackRow = doc.createElement('div');
+        fallbackRow.className = 'stats-api-rune-tree-row';
+        fallbackRow.append(...[...selectedIds].map((runeId) => {
+          const runeEntry = getRuneAssetEntry('perks', runeId) || { id: runeId, name: getRuneLabel(runeId) };
+          return createStatsApiRuneNode(runeEntry, true, { secondary: options.secondary });
+        }));
+        slotsWrap.append(fallbackRow);
+      }
+
+      tree.append(slotsWrap);
+      return tree;
+    }
+
+    function createStatsApiRunePage(runeSet: StatsApiRuneSet, shardIds: unknown[] = []): HTMLElement {
+      const page = doc.createElement('div');
+      page.className = 'stats-api-rune-page';
+
+      const styles = doc.createElement('div');
+      styles.className = 'stats-api-rune-page-styles';
+      styles.append(
+        createStatsApiRuneStyleTree(runeSet.primaryStyleId, runeSet.primaryRuneIds, { omitKeystone: true }),
+        createStatsApiRuneStyleTree(runeSet.secondaryStyleId, runeSet.secondaryRuneIds, { omitKeystone: true, secondary: true })
+      );
+
+      const shardBlock = doc.createElement('div');
+      shardBlock.className = 'stats-api-rune-page-shards';
+      shardBlock.append(
+        createText('stats-api-rune-page-shards-title', 'ルーンシャード', 'h5'),
+        createStatsApiShardTree(shardIds)
+      );
+
+      page.append(styles, shardBlock);
+      return page;
+    }
+
+    function createStatsApiEmptyState(message: string): HTMLElement {
+      return createText('stats-api-detail-empty', message, 'p');
+    }
+
+    function createStatsApiItemToken(itemId: unknown): HTMLElement {
+      const numericItemId = normalizeChampionId(itemId);
+      const token = doc.createElement('div');
+      token.className = 'stats-api-item-token';
+      if (numericItemId) {
+        const img = doc.createElement('img');
+        img.alt = `Item ${numericItemId}`;
+        img.className = 'stats-api-item-icon';
+        img.loading = 'lazy';
+        img.src = getItemIconUrl(numericItemId);
+        token.append(img);
+      }
+      token.append(createText('stats-api-item-id', `#${numericItemId || '-'}`));
+      return token;
+    }
+
+    function createStatsApiItemSetRow(
+      title: string,
+      items: unknown[],
+      entry: StatsApiOptionStat,
+      options: { arrow?: boolean } = {}
+    ): HTMLElement {
+      const row = doc.createElement('article');
+      row.className = 'stats-api-item-set-row';
+      const body = doc.createElement('div');
+      body.className = 'stats-api-item-set-body';
+      const titleElement = createText('stats-api-item-set-title', title, 'h4');
+      const itemsWrap = doc.createElement('div');
+      itemsWrap.className = 'stats-api-item-token-list';
+      itemsWrap.append(...items.map((itemId, index) => {
+        const fragment = doc.createDocumentFragment();
+        if (options.arrow && index > 0) {
+          fragment.append(createText('stats-api-item-arrow', '→'));
+        }
+        fragment.append(createStatsApiItemToken(itemId));
+        return fragment;
+      }));
+      body.append(titleElement, itemsWrap);
+      row.append(body, createStatsApiOptionMeta(entry));
+      return row;
+    }
+
+    function createStatsApiSingleItemRows(
+      title: string,
+      entries: StatsApiSingleItem[] | undefined
+    ): HTMLElement {
+      const section = doc.createElement('section');
+      section.className = 'stats-api-detail-subsection';
+      section.append(createText('stats-api-detail-subtitle', title, 'h4'));
+      if (!entries?.length) {
+        section.append(createStatsApiEmptyState('候補がありません。'));
+        return section;
+      }
+      const list = doc.createElement('div');
+      list.className = 'stats-api-item-set-list';
+      list.append(...entries.map((entry) => createStatsApiItemSetRow(title, [entry.itemId], entry)));
+      section.append(list);
+      return section;
+    }
+
+    function createStatsApiDetailCard(
+      title: string,
+      subtitle: string,
+      bodyChildren: HTMLElement[]
+    ): HTMLElement {
+      const card = doc.createElement('section');
+      card.className = 'stats-api-detail-card';
+      const header = doc.createElement('div');
+      header.className = 'stats-api-detail-card-header';
+      header.append(
+        createText('stats-api-detail-card-title', title, 'h3'),
+        createText('stats-api-detail-card-subtitle', subtitle, 'p')
+      );
+      const body = doc.createElement('div');
+      body.className = 'stats-api-detail-card-body';
+      body.append(...bodyChildren);
+      card.append(header, body);
+      return card;
     }
 
     function initializeStatsApiRankDropdown(): void {
@@ -253,6 +908,17 @@
           statsApiSortKey = sortKey;
           refreshStatsApiChampionList();
         });
+      });
+    }
+
+    function initializeStatsApiDetailsActions(): void {
+      detailsBackButton?.addEventListener('click', () => {
+        selectedChampionId = 0;
+        selectedChampionStats = null;
+        selectedKeystoneId = 0;
+        lastDetailsData = null;
+        setStatsApiDetailsVisible(false);
+        setStatsApiDetailsStatus('');
       });
     }
 
@@ -331,6 +997,7 @@
       clearStatsApiRetryTimer();
       initializeStatsApiRankDropdown();
       initializeStatsApiSortButtons();
+      initializeStatsApiDetailsActions();
       setStatsApiLoading(true);
       setStatsApiStatus('StatsAPIのメタ情報を取得しています。');
       clearStatsApiChampionRows();
@@ -428,6 +1095,10 @@
 
     function createStatsApiChampionRow(stats: StatsApiChampionStats): HTMLTableRowElement {
       const row = doc.createElement('tr');
+      row.className = 'stats-table-clickable-row';
+      row.dataset.championId = String(normalizeChampionId(stats.championId));
+      row.tabIndex = 0;
+      row.classList.toggle('expanded', normalizeChampionId(stats.championId) === selectedChampionId && !detailsView?.hidden);
 
       const tierCell = doc.createElement('td');
       const tier = normalizeStatsApiTier(stats.tier);
@@ -456,8 +1127,31 @@
       const banRateCell = doc.createElement('td');
       banRateCell.textContent = formatStatsApiRate(stats.banRate);
 
+      const openDetails = () => {
+        selectedChampionId = normalizeChampionId(stats.championId);
+        selectedChampionStats = stats;
+        selectedKeystoneId = 0;
+        lastDetailsData = null;
+        setStatsApiDetailsVisible(true);
+        refreshStatsApiChampionTableSelection();
+        refreshSelectedChampionDetails();
+      };
+      row.addEventListener('click', openDetails);
+      row.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openDetails();
+      });
+
       row.append(tierCell, championCell, laneCell, gamesCell, winRateCell, pickRateCell, banRateCell);
       return row;
+    }
+
+    function refreshStatsApiChampionTableSelection(): void {
+      elements.statsApiChampionsTableBody?.querySelectorAll('tr').forEach((row: Element) => {
+        const championId = normalizeChampionId((row as HTMLElement).dataset?.championId);
+        row.classList.toggle('expanded', championId === selectedChampionId && !detailsView?.hidden);
+      });
     }
 
     function renderStatsApiRankOptions(ranks: string[]): void {
@@ -508,19 +1202,421 @@
         const response = await fetchStatsApiJson(buildStatsApiChampionsUrl(filters));
         if (requestId !== statsApiRequestId) return;
         const statsList = Array.isArray(response?.data) ? response.data : [];
+        if (selectedChampionId > 0) {
+          selectedChampionStats = statsList.find((entry: StatsApiChampionStats) => normalizeChampionId(entry?.championId) === selectedChampionId) || selectedChampionStats;
+        }
         renderStatsApiChampionTable(statsList);
         setStatsApiStatus(createStatsApiStatusText(statsList.length, response?.meta?.dataset?.watermark));
+        if (selectedChampionId > 0 && !detailsView?.hidden) {
+          await refreshSelectedChampionDetails();
+        }
       } catch (error: any) {
         if (requestId !== statsApiRequestId) return;
         clearStatsApiChampionRows();
         if (!scheduleStatsApiRetry('champions', error)) {
           setStatsApiStatus(`チャンピオン一覧を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+          if (selectedChampionId > 0 && !detailsView?.hidden) {
+            setStatsApiDetailsStatus(`詳細データを更新できませんでした: ${formatStatsApiErrorMessage(error)}`);
+          }
         }
       } finally {
         if (requestId === statsApiRequestId) {
           setStatsApiLoading(false);
         }
       }
+    }
+
+    async function refreshSelectedChampionDetails(): Promise<void> {
+      const championId = normalizeChampionId(selectedChampionId);
+      const filters = getStatsApiSelectedFilters();
+      if (!championId || !filters.position) return;
+      const requestId = ++statsApiDetailsRequestId;
+      setStatsApiDetailsStatus('チャンピオン詳細を取得しています。');
+      if (detailsContent && !lastDetailsData) {
+        detailsContent.replaceChildren(createStatsApiEmptyState('詳細データを読み込み中です。'));
+      }
+      try {
+        await ensureStatsApiRuneCatalog();
+        const response = await fetchStatsApiJson(buildStatsApiChampionDetailsUrl({
+          ...filters,
+          championId
+        }));
+        if (requestId !== statsApiDetailsRequestId) return;
+        lastDetailsData = response?.data || null;
+        renderSelectedChampionDetails(lastDetailsData, response?.meta?.dataset?.watermark);
+      } catch (error: any) {
+        if (requestId !== statsApiDetailsRequestId) return;
+        lastDetailsData = null;
+        renderSelectedChampionDetails(null, null);
+        setStatsApiDetailsStatus(`チャンピオン詳細を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+      }
+    }
+
+    function renderSelectedChampionDetails(
+      detailsData: StatsApiChampionDetailsData | null,
+      watermark: string | null | undefined
+    ): void {
+      const championId = normalizeChampionId(selectedChampionId || detailsData?.champion?.championId);
+      const championName = deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`;
+      if (detailsTitle) {
+        detailsTitle.textContent = championName;
+      }
+      if (!detailsContent) return;
+      if (!detailsData?.champion) {
+        detailsContent.replaceChildren(createStatsApiEmptyState('この条件では詳細データがありません。'));
+        return;
+      }
+
+      const champion = detailsData.champion;
+      const keystones = Array.isArray(detailsData.keystones) ? detailsData.keystones : [];
+      if (!selectedKeystoneId || !keystones.some((entry) => normalizeChampionId(entry.keystoneId) === selectedKeystoneId)) {
+        selectedKeystoneId = normalizeChampionId(keystones[0]?.keystoneId);
+      }
+      const activeKeystone = keystones.find((entry) => normalizeChampionId(entry.keystoneId) === selectedKeystoneId) || keystones[0] || null;
+      setStatsApiDetailsStatus(watermark ? `Data watermark: ${new Date(watermark).toLocaleString('ja-JP')}` : '');
+      const top = doc.createElement('section');
+      top.className = 'stats-api-details-top';
+      top.append(
+        createStatsApiChampionHero(champion),
+        createStatsApiKeystoneSelector(keystones)
+      );
+      detailsContent.replaceChildren(
+        top,
+        createStatsApiDetailGridV2(activeKeystone)
+      );
+    }
+
+    function createStatsApiChampionHero(champion: StatsApiChampionSummary): HTMLElement {
+      const hero = doc.createElement('section');
+      hero.className = 'stats-api-champion-hero';
+
+      const portraitWrap = doc.createElement('div');
+      portraitWrap.className = 'stats-api-champion-portrait';
+      if (deps.loadChampionIcon) {
+        const portrait = doc.createElement('img');
+        portrait.alt = deps.championLabel ? deps.championLabel(champion.championId) : `Champion ${champion.championId}`;
+        portrait.className = 'stats-api-champion-portrait-image';
+        deps.loadChampionIcon(portrait, champion.championId);
+        portraitWrap.append(portrait);
+      } else {
+        portraitWrap.textContent = String(champion.championId);
+      }
+
+      const content = doc.createElement('div');
+      content.className = 'stats-api-champion-hero-main';
+      const heading = doc.createElement('div');
+      heading.className = 'stats-api-champion-hero-heading';
+      heading.append(
+        createText('stats-api-champion-name', deps.championLabel ? deps.championLabel(champion.championId) : `Champion ${champion.championId}`, 'h2'),
+        createText('stats-api-champion-subtitle', `${getStatsApiLaneLabel(getStatsApiSelectedFilters().position)} lane`, 'p')
+      );
+      const metrics = doc.createElement('div');
+      metrics.className = 'stats-api-champion-hero-metrics';
+      metrics.append(
+        createStatsApiSummaryChip('PR', formatStatsApiRate(champion.pickRate)),
+        createStatsApiSummaryChip('WR', formatStatsApiRate(champion.winRate), true),
+        createStatsApiSummaryChip('Games', formatStatsApiGames(champion.games))
+      );
+      content.append(heading, metrics);
+      hero.append(portraitWrap, content);
+      return hero;
+    }
+
+    function createStatsApiKeystoneSelector(keystones: StatsApiKeystoneDetails[]): HTMLElement {
+      const section = doc.createElement('section');
+      section.className = 'stats-api-keystone-panel';
+      section.append(
+        createText('stats-api-section-title', 'キーストーン', 'h3'),
+        createText('stats-api-section-subtitle', '候補を切り替えると下の推奨ルーン・ビルドも更新されます。', 'p')
+      );
+      if (!keystones.length) {
+        section.append(createStatsApiEmptyState('キーストーン候補がありません。'));
+        return section;
+      }
+      const list = doc.createElement('div');
+      list.className = 'stats-api-keystone-list';
+      list.append(...keystones.map((keystone) => {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        const isActive = normalizeChampionId(keystone.keystoneId) === selectedKeystoneId;
+        button.className = `stats-api-keystone-card${isActive ? ' active' : ''}`;
+        button.setAttribute('aria-pressed', String(isActive));
+        const header = doc.createElement('div');
+        header.className = 'stats-api-keystone-card-header';
+        header.append(
+          createStatsApiRuneToken(
+            getKeystoneLabel(keystone.keystoneId),
+            getRuneIconUrl(keystone.keystoneId),
+            'stats-api-rune-token keystone'
+          )
+        );
+        button.append(
+          header,
+          createStatsApiOptionMeta(keystone)
+        );
+        button.addEventListener('click', () => {
+          selectedKeystoneId = normalizeChampionId(keystone.keystoneId);
+          if (lastDetailsData) {
+            renderSelectedChampionDetails(lastDetailsData, null);
+          }
+        });
+        return button;
+      }));
+      section.append(list);
+      return section;
+    }
+
+    function createStatsApiDetailGrid(activeKeystone: StatsApiKeystoneDetails | null): HTMLElement {
+      const grid = doc.createElement('div');
+      grid.className = 'stats-api-detail-grid';
+      if (!activeKeystone) {
+        grid.append(createStatsApiDetailCard('詳細', '候補がありません', [createStatsApiEmptyState('表示できるキーストーン詳細がありません。')]));
+        return grid;
+      }
+
+      const runeBodies: HTMLElement[] = [];
+      if (activeKeystone.runes?.length) {
+        runeBodies.push(...activeKeystone.runes.map((runeSet, index) => {
+          const entry = doc.createElement('article');
+          entry.className = 'stats-api-detail-option';
+          entry.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 ルーンセット`, 'h4'),
+            createStatsApiRuneStyleRow(runeSet.primaryStyleId, runeSet.primaryRuneIds),
+            createStatsApiRuneStyleRow(runeSet.secondaryStyleId, runeSet.secondaryRuneIds),
+            createStatsApiOptionMeta(runeSet)
+          );
+          return entry;
+        }));
+      }
+      if (activeKeystone.statShards?.length) {
+        const shardSection = doc.createElement('section');
+        shardSection.className = 'stats-api-detail-subsection';
+        shardSection.append(createText('stats-api-detail-subtitle', 'ルーンシャード', 'h4'));
+        const shardList = doc.createElement('div');
+        shardList.className = 'stats-api-item-set-list';
+        shardList.append(...activeKeystone.statShards.map((shards) => {
+          const entry = doc.createElement('article');
+          entry.className = 'stats-api-detail-option';
+          entry.append(
+            createStatsApiTagList(shards.shardIds.map((id) => getShardLabel(id))),
+            createStatsApiOptionMeta(shards)
+          );
+          return entry;
+        }));
+        shardSection.append(shardList);
+        runeBodies.push(shardSection);
+      }
+
+      const summonerBodies = activeKeystone.summonerSpells?.length
+        ? activeKeystone.summonerSpells.map((entry, index) => {
+          const node = doc.createElement('article');
+          node.className = 'stats-api-detail-option';
+          node.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
+            createStatsApiTagList(entry.spellIds.map((id) => getSummonerSpellLabel(id))),
+            createStatsApiOptionMeta(entry)
+          );
+          return node;
+        })
+        : [createStatsApiEmptyState('サモナースペル候補がありません。')];
+
+      const buildBodies: HTMLElement[] = [];
+      if (activeKeystone.boots?.length) {
+        buildBodies.push(createStatsApiSingleItemRows('ブーツ', activeKeystone.boots));
+      }
+      if (activeKeystone.startingItems?.length) {
+        const wrap = doc.createElement('section');
+        wrap.className = 'stats-api-detail-subsection';
+        wrap.append(createText('stats-api-detail-subtitle', 'スタートアイテム', 'h4'));
+        const list = doc.createElement('div');
+        list.className = 'stats-api-item-set-list';
+        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry)));
+        wrap.append(list);
+        buildBodies.push(wrap);
+      }
+      if (activeKeystone.firstSecondCoreItems?.length) {
+        const wrap = doc.createElement('section');
+        wrap.className = 'stats-api-detail-subsection';
+        wrap.append(createText('stats-api-detail-subtitle', '1st + 2nd コア', 'h4'));
+        const list = doc.createElement('div');
+        list.className = 'stats-api-item-set-list';
+        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, { arrow: true })));
+        wrap.append(list);
+        buildBodies.push(wrap);
+      }
+      buildBodies.push(
+        createStatsApiSingleItemRows('3rd アイテム', activeKeystone.thirdItems),
+        createStatsApiSingleItemRows('4th アイテム', activeKeystone.fourthItems),
+        createStatsApiSingleItemRows('5th アイテム', activeKeystone.fifthItems),
+        createStatsApiSingleItemRows('6th アイテム', activeKeystone.sixthItems)
+      );
+
+      const skillBodies = activeKeystone.skillOrders?.length
+        ? activeKeystone.skillOrders.map((entry, index) => {
+          const node = doc.createElement('article');
+          node.className = 'stats-api-detail-option';
+          node.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 スキルオーダー`, 'h4'),
+            createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
+            createStatsApiOptionMeta(entry)
+          );
+          return node;
+        })
+        : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
+
+      grid.append(
+        createStatsApiDetailCard(
+          'ルーンセット',
+          'アクティブなキーストーンでよく使われる構成',
+          runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
+        ),
+        createStatsApiDetailCard(
+          'サモナースペル',
+          'このキーストーンと一緒に使われる組み合わせ',
+          summonerBodies
+        ),
+        createStatsApiDetailCard(
+          '推奨アイテムビルド',
+          '開始から 6th までの代表候補',
+          buildBodies
+        ),
+        createStatsApiDetailCard(
+          'スキルオーダー',
+          'サンプル内で勝率上位のスキル順',
+          skillBodies
+        )
+      );
+      return grid;
+    }
+
+    function createStatsApiDetailGridV2(activeKeystone: StatsApiKeystoneDetails | null): HTMLElement {
+      const grid = doc.createElement('div');
+      grid.className = 'stats-api-detail-grid';
+      if (!activeKeystone) {
+        grid.append(createStatsApiDetailCard('詳細', '候補がありません', [createStatsApiEmptyState('表示できるキーストーン詳細がありません。')]));
+        return grid;
+      }
+
+      const runeBodies: HTMLElement[] = [];
+      if (activeKeystone.runes?.length) {
+        runeBodies.push(...activeKeystone.runes.map((runeSet, index) => {
+          const entry = doc.createElement('article');
+          entry.className = 'stats-api-detail-option';
+          const shardIds = activeKeystone.statShards?.[index]?.shardIds || activeKeystone.statShards?.[0]?.shardIds || [];
+          entry.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 ルーンセット`, 'h4'),
+            createStatsApiRunePage(runeSet, shardIds),
+            createStatsApiOptionMeta(runeSet)
+          );
+          return entry;
+        }));
+      }
+      if (activeKeystone.statShards?.length) {
+        const shardSection = doc.createElement('section');
+        shardSection.className = 'stats-api-detail-subsection';
+        shardSection.append(createText('stats-api-detail-subtitle', 'シャード別傾向', 'h4'));
+        const shardList = doc.createElement('div');
+        shardList.className = 'stats-api-item-set-list';
+        shardList.append(...activeKeystone.statShards.map((shards) => {
+          const entry = doc.createElement('article');
+          entry.className = 'stats-api-detail-option';
+          entry.append(
+            createStatsApiTagList(shards.shardIds.map((id) => getShardLabel(id))),
+            createStatsApiOptionMeta(shards)
+          );
+          return entry;
+        }));
+        shardSection.append(shardList);
+        runeBodies.push(shardSection);
+      }
+
+      const summonerBodies = activeKeystone.summonerSpells?.length
+        ? activeKeystone.summonerSpells.map((entry, index) => {
+          const node = doc.createElement('article');
+          node.className = 'stats-api-detail-option';
+          node.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
+            createStatsApiTagList(entry.spellIds.map((id) => getSummonerSpellLabel(id))),
+            createStatsApiOptionMeta(entry)
+          );
+          return node;
+        })
+        : [createStatsApiEmptyState('サモナースペル候補がありません。')];
+
+      const buildBodies: HTMLElement[] = [];
+      if (activeKeystone.boots?.length) {
+        buildBodies.push(createStatsApiSingleItemRows('ブーツ', activeKeystone.boots));
+      }
+      if (activeKeystone.startingItems?.length) {
+        const wrap = doc.createElement('section');
+        wrap.className = 'stats-api-detail-subsection';
+        wrap.append(createText('stats-api-detail-subtitle', 'スタートアイテム', 'h4'));
+        const list = doc.createElement('div');
+        list.className = 'stats-api-item-set-list';
+        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry)));
+        wrap.append(list);
+        buildBodies.push(wrap);
+      }
+      if (activeKeystone.firstSecondCoreItems?.length) {
+        const wrap = doc.createElement('section');
+        wrap.className = 'stats-api-detail-subsection';
+        wrap.append(createText('stats-api-detail-subtitle', '1st + 2nd コア', 'h4'));
+        const list = doc.createElement('div');
+        list.className = 'stats-api-item-set-list';
+        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, { arrow: true })));
+        wrap.append(list);
+        buildBodies.push(wrap);
+      }
+      buildBodies.push(
+        createStatsApiSingleItemRows('3rd アイテム', activeKeystone.thirdItems),
+        createStatsApiSingleItemRows('4th アイテム', activeKeystone.fourthItems),
+        createStatsApiSingleItemRows('5th アイテム', activeKeystone.fifthItems),
+        createStatsApiSingleItemRows('6th アイテム', activeKeystone.sixthItems)
+      );
+
+      const skillBodies = activeKeystone.skillOrders?.length
+        ? activeKeystone.skillOrders.map((entry, index) => {
+          const node = doc.createElement('article');
+          node.className = 'stats-api-detail-option';
+          node.append(
+            createText('stats-api-detail-option-title', `${index + 1}位 スキルオーダー`, 'h4'),
+            createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
+            createStatsApiOptionMeta(entry)
+          );
+          return node;
+        })
+        : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
+
+      const runeCard = createStatsApiDetailCard(
+        'ルーンセット',
+        'ゲーム内のルーンページに寄せて、選択中を明るく表示します。',
+        runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
+      );
+      runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
+
+      const summonerCard = createStatsApiDetailCard(
+        'サモナースペル',
+        'このキーストーンと一緒に使われる組み合わせ。',
+        summonerBodies
+      );
+      summonerCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-summoners');
+
+      const buildCard = createStatsApiDetailCard(
+        '推奨アイテムビルド',
+        '開始から6th までの採用候補。',
+        buildBodies
+      );
+      buildCard.classList.add('stats-api-detail-card-build');
+
+      const skillCard = createStatsApiDetailCard(
+        'スキルオーダー',
+        'サンプル数順で並べたスキル順。',
+        skillBodies
+      );
+      skillCard.classList.add('stats-api-detail-card-skill');
+
+      grid.append(runeCard, summonerCard, buildCard, skillCard);
+      return grid;
     }
 
     function scheduleStatsApiRetry(target: 'meta' | 'champions', error: any): boolean {
@@ -544,18 +1640,23 @@
     }
 
     return {
+      buildStatsApiChampionDetailsUrl,
       initializeStatsApiChampionList,
       refreshStatsApiChampionList
     };
   }
 
   const api = {
+    buildStatsApiChampionDetailsUrl,
     buildStatsApiChampionsUrl,
     createChampionsView,
     formatStatsApiErrorMessage,
     getStatsApiLaneLabel,
+    normalizeStatsApiRuneCatalog,
     parseStatsApiErrorInfo,
     parseStatsApiRetryAfterSeconds,
+    buildStatsApiRunesDataUrl,
+    buildStatsApiRuneIconUrl,
     sortStatsApiChampionRows
   };
 
