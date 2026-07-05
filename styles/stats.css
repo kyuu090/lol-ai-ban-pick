@@ -419,13 +419,13 @@
 
 .stats-api-details-content {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stats-api-details-top {
   display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+  gap: 6px;
+  grid-template-columns: minmax(220px, 0.56fr) minmax(0, 1.44fr);
 }
 
 .stats-api-champion-hero {
@@ -434,9 +434,9 @@
   border: 1px solid rgba(154, 167, 184, 0.2);
   border-radius: 12px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: 56px minmax(0, 1fr);
-  padding: 8px 10px;
+  padding: 7px 9px;
 }
 
 .stats-api-champion-portrait {
@@ -460,12 +460,12 @@
 
 .stats-api-champion-hero-main {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
 .stats-api-champion-name {
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1;
   margin: 0;
 }
@@ -481,7 +481,7 @@
 .stats-api-option-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .stats-api-summary-chip {
@@ -490,8 +490,8 @@
   border-radius: 8px;
   display: grid;
   gap: 1px;
-  min-width: 58px;
-  padding: 4px 6px;
+  min-width: 54px;
+  padding: 3px 5px;
 }
 
 .stats-api-summary-chip.accent .stats-api-summary-chip-value {
@@ -508,7 +508,7 @@
 
 .stats-api-summary-chip-value {
   color: var(--text);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.1;
 }
 
@@ -518,8 +518,8 @@
   border: 1px solid rgba(154, 167, 184, 0.2);
   border-radius: 12px;
   display: grid;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 3px;
+  padding: 7px 9px;
 }
 
 .stats-api-keystone-panel .stats-api-section-title,
@@ -544,24 +544,26 @@
 
 .stats-api-keystone-list {
   display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 5px;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
 }
 
 .stats-api-keystone-card {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(154, 167, 184, 0.22);
-  border-radius: 9px;
+  border-radius: 8px;
   box-shadow: none;
   color: inherit;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   min-height: 0;
-  padding: 6px 8px;
+  padding: 5px 7px;
   text-align: left;
 }
 
 .stats-api-keystone-card-header {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -575,13 +577,13 @@
 
 .stats-api-keystone-card .stats-api-option-meta {
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 3px;
   justify-content: flex-end;
 }
 
 .stats-api-keystone-card .stats-api-summary-chip {
-  min-width: 46px;
-  padding: 2px 4px;
+  min-width: 42px;
+  padding: 2px 3px;
 }
 
 .stats-api-keystone-card .stats-api-summary-chip-value {
@@ -595,24 +597,25 @@
 }
 
 .stats-api-keystone-name {
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.1;
 }
 
 .stats-api-detail-grid {
   display: grid;
   align-items: start;
-  gap: 8px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 6px;
+  grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr);
 }
 
 .stats-api-detail-card {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(154, 167, 184, 0.2);
-  border-radius: 10px;
+  border-radius: 9px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  padding: 8px;
+  padding: 7px;
 }
 
 .stats-api-detail-card-compact {
@@ -635,16 +638,16 @@
 }
 
 .stats-api-detail-card-build .stats-api-detail-card-body {
-  gap: 6px 8px;
+  gap: 5px 7px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stats-api-detail-card-build .stats-api-detail-subsection {
-  gap: 4px;
+  gap: 3px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-list {
-  gap: 4px;
+  gap: 3px;
 }
 
 .stats-api-detail-card-build .stats-api-detail-subtitle {
@@ -653,8 +656,8 @@
 
 .stats-api-detail-card-build .stats-api-item-set-row {
   border-radius: 8px;
-  gap: 5px;
-  padding: 5px 6px;
+  gap: 4px;
+  padding: 4px 5px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-body {
@@ -662,12 +665,8 @@
 }
 
 .stats-api-detail-card-build .stats-api-item-icon {
-  height: 22px;
-  width: 22px;
-}
-
-.stats-api-detail-card-build .stats-api-item-id {
-  font-size: 8px;
+  height: 20px;
+  width: 20px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-option-meta {
@@ -675,8 +674,8 @@
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip {
-  min-width: 42px;
-  padding: 2px 4px;
+  min-width: 38px;
+  padding: 2px 3px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-label {
@@ -688,36 +687,31 @@
 }
 
 .stats-api-detail-card-skill {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 2;
 }
 
 .stats-api-detail-card-runes .stats-api-detail-card-body {
-  gap: 6px;
+  gap: 5px;
   grid-template-columns: 1fr;
-}
-
-.stats-api-detail-card-summoners .stats-api-detail-card-body {
-  gap: 6px 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stats-api-detail-card-runes .stats-api-detail-subsection,
 .stats-api-detail-card-skill .stats-api-detail-option,
 .stats-api-detail-card-runes .stats-api-detail-card-body > .stats-api-detail-empty,
-.stats-api-detail-card-summoners .stats-api-detail-card-body > .stats-api-detail-empty {
+.stats-api-rune-summoner-section {
   grid-column: 1 / -1;
 }
 
 .stats-api-rune-tabs {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .stats-api-rune-tab-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .stats-api-rune-tab {
@@ -728,8 +722,8 @@
   font: inherit;
   font-size: 10px;
   font-weight: 900;
-  min-height: 24px;
-  padding: 0 10px;
+  min-height: 22px;
+  padding: 0 8px;
 }
 
 .stats-api-rune-tab.active {
@@ -745,7 +739,7 @@
 .stats-api-rune-panel-header {
   align-items: center;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: space-between;
 }
 
@@ -755,8 +749,8 @@
 }
 
 .stats-api-rune-set-meta .stats-api-summary-chip {
-  min-width: 54px;
-  padding: 2px 5px;
+  min-width: 50px;
+  padding: 2px 4px;
 }
 
 .stats-api-detail-card-header {
@@ -768,16 +762,16 @@
 .stats-api-detail-subsection,
 .stats-api-item-set-list {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .stats-api-detail-option {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(154, 167, 184, 0.16);
-  border-radius: 10px;
+  border-radius: 8px;
   display: grid;
-  gap: 4px;
-  padding: 6px;
+  gap: 3px;
+  padding: 5px;
 }
 
 .stats-api-detail-option-title,
@@ -792,13 +786,13 @@
 .stats-api-item-token-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .stats-api-rune-style-row {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .stats-api-rune-style-badge {
@@ -808,7 +802,7 @@
 .stats-api-rune-page {
   align-items: start;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: auto auto;
   justify-content: start;
 }
@@ -820,21 +814,21 @@
 .stats-api-rune-page-secondary-row {
   align-items: start;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: auto auto;
   justify-content: start;
 }
 
 .stats-api-rune-page-shards {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   justify-items: start;
 }
 
 .stats-api-rune-page-shards-header {
   align-items: start;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
   width: 100%;
 }
@@ -843,10 +837,10 @@
   align-content: start;
   background: linear-gradient(180deg, rgba(13, 17, 28, 0.96), rgba(27, 34, 51, 0.94));
   border: 1px solid rgba(99, 115, 140, 0.34);
-  border-radius: 10px;
+  border-radius: 9px;
   display: grid;
-  gap: 6px;
-  padding: 8px;
+  gap: 5px;
+  padding: 7px;
   width: fit-content;
 }
 
@@ -856,13 +850,13 @@
 
 .stats-api-rune-tree-slots {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .stats-api-rune-tree-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .stats-api-rune-node {
@@ -870,20 +864,20 @@
   border-radius: 999px;
   display: inline-flex;
   justify-content: center;
-  min-height: 30px;
-  min-width: 30px;
+  min-height: 28px;
+  min-width: 28px;
   padding: 2px;
   transition: opacity 120ms ease, filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
 .stats-api-rune-node.keystone {
-  min-height: 42px;
-  min-width: 42px;
+  min-height: 38px;
+  min-width: 38px;
 }
 
 .stats-api-rune-node.secondary {
-  min-height: 26px;
-  min-width: 26px;
+  min-height: 24px;
+  min-width: 24px;
 }
 
 .stats-api-rune-node.selected {
@@ -899,15 +893,15 @@
 .stats-api-rune-node-icon {
   display: block;
   height: 100%;
-  max-height: 34px;
-  max-width: 34px;
+  max-height: 30px;
+  max-width: 30px;
   object-fit: contain;
   width: 100%;
 }
 
 .stats-api-rune-node.keystone .stats-api-rune-node-icon {
-  max-height: 38px;
-  max-width: 38px;
+  max-height: 34px;
+  max-width: 34px;
 }
 
 .stats-api-shard-tree {
@@ -931,10 +925,10 @@
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
-  height: 28px;
+  height: 24px;
   justify-content: center;
   padding: 0;
-  width: 28px;
+  width: 24px;
 }
 
 .stats-api-shard-node.selected {
@@ -954,9 +948,9 @@
 
 .stats-api-shard-node-icon {
   display: block;
-  height: 18px;
+  height: 15px;
   object-fit: contain;
-  width: 18px;
+  width: 15px;
 }
 
 .stats-api-rune-token {
@@ -966,16 +960,17 @@
   border-radius: 999px;
   color: var(--text);
   display: inline-flex;
-  gap: 5px;
-  min-height: 28px;
+  gap: 4px;
+  min-height: 24px;
   min-width: 0;
-  padding: 2px 7px 2px 2px;
+  padding: 2px 6px 2px 2px;
 }
 
 .stats-api-rune-token.keystone {
   background: transparent;
   border: 0;
   border-radius: 0;
+  gap: 8px;
   min-height: 0;
   padding: 0;
 }
@@ -984,24 +979,43 @@
   justify-self: start;
 }
 
+.stats-api-summoner-spell-token {
+  min-height: 26px;
+  padding-right: 8px;
+}
+
+.stats-api-summoner-spell-token .stats-api-rune-icon {
+  height: 20px;
+  width: 20px;
+}
+
+.stats-api-summoner-spell-list {
+  gap: 4px;
+}
+
 .stats-api-rune-icon {
   background: rgba(20, 24, 36, 0.06);
   border: 1px solid rgba(154, 167, 184, 0.14);
   border-radius: 999px;
   display: block;
   flex: 0 0 auto;
-  height: 20px;
+  height: 18px;
   object-fit: cover;
-  width: 20px;
+  width: 18px;
 }
 
 .stats-api-rune-token.keystone .stats-api-rune-icon {
-  height: 28px;
-  width: 28px;
+  height: 34px;
+  width: 34px;
+}
+
+.stats-api-keystone-card .stats-api-rune-token-label {
+  font-size: 15px;
+  line-height: 1.15;
 }
 
 .stats-api-rune-token-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -1015,8 +1029,8 @@
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
-  min-height: 21px;
-  padding: 0 7px;
+  min-height: 19px;
+  padding: 0 6px;
   align-items: center;
 }
 
@@ -1026,9 +1040,9 @@
   border: 1px solid rgba(154, 167, 184, 0.16);
   border-radius: 8px;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   justify-content: space-between;
-  padding: 6px;
+  padding: 5px;
 }
 
 .stats-api-item-set-row.compact {
@@ -1043,9 +1057,9 @@
 
 .stats-api-item-arrow {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-  line-height: 24px;
+  line-height: 20px;
 }
 
 .stats-api-item-token {
@@ -1054,13 +1068,17 @@
   gap: 2px;
 }
 
+.stats-api-item-token.icon-only .stats-api-item-icon {
+  margin: 0;
+}
+
 .stats-api-item-icon {
   background: rgba(20, 24, 36, 0.06);
   border: 1px solid rgba(154, 167, 184, 0.16);
   border-radius: 6px;
   display: block;
-  height: 24px;
-  width: 24px;
+  height: 22px;
+  width: 22px;
 }
 
 .stats-api-item-id {
@@ -1072,17 +1090,27 @@
 .stats-api-item-set-row .stats-api-option-meta {
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 3px;
   justify-content: flex-end;
 }
 
 .stats-api-item-set-row .stats-api-summary-chip {
-  min-width: 46px;
-  padding: 3px 4px;
+  min-width: 42px;
+  padding: 2px 3px;
 }
 
 .stats-api-item-set-row .stats-api-summary-chip-value {
-  font-size: 9px;
+  font-size: 8px;
+}
+
+.stats-api-rune-summoner-section {
+  gap: 4px;
+}
+
+.stats-api-rune-summoner-list {
+  display: grid;
+  gap: 5px 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stats-api-detail-empty {

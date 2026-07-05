@@ -89,7 +89,7 @@
 
   .stats-api-detail-card-build .stats-api-detail-card-body,
   .stats-api-detail-card-runes .stats-api-detail-card-body,
-  .stats-api-detail-card-summoners .stats-api-detail-card-body {
+  .stats-api-rune-summoner-list {
     grid-template-columns: 1fr;
   }
 

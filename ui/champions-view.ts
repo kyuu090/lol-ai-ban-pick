@@ -71,6 +71,19 @@
     21: 'バリア',
     32: 'マーク'
   };
+  const SUMMONER_SPELL_ICON_KEYS: Record<number, string> = {
+    1: 'SummonerBoost',
+    3: 'SummonerExhaust',
+    4: 'SummonerFlash',
+    6: 'SummonerHaste',
+    7: 'SummonerHeal',
+    11: 'SummonerSmite',
+    12: 'SummonerTeleport',
+    13: 'SummonerMana',
+    14: 'SummonerDot',
+    21: 'SummonerBarrier',
+    32: 'SummonerSnowball'
+  };
   type StatsApiLaneOption = (typeof STATS_API_LANES)[number];
   type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate' | 'tierScore';
 
@@ -684,6 +697,17 @@
       return SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
     }
 
+    function getSummonerSpellIconUrl(spellId: unknown): string {
+      const numericSpellId = normalizeChampionId(spellId);
+      const iconKey = SUMMONER_SPELL_ICON_KEYS[numericSpellId];
+      if (!iconKey) return '';
+      const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || 'latest';
+      const version = getStatsApiDataDragonVersion(String(patch));
+      return version === 'latest'
+        ? `https://ddragon.leagueoflegends.com/cdn/img/spell/${iconKey}.png`
+        : `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/${iconKey}.png`;
+    }
+
     function formatSkillLetter(skillId: unknown): string {
       const normalizedSkillId = String(skillId || '').trim();
       if (normalizedSkillId === '1') return 'Q';
@@ -710,11 +734,16 @@
       return chip;
     }
 
-    function createStatsApiOptionMeta(entry: StatsApiOptionStat): HTMLElement {
+    function createStatsApiOptionMeta(
+      entry: StatsApiOptionStat,
+      options: { hidePickRate?: boolean } = {}
+    ): HTMLElement {
       const meta = doc.createElement('div');
       meta.className = 'stats-api-option-meta';
+      if (!options.hidePickRate) {
+        meta.append(createStatsApiSummaryChip('PR', formatStatsApiRate(entry.pickRate)));
+      }
       meta.append(
-        createStatsApiSummaryChip('PR', formatStatsApiRate(entry.pickRate)),
         createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), true),
         createStatsApiSummaryChip('Games', formatStatsApiGames(entry.games))
       );
@@ -751,6 +780,14 @@
       }
       token.append(createText('stats-api-rune-token-label', label));
       return token;
+    }
+
+    function createStatsApiSummonerSpellToken(spellId: unknown): HTMLElement {
+      return createStatsApiRuneToken(
+        getSummonerSpellLabel(spellId),
+        getSummonerSpellIconUrl(spellId),
+        'stats-api-rune-token stats-api-summoner-spell-token'
+      );
     }
 
     function createStatsApiRuneList(
@@ -984,10 +1021,11 @@
       return createText('stats-api-detail-empty', message, 'p');
     }
 
-    function createStatsApiItemToken(itemId: unknown): HTMLElement {
+    function createStatsApiItemToken(itemId: unknown, options: { iconOnly?: boolean } = {}): HTMLElement {
       const numericItemId = normalizeChampionId(itemId);
       const token = doc.createElement('div');
-      token.className = 'stats-api-item-token';
+      token.className = `stats-api-item-token${options.iconOnly ? ' icon-only' : ''}`;
+      token.title = `Item #${numericItemId || '-'}`;
       if (numericItemId) {
         const img = doc.createElement('img');
         img.alt = `Item ${numericItemId}`;
@@ -996,7 +1034,9 @@
         img.src = getItemIconUrl(numericItemId);
         token.append(img);
       }
-      token.append(createText('stats-api-item-id', `#${numericItemId || '-'}`));
+      if (!options.iconOnly) {
+        token.append(createText('stats-api-item-id', `#${numericItemId || '-'}`));
+      }
       return token;
     }
 
@@ -1004,7 +1044,7 @@
       title: string,
       items: unknown[],
       entry: StatsApiOptionStat,
-      options: { arrow?: boolean; hideTitle?: boolean; compact?: boolean } = {}
+      options: { arrow?: boolean; hideTitle?: boolean; compact?: boolean; iconOnly?: boolean; hidePickRate?: boolean } = {}
     ): HTMLElement {
       const row = doc.createElement('article');
       row.className = `stats-api-item-set-row${options.compact ? ' compact' : ''}`;
@@ -1017,14 +1057,14 @@
         if (options.arrow && index > 0) {
           fragment.append(createText('stats-api-item-arrow', '→'));
         }
-        fragment.append(createStatsApiItemToken(itemId));
+        fragment.append(createStatsApiItemToken(itemId, { iconOnly: options.iconOnly }));
         return fragment;
       }));
       if (!options.hideTitle) {
         body.append(createText('stats-api-item-set-title', title, 'h4'));
       }
       body.append(itemsWrap);
-      row.append(body, createStatsApiOptionMeta(entry));
+      row.append(body, createStatsApiOptionMeta(entry, { hidePickRate: options.hidePickRate }));
       return row;
     }
 
@@ -1043,8 +1083,39 @@
       list.className = 'stats-api-item-set-list';
       list.append(...entries.map((entry) => createStatsApiItemSetRow(title, [entry.itemId], entry, {
         compact: true,
-        hideTitle: true
+        hideTitle: true,
+        hidePickRate: true,
+        iconOnly: true
       })));
+      section.append(list);
+      return section;
+    }
+
+    function createStatsApiSummonerSpellSection(entries: StatsApiSummonerSpells[] | undefined): HTMLElement {
+      const section = doc.createElement('section');
+      section.className = 'stats-api-detail-subsection stats-api-rune-summoner-section';
+      section.append(createText('stats-api-detail-subtitle', 'サモナースペル', 'h4'));
+      if (!entries?.length) {
+        section.append(createStatsApiEmptyState('サモナースペル候補がありません。'));
+        return section;
+      }
+      const list = doc.createElement('div');
+      list.className = 'stats-api-rune-summoner-list';
+      list.append(...entries.map((entry, index) => {
+        const node = doc.createElement('article');
+        node.className = 'stats-api-detail-option';
+        node.append(
+          createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
+          (() => {
+            const wrap = doc.createElement('div');
+            wrap.className = 'stats-api-tag-list stats-api-summoner-spell-list';
+            wrap.append(...entry.spellIds.map((id) => createStatsApiSummonerSpellToken(id)));
+            return wrap;
+          })(),
+          createStatsApiOptionMeta(entry)
+        );
+        return node;
+      }));
       section.append(list);
       return section;
     }
@@ -1683,19 +1754,7 @@
       }
 
       const runeBodies = createStatsApiRuneTabs(activeKeystone.runes, activeKeystone.statShards);
-
-      const summonerBodies = activeKeystone.summonerSpells?.length
-        ? activeKeystone.summonerSpells.map((entry, index) => {
-          const node = doc.createElement('article');
-          node.className = 'stats-api-detail-option';
-          node.append(
-            createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
-            createStatsApiTagList(entry.spellIds.map((id) => getSummonerSpellLabel(id))),
-            createStatsApiOptionMeta(entry)
-          );
-          return node;
-        })
-        : [createStatsApiEmptyState('サモナースペル候補がありません。')];
+      runeBodies.push(createStatsApiSummonerSpellSection(activeKeystone.summonerSpells));
 
       const buildBodies: HTMLElement[] = [];
       if (activeKeystone.boots?.length) {
@@ -1707,7 +1766,10 @@
         wrap.append(createText('stats-api-detail-subtitle', 'スタートアイテム', 'h4'));
         const list = doc.createElement('div');
         list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry)));
+        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry, {
+          hidePickRate: true,
+          iconOnly: true
+        })));
         wrap.append(list);
         buildBodies.push(wrap);
       }
@@ -1717,7 +1779,11 @@
         wrap.append(createText('stats-api-detail-subtitle', '1st + 2nd コア', 'h4'));
         const list = doc.createElement('div');
         list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, { arrow: true })));
+        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, {
+          arrow: true,
+          hidePickRate: true,
+          iconOnly: true
+        })));
         wrap.append(list);
         buildBodies.push(wrap);
       }
@@ -1743,17 +1809,10 @@
 
       const runeCard = createStatsApiDetailCard(
         'ルーンセット',
-        'ゲーム内のルーンページに寄せて、選択中を明るく表示します。',
+        'ゲーム内のルーンページに寄せて、下部にサモナースペルもまとめて表示します。',
         runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
       );
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
-
-      const summonerCard = createStatsApiDetailCard(
-        'サモナースペル',
-        'このキーストーンと一緒に使われる組み合わせ。',
-        summonerBodies
-      );
-      summonerCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-summoners');
 
       const buildCard = createStatsApiDetailCard(
         '推奨アイテムビルド',
@@ -1769,7 +1828,7 @@
       );
       skillCard.classList.add('stats-api-detail-card-skill');
 
-      grid.append(runeCard, summonerCard, buildCard, skillCard);
+      grid.append(runeCard, buildCard, skillCard);
       return grid;
     }
 
