@@ -724,14 +724,37 @@
       return element;
     }
 
-    function createStatsApiSummaryChip(label: string, value: string, accent = false): HTMLElement {
+    function createStatsApiSummaryChip(
+      label: string,
+      value: string,
+      accent: boolean | 'negative' = false
+    ): HTMLElement {
       const chip = doc.createElement('div');
-      chip.className = `stats-api-summary-chip${accent ? ' accent' : ''}`;
+      const accentClass = accent === 'negative'
+        ? ' accent negative'
+        : accent
+          ? ' accent'
+          : '';
+      chip.className = `stats-api-summary-chip${accentClass}`;
       chip.append(
         createText('stats-api-summary-chip-label', label, 'small'),
         createText('stats-api-summary-chip-value', value, 'strong')
       );
       return chip;
+    }
+
+    function getStatsApiWinRateAccent(winRate: number | null | undefined): boolean | 'negative' {
+      return Number(winRate || 0) < 0.5 ? 'negative' : true;
+    }
+
+    function createStatsApiSkillOrderRow(entry: StatsApiSkillOrder): HTMLElement {
+      const row = doc.createElement('div');
+      row.className = 'stats-api-skill-order-row';
+      row.append(
+        createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
+        createStatsApiOptionMeta(entry)
+      );
+      return row;
     }
 
     function createStatsApiOptionMeta(
@@ -744,7 +767,7 @@
         meta.append(createStatsApiSummaryChip('PR', formatStatsApiRate(entry.pickRate)));
       }
       meta.append(
-        createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), true),
+        createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), getStatsApiWinRateAccent(entry.winRate)),
         createStatsApiSummaryChip('Games', formatStatsApiGames(entry.games))
       );
       return meta;
@@ -754,7 +777,7 @@
       const meta = doc.createElement('div');
       meta.className = 'stats-api-option-meta stats-api-rune-set-meta';
       meta.append(
-        createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), true),
+        createStatsApiSummaryChip('WR', formatStatsApiRate(entry.winRate), getStatsApiWinRateAccent(entry.winRate)),
         createStatsApiSummaryChip('Games', formatStatsApiGames(entry.games))
       );
       return meta;
@@ -1598,7 +1621,7 @@
       metrics.className = 'stats-api-champion-hero-metrics';
       metrics.append(
         createStatsApiSummaryChip('PR', formatStatsApiRate(champion.pickRate)),
-        createStatsApiSummaryChip('WR', formatStatsApiRate(champion.winRate), true),
+        createStatsApiSummaryChip('WR', formatStatsApiRate(champion.winRate), getStatsApiWinRateAccent(champion.winRate)),
         createStatsApiSummaryChip('Games', formatStatsApiGames(champion.games))
       );
       content.append(heading, metrics);
@@ -1743,16 +1766,7 @@
       );
 
       const skillBodies = activeKeystone.skillOrders?.length
-        ? activeKeystone.skillOrders.map((entry, index) => {
-          const node = doc.createElement('article');
-          node.className = 'stats-api-detail-option';
-          node.append(
-            createText('stats-api-detail-option-title', `${index + 1}位 スキルオーダー`, 'h4'),
-            createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
-            createStatsApiOptionMeta(entry)
-          );
-          return node;
-        })
+        ? activeKeystone.skillOrders.map((entry) => createStatsApiSkillOrderRow(entry))
         : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
 
       grid.append(
@@ -1835,16 +1849,7 @@
       ];
 
       const skillBodies = activeKeystone.skillOrders?.length
-        ? activeKeystone.skillOrders.map((entry, index) => {
-          const node = doc.createElement('article');
-          node.className = 'stats-api-detail-option';
-          node.append(
-            createText('stats-api-detail-option-title', `${index + 1}位 スキルオーダー`, 'h4'),
-            createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
-            createStatsApiOptionMeta(entry)
-          );
-          return node;
-        })
+        ? activeKeystone.skillOrders.map((entry) => createStatsApiSkillOrderRow(entry))
         : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
 
       const runeCard = createStatsApiDetailCard(

@@ -537,6 +537,10 @@
   color: var(--stats-api-chip-accent);
 }
 
+.stats-api-summary-chip.accent.negative .stats-api-summary-chip-value {
+  color: var(--danger);
+}
+
 .stats-api-summary-chip-label {
   color: var(--muted);
   font-size: 9.5px;
@@ -724,11 +728,11 @@
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-label {
-  font-size: 8.5px;
+  font-size: 9px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-value {
-  font-size: 10px;
+  font-size: 10.5px;
 }
 
 .stats-api-detail-card-build .stats-api-build-stage .stats-api-detail-empty {
@@ -746,7 +750,7 @@
 }
 
 .stats-api-detail-card-runes .stats-api-detail-subsection,
-.stats-api-detail-card-skill .stats-api-detail-option,
+.stats-api-detail-card-skill .stats-api-skill-order-row,
 .stats-api-detail-card-runes .stats-api-detail-card-body > .stats-api-detail-empty,
 .stats-api-rune-summoner-section {
   grid-column: 1 / -1;
@@ -841,6 +845,20 @@
   flex-wrap: wrap;
   gap: 3px;
   min-width: 0;
+}
+
+.stats-api-skill-order-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.stats-api-skill-order-row .stats-api-option-meta {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
 .stats-api-rune-style-row {
@@ -1160,7 +1178,7 @@
 }
 
 .stats-api-item-set-row .stats-api-summary-chip-value {
-  font-size: 10px;
+  font-size: 10.5px;
 }
 
 .stats-api-rune-summoner-section {
