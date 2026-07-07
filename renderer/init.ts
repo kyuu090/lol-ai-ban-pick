@@ -78,6 +78,7 @@ const { initializeStatsApiChampionList, refreshStatsApiChampionList } = createCh
     elements,
     document,
     championLabel,
+    getChampionsById: () => rendererState.championsById,
     createInlineChampionName,
     loadChampionIcon,
     requestStatsApiJson: window.lcuApi.requestStatsApiJson,

@@ -5,10 +5,13 @@ const {
   buildStatsApiChampionDetailsUrl,
   buildStatsApiChampionsUrl,
   buildStatsApiRuneIconUrl,
+  filterStatsApiOpponentChampionOptions,
   buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
+  getStatsApiOpponentChampionOptions,
   getStatsApiLaneLabel,
   getStatsApiShardRowIndex,
+  normalizeStatsApiSearchText,
   normalizeStatsApiRuneCatalog,
   normalizeStatsApiSelectedShardIds,
   parseStatsApiErrorInfo,
@@ -130,6 +133,31 @@ test('champions view lane labels use compact stats tab naming', () => {
   assert.equal(getStatsApiLaneLabel('BOTTOM'), 'BOT');
   assert.equal(getStatsApiLaneLabel('UTILITY'), 'SUP');
   assert.equal(getStatsApiLaneLabel(''), '-');
+});
+
+test('champions view normalizes opponent search text for mixed jp/en inputs', () => {
+  assert.equal(normalizeStatsApiSearchText('  Ahri '), 'ahri');
+  assert.equal(normalizeStatsApiSearchText(' ツイステッド・フェイト '), 'ツイステッド・フェイト');
+});
+
+test('champions view opponent filter indexes japanese names and english aliases', () => {
+  const options = getStatsApiOpponentChampionOptions({
+    4: { id: 4, name: 'ツイステッド・フェイト', alias: 'TwistedFate', title: 'カードマスター' },
+    103: { id: 103, name: 'アーリ', alias: 'Ahri', title: '九尾の狐' }
+  });
+
+  assert.deepEqual(
+    filterStatsApiOpponentChampionOptions(options, 'ツイステッド').map((entry) => entry.championId),
+    [4]
+  );
+  assert.deepEqual(
+    filterStatsApiOpponentChampionOptions(options, 'ahri').map((entry) => entry.championId),
+    [103]
+  );
+  assert.deepEqual(
+    filterStatsApiOpponentChampionOptions(options, 'fate').map((entry) => entry.championId),
+    [4]
+  );
 });
 
 test('champions view shard helper maps each shard id to the expected row', () => {

@@ -1026,7 +1026,8 @@ response の概念構造:
         "fourthItems": [],
         "fifthItems": [],
         "sixthItems": [],
-        "skillOrders": []
+        "skillOpenings": [],
+        "skillPriorities": []
       }
     ]
   },

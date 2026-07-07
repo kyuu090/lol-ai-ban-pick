@@ -88,12 +88,24 @@
   }
 
   .stats-api-detail-card-build .stats-api-detail-card-body,
+  .stats-api-detail-card-skill .stats-api-detail-card-body,
   .stats-api-detail-card-runes .stats-api-detail-card-body,
   .stats-api-rune-summoner-list {
     grid-template-columns: 1fr;
   }
 
+  .stats-api-detail-column {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .stats-api-detail-card-skill .stats-api-skill-section + .stats-api-skill-section {
+    border-left: 0;
+    padding-left: 0;
+  }
+
   .stats-api-detail-card-build,
+  .stats-api-detail-card-summoners,
   .stats-api-detail-card-skill {
     grid-column: auto;
     grid-row: auto;
@@ -101,6 +113,10 @@
 
   .stats-api-details-toolbar {
     display: grid;
+  }
+
+  .stats-api-opponent-filter {
+    min-width: 0;
   }
 
   .stats-api-item-set-row {

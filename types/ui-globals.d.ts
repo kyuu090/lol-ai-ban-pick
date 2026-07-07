@@ -108,6 +108,7 @@ declare global {
     elements: UiDomElements;
     fetch?: typeof fetch;
     championLabel?(championId: number): string;
+    getChampionsById?(): Record<string | number, ChampionSummaryItem>;
     loadChampionIcon?(img: HTMLImageElement, championId: number): void;
     requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     setTimeout?: typeof setTimeout;

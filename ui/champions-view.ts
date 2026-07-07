@@ -116,6 +116,14 @@
     opponentChampionId?: number;
   }
 
+  interface StatsApiOpponentChampionOption {
+    alias: string;
+    championId: number;
+    name: string;
+    searchText: string;
+    title: string;
+  }
+
   interface StatsApiErrorInfo {
     message: string;
     retryAfterSeconds: number | null;
@@ -160,8 +168,14 @@
     itemId: number;
   }
 
-  interface StatsApiSkillOrder extends StatsApiOptionStat {
+  interface StatsApiSkillOpening extends StatsApiOptionStat {
     skillOrder: string[];
+  }
+
+  interface StatsApiSkillPriority extends StatsApiOptionStat {
+    firstMaxSkill: string;
+    secondMaxSkill: string;
+    thirdMaxSkill: string;
   }
 
   interface StatsApiKeystoneDetails extends StatsApiOptionStat {
@@ -176,7 +190,8 @@
     fourthItems?: StatsApiSingleItem[];
     fifthItems?: StatsApiSingleItem[];
     sixthItems?: StatsApiSingleItem[];
-    skillOrders?: StatsApiSkillOrder[];
+    skillOpenings?: StatsApiSkillOpening[];
+    skillPriorities?: StatsApiSkillPriority[];
   }
 
   interface StatsApiChampionDetailsData {
@@ -227,6 +242,43 @@
   function normalizeChampionId(value: unknown): number {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0;
+  }
+
+  function normalizeStatsApiSearchText(value: unknown): string {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function getStatsApiOpponentChampionOptions(championsById: Record<string | number, any> | null | undefined): StatsApiOpponentChampionOption[] {
+    return Object.values(championsById || {})
+      .map((champion: any) => {
+        const championId = normalizeChampionId(champion?.id);
+        const name = String(champion?.name || '').trim();
+        const alias = String(champion?.alias || '').trim();
+        const title = String(champion?.title || '').trim();
+        if (!championId || !name) return null;
+        return {
+          alias,
+          championId,
+          name,
+          searchText: normalizeStatsApiSearchText([name, alias, title].filter(Boolean).join(' ')),
+          title
+        };
+      })
+      .filter((champion): champion is StatsApiOpponentChampionOption => Boolean(champion))
+      .sort((a, b) => (
+        a.name.localeCompare(b.name, 'ja') ||
+        a.alias.localeCompare(b.alias, 'en') ||
+        a.championId - b.championId
+      ));
+  }
+
+  function filterStatsApiOpponentChampionOptions(
+    options: StatsApiOpponentChampionOption[],
+    query: unknown
+  ): StatsApiOpponentChampionOption[] {
+    const normalizedQuery = normalizeStatsApiSearchText(query);
+    if (!normalizedQuery) return options;
+    return options.filter((option) => option.searchText.includes(normalizedQuery));
   }
 
   function getStatsApiShardRowIndex(shardId: unknown): number {
@@ -553,11 +605,19 @@
     let statsApiRankSelectionDirty = false;
     let selectedChampionId = 0;
     let selectedChampionStats: StatsApiChampionStats | null = null;
+    let selectedOpponentChampionId = 0;
     let selectedKeystoneId = 0;
     let lastDetailsData: StatsApiChampionDetailsData | null = null;
     let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
     let statsApiRuneCatalogUrl = '';
     let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
+    const statsApiFiltersBar = doc.querySelector<HTMLElement>('.stats-api-filters');
+    let statsApiOpponentDropdownButton: HTMLButtonElement | null = null;
+    let statsApiOpponentDropdownField: HTMLElement | null = null;
+    let statsApiOpponentDropdownLabel: HTMLElement | null = null;
+    let statsApiOpponentDropdownPanel: HTMLElement | null = null;
+    let statsApiOpponentSearchInput: HTMLInputElement | null = null;
+    let statsApiOpponentOptionsList: HTMLElement | null = null;
 
     function formatStatsApiRate(value: unknown): string {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -591,6 +651,12 @@
       if (detailsView) detailsView.hidden = !isVisible;
       if (listView) listView.hidden = isVisible;
       if (detailsBackButton) detailsBackButton.hidden = !isVisible;
+      if (statsApiOpponentDropdownField) {
+        statsApiOpponentDropdownField.hidden = !isVisible;
+      }
+      if (!isVisible) {
+        setStatsApiOpponentDropdownOpen(false);
+      }
     }
 
     function clearStatsApiRetryTimer(): void {
@@ -724,6 +790,150 @@
       return element;
     }
 
+    function getSelectedOpponentChampionOption(): StatsApiOpponentChampionOption | null {
+      return getStatsApiOpponentChampionOptions(deps.getChampionsById?.())
+        .find((option) => option.championId === selectedOpponentChampionId) || null;
+    }
+
+    function getStatsApiOpponentSummaryLabel(): string {
+      const selectedOption = getSelectedOpponentChampionOption();
+      return selectedOption ? selectedOption.name : '指定なし';
+    }
+
+    function updateStatsApiOpponentDropdownLabel(): void {
+      if (!statsApiOpponentDropdownLabel) return;
+      statsApiOpponentDropdownLabel.textContent = getStatsApiOpponentSummaryLabel();
+    }
+
+    function setStatsApiOpponentDropdownOpen(isOpen: boolean): void {
+      if (!statsApiOpponentDropdownButton || !statsApiOpponentDropdownPanel) return;
+      statsApiOpponentDropdownButton.setAttribute('aria-expanded', String(isOpen));
+      statsApiOpponentDropdownPanel.hidden = !isOpen;
+      if (isOpen) {
+        if (statsApiOpponentSearchInput) {
+          statsApiOpponentSearchInput.value = '';
+        }
+        renderStatsApiOpponentOptions('');
+        statsApiOpponentSearchInput?.focus();
+      }
+    }
+
+    function renderStatsApiOpponentOptions(query = ''): void {
+      if (!statsApiOpponentOptionsList) return;
+      const options = filterStatsApiOpponentChampionOptions(
+        getStatsApiOpponentChampionOptions(deps.getChampionsById?.()),
+        query
+      );
+      const nodes: HTMLElement[] = [];
+      const clearButton = doc.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = `stats-api-opponent-option${selectedOpponentChampionId === 0 ? ' active' : ''}`;
+      clearButton.setAttribute('aria-pressed', String(selectedOpponentChampionId === 0));
+      clearButton.append(createText('stats-api-opponent-option-name', '指定なし'));
+      clearButton.addEventListener('click', async () => {
+        const changed = selectedOpponentChampionId !== 0;
+        selectedOpponentChampionId = 0;
+        updateStatsApiOpponentDropdownLabel();
+        setStatsApiOpponentDropdownOpen(false);
+        if (changed && selectedChampionId > 0 && !detailsView?.hidden) {
+          await refreshSelectedChampionDetails();
+        }
+      });
+      nodes.push(clearButton);
+
+      options.forEach((option) => {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        const isActive = option.championId === selectedOpponentChampionId;
+        button.className = `stats-api-opponent-option${isActive ? ' active' : ''}`;
+        button.setAttribute('aria-pressed', String(isActive));
+        button.append(
+          deps.createInlineChampionName(option.championId, 'inline-champion-name stats-api-opponent-option-name')
+        );
+        button.addEventListener('click', async () => {
+          const changed = selectedOpponentChampionId !== option.championId;
+          selectedOpponentChampionId = option.championId;
+          updateStatsApiOpponentDropdownLabel();
+          setStatsApiOpponentDropdownOpen(false);
+          if (changed && selectedChampionId > 0 && !detailsView?.hidden) {
+            await refreshSelectedChampionDetails();
+          }
+        });
+        nodes.push(button);
+      });
+
+      if (nodes.length === 1) {
+        const empty = createText('stats-api-opponent-empty', '条件に合うチャンピオンがありません。', 'p');
+        statsApiOpponentOptionsList.replaceChildren(clearButton, empty);
+        return;
+      }
+
+      statsApiOpponentOptionsList.replaceChildren(...nodes);
+    }
+
+    function ensureStatsApiOpponentFilter(): void {
+      if (statsApiOpponentDropdownField || !statsApiFiltersBar) return;
+
+      statsApiOpponentDropdownField = doc.createElement('div');
+      statsApiOpponentDropdownField.className = 'stats-api-field stats-api-opponent-filter';
+      statsApiOpponentDropdownField.hidden = true;
+      statsApiOpponentDropdownField.append(createText('stats-api-opponent-label', '対面チャンピオン'));
+
+      const dropdown = doc.createElement('div');
+      dropdown.className = 'stats-api-opponent-dropdown';
+
+      statsApiOpponentDropdownButton = doc.createElement('button');
+      statsApiOpponentDropdownButton.type = 'button';
+      statsApiOpponentDropdownButton.className = 'stats-api-opponent-dropdown-button';
+      statsApiOpponentDropdownButton.setAttribute('aria-expanded', 'false');
+      statsApiOpponentDropdownLabel = createText('stats-api-opponent-dropdown-label', '指定なし');
+      statsApiOpponentDropdownButton.append(statsApiOpponentDropdownLabel);
+      statsApiOpponentDropdownButton.addEventListener('click', () => {
+        const isOpen = statsApiOpponentDropdownButton?.getAttribute('aria-expanded') === 'true';
+        setStatsApiOpponentDropdownOpen(!isOpen);
+      });
+
+      statsApiOpponentDropdownPanel = doc.createElement('div');
+      statsApiOpponentDropdownPanel.className = 'stats-api-opponent-dropdown-panel';
+      statsApiOpponentDropdownPanel.hidden = true;
+
+      statsApiOpponentSearchInput = doc.createElement('input');
+      statsApiOpponentSearchInput.type = 'search';
+      statsApiOpponentSearchInput.className = 'stats-api-opponent-search-input';
+      statsApiOpponentSearchInput.placeholder = '検索';
+      statsApiOpponentSearchInput.setAttribute('aria-label', '対面チャンピオンを検索');
+      statsApiOpponentSearchInput.addEventListener('input', () => {
+        renderStatsApiOpponentOptions(statsApiOpponentSearchInput?.value || '');
+      });
+      statsApiOpponentSearchInput.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        setStatsApiOpponentDropdownOpen(false);
+        statsApiOpponentDropdownButton?.focus();
+      });
+
+      statsApiOpponentOptionsList = doc.createElement('div');
+      statsApiOpponentOptionsList.className = 'stats-api-opponent-options';
+
+      statsApiOpponentDropdownPanel.append(statsApiOpponentSearchInput, statsApiOpponentOptionsList);
+      dropdown.append(statsApiOpponentDropdownButton, statsApiOpponentDropdownPanel);
+      statsApiOpponentDropdownField.append(dropdown);
+      statsApiFiltersBar.insertBefore(
+        statsApiOpponentDropdownField,
+        doc.querySelector('#statsApiDetailsBackButton')
+      );
+
+      doc.addEventListener('click', (event: MouseEvent) => {
+        if (!statsApiOpponentDropdownField) return;
+        const target = event.target as Node | null;
+        if (target && statsApiOpponentDropdownField.contains(target)) return;
+        setStatsApiOpponentDropdownOpen(false);
+      });
+
+      updateStatsApiOpponentDropdownLabel();
+      renderStatsApiOpponentOptions('');
+    }
+
     function createStatsApiSummaryChip(
       label: string,
       value: string,
@@ -747,14 +957,43 @@
       return Number(winRate || 0) < 0.5 ? 'negative' : true;
     }
 
-    function createStatsApiSkillOrderRow(entry: StatsApiSkillOrder): HTMLElement {
+    function createStatsApiSkillOpeningRow(entry: StatsApiSkillOpening): HTMLElement {
       const row = doc.createElement('div');
       row.className = 'stats-api-skill-order-row';
       row.append(
-        createStatsApiTagList(entry.skillOrder.map((skillId, level) => `Lv${level + 1} ${formatSkillLetter(skillId)}`), 'stats-api-skill-order'),
+        createStatsApiSkillTagList(entry.skillOrder.map((skillId, level) => ({
+          prefix: `Lv${level + 1} `,
+          skillLetter: formatSkillLetter(skillId)
+        })), 'stats-api-skill-order'),
         createStatsApiOptionMeta(entry)
       );
       return row;
+    }
+
+    function createStatsApiSkillPriorityRow(entry: StatsApiSkillPriority): HTMLElement {
+      const row = doc.createElement('div');
+      row.className = 'stats-api-skill-order-row';
+      row.append(
+        createStatsApiSkillTagList([
+          { prefix: '1st ', skillLetter: formatSkillLetter(entry.firstMaxSkill) },
+          { prefix: '2nd ', skillLetter: formatSkillLetter(entry.secondMaxSkill) },
+          { prefix: '3rd ', skillLetter: formatSkillLetter(entry.thirdMaxSkill) }
+        ], 'stats-api-skill-priority'),
+        createStatsApiOptionMeta(entry)
+      );
+      return row;
+    }
+
+    function createStatsApiSkillSection(title: string, rows: HTMLElement[]): HTMLElement {
+      const wrap = doc.createElement('section');
+      wrap.className = 'stats-api-detail-subsection stats-api-skill-section';
+      wrap.append(createText('stats-api-detail-subtitle', title, 'h4'));
+      if (rows.length) {
+        wrap.append(...rows);
+      } else {
+        wrap.append(createStatsApiEmptyState(`${title}候補がありません。`));
+      }
+      return wrap;
     }
 
     function createStatsApiOptionMeta(
@@ -787,6 +1026,24 @@
       const container = doc.createElement('div');
       container.className = className;
       container.append(...items.map((item) => createText('stats-api-tag', item)));
+      return container;
+    }
+
+    function createStatsApiSkillTagList(
+      items: Array<{ prefix: string; skillLetter: string }>,
+      className: string
+    ): HTMLElement {
+      const container = doc.createElement('div');
+      container.className = className;
+      container.append(...items.map(({ prefix, skillLetter }) => {
+        const tag = doc.createElement('span');
+        tag.className = 'stats-api-tag stats-api-skill-tag';
+        tag.append(
+          doc.createTextNode(prefix),
+          createText(`stats-api-skill-letter skill-${String(skillLetter || '').toLowerCase()}`, skillLetter)
+        );
+        return tag;
+      }));
       return container;
     }
 
@@ -1150,7 +1407,10 @@
         .filter((row): row is HTMLElement => Boolean(row));
     }
 
-    function createStatsApiSummonerSpellSection(entries: StatsApiSummonerSpells[] | undefined): HTMLElement {
+    function createStatsApiSummonerSpellSection(
+      entries: StatsApiSummonerSpells[] | undefined,
+      options: { hideTitle?: boolean } = {}
+    ): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'stats-api-detail-subsection stats-api-rune-summoner-section';
       section.append(createText('stats-api-detail-subtitle', 'サモナースペル', 'h4'));
@@ -1313,6 +1573,7 @@
 
     async function initializeStatsApiChampionList(): Promise<void> {
       clearStatsApiRetryTimer();
+      ensureStatsApiOpponentFilter();
       initializeStatsApiRankDropdown();
       initializeStatsApiSortButtons();
       initializeStatsApiDetailsActions();
@@ -1440,8 +1701,10 @@
       const openDetails = () => {
         selectedChampionId = normalizeChampionId(stats.championId);
         selectedChampionStats = stats;
+        selectedOpponentChampionId = 0;
         selectedKeystoneId = 0;
         lastDetailsData = null;
+        updateStatsApiOpponentDropdownLabel();
         setStatsApiDetailsVisible(true);
         refreshStatsApiChampionTableSelection();
         refreshSelectedChampionDetails();
@@ -1549,7 +1812,8 @@
         await ensureStatsApiRuneCatalog();
         const response = await fetchStatsApiJson(buildStatsApiChampionDetailsUrl({
           ...filters,
-          championId
+          championId,
+          opponentChampionId: selectedOpponentChampionId
         }));
         if (requestId !== statsApiDetailsRequestId) return;
         lastDetailsData = response?.data || null;
@@ -1765,9 +2029,22 @@
         createStatsApiSingleItemRows('6th アイテム', activeKeystone.sixthItems)
       );
 
-      const skillBodies = activeKeystone.skillOrders?.length
-        ? activeKeystone.skillOrders.map((entry) => createStatsApiSkillOrderRow(entry))
-        : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
+      const skillBodies: HTMLElement[] = [];
+      if (activeKeystone.skillOpenings?.length) {
+        skillBodies.push(createStatsApiSkillSection(
+          'Lv1-6',
+          activeKeystone.skillOpenings.map((entry) => createStatsApiSkillOpeningRow(entry))
+        ));
+      }
+      if (activeKeystone.skillPriorities?.length) {
+        skillBodies.push(createStatsApiSkillSection(
+          '優先スキル',
+          activeKeystone.skillPriorities.map((entry) => createStatsApiSkillPriorityRow(entry))
+        ));
+      }
+      if (!skillBodies.length) {
+        skillBodies.push(createStatsApiEmptyState('スキル候補がありません。'));
+      }
 
       grid.append(
         createStatsApiDetailCard(
@@ -1787,7 +2064,7 @@
         ),
         createStatsApiDetailCard(
           'スキルオーダー',
-          'サンプル内で勝率上位のスキル順',
+          'Lv1-6 の取り方と優先して伸ばすスキル',
           skillBodies
         )
       );
@@ -1803,7 +2080,7 @@
       }
 
       const runeBodies = createStatsApiRuneTabs(activeKeystone.runes, activeKeystone.statShards);
-      runeBodies.push(createStatsApiSummonerSpellSection(activeKeystone.summonerSpells));
+      const summonerBodies = [createStatsApiSummonerSpellSection(activeKeystone.summonerSpells, { hideTitle: true })];
 
       const buildBodies: HTMLElement[] = [
         createStatsApiBuildStageSection(
@@ -1848,9 +2125,22 @@
         )
       ];
 
-      const skillBodies = activeKeystone.skillOrders?.length
-        ? activeKeystone.skillOrders.map((entry) => createStatsApiSkillOrderRow(entry))
-        : [createStatsApiEmptyState('スキルオーダー候補がありません。')];
+      const skillBodies: HTMLElement[] = [];
+      if (activeKeystone.skillOpenings?.length) {
+        skillBodies.push(createStatsApiSkillSection(
+          'Lv1-6',
+          activeKeystone.skillOpenings.map((entry) => createStatsApiSkillOpeningRow(entry))
+        ));
+      }
+      if (activeKeystone.skillPriorities?.length) {
+        skillBodies.push(createStatsApiSkillSection(
+          '優先スキル',
+          activeKeystone.skillPriorities.map((entry) => createStatsApiSkillPriorityRow(entry))
+        ));
+      }
+      if (!skillBodies.length) {
+        skillBodies.push(createStatsApiEmptyState('スキル候補がありません。'));
+      }
 
       const runeCard = createStatsApiDetailCard(
         'ルーンセット',
@@ -1866,6 +2156,17 @@
       );
       buildCard.classList.add('stats-api-detail-card-build');
 
+      const summonerCard = createStatsApiDetailCard(
+        '\u30b5\u30e2\u30ca\u30fc\u30b9\u30da\u30eb',
+        '',
+        summonerBodies
+      );
+      summonerCard.classList.add('stats-api-detail-card-summoners');
+
+      const leftColumn = doc.createElement('div');
+      leftColumn.className = 'stats-api-detail-column';
+      leftColumn.append(runeCard, summonerCard);
+
       const skillCard = createStatsApiDetailCard(
         'スキルオーダー',
         '',
@@ -1873,7 +2174,7 @@
       );
       skillCard.classList.add('stats-api-detail-card-skill');
 
-      grid.append(runeCard, buildCard, skillCard);
+      grid.append(leftColumn, buildCard, skillCard);
       return grid;
     }
 
@@ -1917,6 +2218,9 @@
     parseStatsApiRetryAfterSeconds,
     buildStatsApiRunesDataUrl,
     buildStatsApiRuneIconUrl,
+    filterStatsApiOpponentChampionOptions,
+    getStatsApiOpponentChampionOptions,
+    normalizeStatsApiSearchText,
     sortStatsApiChampionRows
   };
 

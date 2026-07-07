@@ -243,6 +243,12 @@
   min-width: 280px;
 }
 
+.stats-api-opponent-filter {
+  flex: 0 1 188px;
+  min-width: 188px;
+  position: relative;
+}
+
 .stats-api-lane-tabs {
   border-bottom: 0;
   gap: 10px;
@@ -274,6 +280,10 @@
   position: relative;
 }
 
+.stats-api-opponent-dropdown {
+  position: relative;
+}
+
 .stats-api-rank-dropdown-button {
   background: var(--panel-soft);
   border: 1px solid var(--border);
@@ -290,7 +300,43 @@
   width: 100%;
 }
 
+.stats-api-opponent-dropdown-button {
+  align-items: center;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--text);
+  display: flex;
+  font: inherit;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 0 32px 0 12px;
+  position: relative;
+  text-align: left;
+  width: 100%;
+}
+
+.stats-api-opponent-dropdown-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stats-api-rank-dropdown-button::after {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  color: var(--muted);
+  content: "";
+  height: 7px;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-65%) rotate(45deg);
+  width: 7px;
+}
+
+.stats-api-opponent-dropdown-button::after {
   border-bottom: 2px solid currentColor;
   border-right: 2px solid currentColor;
   color: var(--muted);
@@ -307,6 +353,10 @@
   transform: translateY(-35%) rotate(225deg);
 }
 
+.stats-api-opponent-dropdown-button[aria-expanded="true"]::after {
+  transform: translateY(-35%) rotate(225deg);
+}
+
 .stats-api-rank-dropdown-panel {
   background: var(--panel-solid);
   border: 1px solid var(--border);
@@ -320,6 +370,66 @@
   right: 0;
   top: calc(100% + 4px);
   z-index: 20;
+}
+
+.stats-api-opponent-dropdown-panel {
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 16px 34px rgba(32, 38, 56, 0.16);
+  display: grid;
+  gap: 8px;
+  left: 0;
+  min-width: 0;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+}
+
+.stats-api-opponent-search-input {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.stats-api-opponent-options {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.stats-api-opponent-option {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.stats-api-opponent-option.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.stats-api-opponent-option-name {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.stats-api-opponent-empty {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .stats-api-rank-options {
@@ -569,9 +679,13 @@
   display: none;
 }
 
-.stats-api-section-title,
-.stats-api-detail-card-title {
+.stats-api-section-title {
   font-size: 16px;
+  margin: 0;
+}
+
+.stats-api-detail-card-title {
+  font-size: 11px;
   margin: 0;
 }
 
@@ -650,6 +764,13 @@
   grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr);
 }
 
+.stats-api-detail-column {
+  display: grid;
+  gap: 6px;
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .stats-api-detail-card {
   background: var(--stats-api-panel-bg);
   border: 1px solid var(--stats-api-panel-border);
@@ -664,14 +785,8 @@
   align-content: start;
 }
 
-.stats-api-detail-card-runes {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.stats-api-detail-card-summoners {
-  grid-column: 1;
-  grid-row: 2;
+.stats-api-detail-card-summoners .stats-api-detail-subtitle {
+  display: none;
 }
 
 .stats-api-detail-card-build {
@@ -741,7 +856,12 @@
 
 .stats-api-detail-card-skill {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 3;
+}
+
+.stats-api-detail-card-skill .stats-api-detail-card-body {
+  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stats-api-detail-card-runes .stats-api-detail-card-body {
@@ -759,6 +879,19 @@
 .stats-api-rune-tabs {
   display: grid;
   gap: 7px;
+}
+
+.stats-api-skill-section {
+  align-content: start;
+}
+
+.stats-api-detail-card-skill .stats-api-skill-section + .stats-api-skill-section {
+  border-left: 1px solid var(--stats-api-panel-border-soft);
+  padding-left: 12px;
+}
+
+.stats-api-detail-card-skill .stats-api-detail-empty {
+  grid-column: 1 / -1;
 }
 
 .stats-api-rune-tab-list {
@@ -840,6 +973,7 @@
 
 .stats-api-tag-list,
 .stats-api-skill-order,
+.stats-api-skill-priority,
 .stats-api-item-token-list {
   display: flex;
   flex-wrap: wrap;
@@ -1230,6 +1364,33 @@
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+.stats-api-skill-tag {
+  align-items: center;
+  display: inline-flex;
+  font-size: 11.5px;
+  gap: 1px;
+}
+
+.stats-api-skill-letter {
+  font-weight: 900;
+}
+
+.stats-api-skill-letter.skill-q {
+  color: #ff6bb5;
+}
+
+.stats-api-skill-letter.skill-w {
+  color: #52d273;
+}
+
+.stats-api-skill-letter.skill-e {
+  color: #61a8ff;
+}
+
+.stats-api-skill-letter.skill-r {
+  color: #b37bff;
 }
 
 .stats-table thead th {
