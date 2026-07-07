@@ -1165,10 +1165,10 @@
       card.className = 'stats-api-detail-card';
       const header = doc.createElement('div');
       header.className = 'stats-api-detail-card-header';
-      header.append(
-        createText('stats-api-detail-card-title', title, 'h3'),
-        createText('stats-api-detail-card-subtitle', subtitle, 'p')
-      );
+      header.append(createText('stats-api-detail-card-title', title, 'h3'));
+      if (subtitle.trim()) {
+        header.append(createText('stats-api-detail-card-subtitle', subtitle, 'p'));
+      }
       const body = doc.createElement('div');
       body.className = 'stats-api-detail-card-body';
       body.append(...bodyChildren);
@@ -1612,7 +1612,7 @@
       section.className = 'stats-api-keystone-panel';
       section.append(
         createText('stats-api-section-title', 'キーストーン', 'h3'),
-        createText('stats-api-section-subtitle', '候補を切り替えると下の推奨ルーン・ビルドも更新されます。', 'p')
+        createText('stats-api-section-subtitle', 'キーストーンを選択してください', 'p')
       );
       if (!keystones.length) {
         section.append(createStatsApiEmptyState('キーストーン候補がありません。'));
@@ -1860,21 +1860,21 @@
 
       const runeCard = createStatsApiDetailCard(
         'ルーンセット',
-        'ゲーム内のルーンページに寄せて、下部にサモナースペルもまとめて表示します。',
+        '',
         runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
       );
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
 
       const buildCard = createStatsApiDetailCard(
         '推奨アイテムビルド',
-        '開始から6th までの採用候補。',
+        '',
         buildBodies
       );
       buildCard.classList.add('stats-api-detail-card-build');
 
       const skillCard = createStatsApiDetailCard(
         'スキルオーダー',
-        'サンプル数順で並べたスキル順。',
+        '',
         skillBodies
       );
       skillCard.classList.add('stats-api-detail-card-skill');

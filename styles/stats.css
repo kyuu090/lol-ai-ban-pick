@@ -561,8 +561,7 @@
   padding: 7px 9px;
 }
 
-.stats-api-keystone-panel .stats-api-section-title,
-.stats-api-keystone-panel .stats-api-section-subtitle {
+.stats-api-keystone-panel .stats-api-section-title {
   display: none;
 }
 
