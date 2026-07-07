@@ -528,9 +528,9 @@
   border: 1px solid var(--stats-api-chip-border);
   border-radius: 8px;
   display: grid;
-  gap: 1px;
-  min-width: 54px;
-  padding: 3px 5px;
+  gap: 2px;
+  min-width: 62px;
+  padding: 4px 6px;
 }
 
 .stats-api-summary-chip.accent .stats-api-summary-chip-value {
@@ -539,7 +539,7 @@
 
 .stats-api-summary-chip-label {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
@@ -547,7 +547,7 @@
 
 .stats-api-summary-chip-value {
   color: var(--text);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.1;
 }
 
@@ -620,12 +620,12 @@
 }
 
 .stats-api-keystone-card .stats-api-summary-chip {
-  min-width: 42px;
-  padding: 2px 3px;
+  min-width: 48px;
+  padding: 3px 4px;
 }
 
 .stats-api-keystone-card .stats-api-summary-chip-value {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .stats-api-keystone-card.active {
@@ -678,7 +678,7 @@
 .stats-api-detail-card-build .stats-api-detail-card-body {
   align-items: start;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .stats-api-detail-card-build .stats-api-detail-subsection {
@@ -710,8 +710,8 @@
 }
 
 .stats-api-detail-card-build .stats-api-item-icon {
-  height: 28px;
-  width: 28px;
+  height: 32px;
+  width: 32px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-option-meta {
@@ -719,16 +719,16 @@
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip {
-  min-width: 38px;
-  padding: 2px 3px;
+  min-width: 44px;
+  padding: 3px 4px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-label {
-  font-size: 7px;
+  font-size: 8px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-value {
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .stats-api-detail-card-build .stats-api-build-stage .stats-api-detail-empty {
@@ -741,7 +741,7 @@
 }
 
 .stats-api-detail-card-runes .stats-api-detail-card-body {
-  gap: 5px;
+  gap: 7px;
   grid-template-columns: 1fr;
 }
 
@@ -754,7 +754,7 @@
 
 .stats-api-rune-tabs {
   display: grid;
-  gap: 5px;
+  gap: 7px;
 }
 
 .stats-api-rune-tab-list {
@@ -785,6 +785,10 @@
   display: grid;
 }
 
+.stats-api-rune-tab-panels .stats-api-detail-option {
+  padding: 8px 10px;
+}
+
 .stats-api-rune-panel-header {
   align-items: center;
   display: flex;
@@ -798,8 +802,8 @@
 }
 
 .stats-api-rune-set-meta .stats-api-summary-chip {
-  min-width: 50px;
-  padding: 2px 4px;
+  min-width: 56px;
+  padding: 3px 5px;
 }
 
 .stats-api-detail-card-header {
@@ -851,9 +855,10 @@
 .stats-api-rune-page {
   align-items: start;
   display: grid;
-  gap: 6px;
-  grid-template-columns: auto auto;
-  justify-content: start;
+  gap: 8px;
+  grid-template-columns: max-content max-content;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .stats-api-rune-page-primary {
@@ -863,14 +868,15 @@
 .stats-api-rune-page-secondary-row {
   align-items: start;
   display: grid;
-  gap: 6px;
-  grid-template-columns: auto auto;
-  justify-content: start;
+  gap: 8px;
+  grid-template-columns: max-content max-content;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .stats-api-rune-page-shards {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   justify-items: start;
 }
 
@@ -888,8 +894,8 @@
   border: 1px solid var(--stats-api-rune-tree-border);
   border-radius: 9px;
   display: grid;
-  gap: 5px;
-  padding: 7px;
+  gap: 6px;
+  padding: 8px;
   width: fit-content;
 }
 
@@ -899,13 +905,13 @@
 
 .stats-api-rune-tree-slots {
   display: grid;
-  gap: 5px;
+  gap: 6px;
 }
 
 .stats-api-rune-tree-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 .stats-api-rune-node {
@@ -913,20 +919,20 @@
   border-radius: 999px;
   display: inline-flex;
   justify-content: center;
-  min-height: 28px;
-  min-width: 28px;
+  min-height: 31px;
+  min-width: 31px;
   padding: 2px;
   transition: opacity 120ms ease, filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
 .stats-api-rune-node.keystone {
-  min-height: 38px;
-  min-width: 38px;
+  min-height: 42px;
+  min-width: 42px;
 }
 
 .stats-api-rune-node.secondary {
-  min-height: 24px;
-  min-width: 24px;
+  min-height: 26px;
+  min-width: 26px;
 }
 
 .stats-api-rune-node.selected {
@@ -942,27 +948,27 @@
 .stats-api-rune-node-icon {
   display: block;
   height: 100%;
-  max-height: 30px;
-  max-width: 30px;
+  max-height: 32px;
+  max-width: 32px;
   object-fit: contain;
   width: 100%;
 }
 
 .stats-api-rune-node.keystone .stats-api-rune-node-icon {
-  max-height: 34px;
-  max-width: 34px;
+  max-height: 38px;
+  max-width: 38px;
 }
 
 .stats-api-shard-tree {
   display: grid;
-  gap: 4px;
+  gap: 5px;
   width: fit-content;
 }
 
 .stats-api-shard-row {
   display: flex;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 5px;
 }
 
 .stats-api-shard-node {
@@ -974,10 +980,10 @@
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
-  height: 24px;
+  height: 27px;
   justify-content: center;
   padding: 0;
-  width: 24px;
+  width: 27px;
 }
 
 .stats-api-shard-node.selected {
@@ -997,9 +1003,9 @@
 
 .stats-api-shard-node-icon {
   display: block;
-  height: 15px;
+  height: 16px;
   object-fit: contain;
-  width: 15px;
+  width: 16px;
 }
 
 .stats-api-rune-token {
@@ -1029,17 +1035,18 @@
 }
 
 .stats-api-summoner-spell-token {
-  min-height: 26px;
-  padding-right: 8px;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 10px 3px 3px;
 }
 
 .stats-api-summoner-spell-token .stats-api-rune-icon {
-  height: 20px;
-  width: 20px;
+  height: 24px;
+  width: 24px;
 }
 
 .stats-api-summoner-spell-list {
-  gap: 4px;
+  gap: 6px;
 }
 
 .stats-api-rune-icon {
@@ -1048,14 +1055,14 @@
   border-radius: 999px;
   display: block;
   flex: 0 0 auto;
-  height: 18px;
+  height: 20px;
   object-fit: cover;
-  width: 18px;
+  width: 20px;
 }
 
 .stats-api-rune-token.keystone .stats-api-rune-icon {
-  height: 34px;
-  width: 34px;
+  height: 38px;
+  width: 38px;
 }
 
 .stats-api-keystone-card .stats-api-rune-token-label {
@@ -1064,7 +1071,7 @@
 }
 
 .stats-api-rune-token-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -1130,8 +1137,8 @@
   border: 1px solid var(--stats-api-panel-border-soft);
   border-radius: 6px;
   display: block;
-  height: 22px;
-  width: 22px;
+  height: 24px;
+  width: 24px;
 }
 
 .stats-api-item-id {
@@ -1148,22 +1155,27 @@
 }
 
 .stats-api-item-set-row .stats-api-summary-chip {
-  min-width: 42px;
-  padding: 2px 3px;
+  min-width: 48px;
+  padding: 3px 4px;
 }
 
 .stats-api-item-set-row .stats-api-summary-chip-value {
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .stats-api-rune-summoner-section {
-  gap: 4px;
+  gap: 6px;
 }
 
 .stats-api-rune-summoner-list {
   display: grid;
-  gap: 5px 6px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+}
+
+.stats-api-rune-summoner-list .stats-api-detail-option {
+  gap: 6px;
+  padding: 8px;
 }
 
 .stats-api-detail-empty {

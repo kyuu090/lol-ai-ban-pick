@@ -1834,16 +1834,6 @@
           }))
         )
       ];
-      if (activeKeystone.sixthItems?.length) {
-        buildBodies.push(createStatsApiBuildStageSection(
-          '6th',
-          activeKeystone.sixthItems.map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
-            hideTitle: true,
-            hidePickRate: true,
-            iconOnly: true
-          }))
-        ));
-      }
 
       const skillBodies = activeKeystone.skillOrders?.length
         ? activeKeystone.skillOrders.map((entry, index) => {
