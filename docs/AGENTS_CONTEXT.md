@@ -653,7 +653,7 @@ StatsAPI ベースの Champions 画面を実装している。
 - ルーン画像と日本語名は Data Dragon の `https://ddragon.leagueoflegends.com/cdn/{version}/data/ja_JP/runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
 - ルーンセットはゲーム内のルーン設定画面に寄せた見た目で、選択中のスタイル配下だけを明るく表示し、未選択ルーンはグレーアウトする
 - フィルター変更時は一覧だけでなく、表示中の詳細チャンピオンにも同じ条件を再適用して API を再取得する
-- 一覧へ戻るときは選択状態をクリアする
+- `×` ボタンで一覧へ戻るときは選択状態をクリアする
 
 ### Stats
 

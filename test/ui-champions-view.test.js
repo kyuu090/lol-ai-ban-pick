@@ -5,6 +5,8 @@ const {
   buildStatsApiChampionDetailsUrl,
   buildStatsApiChampionsUrl,
   buildStatsApiRuneIconUrl,
+  buildStatsApiChampionSearchText,
+  filterStatsApiChampionRows,
   filterStatsApiOpponentChampionOptions,
   buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
@@ -157,6 +159,44 @@ test('champions view opponent filter indexes japanese names and english aliases'
   assert.deepEqual(
     filterStatsApiOpponentChampionOptions(options, 'fate').map((entry) => entry.championId),
     [4]
+  );
+});
+
+test('champions view champion search text includes localized name and english alias metadata', () => {
+  assert.equal(
+    buildStatsApiChampionSearchText(
+      103,
+      {
+        103: { id: 103, name: 'アーリ', alias: 'Ahri', title: '九尾の狐' }
+      },
+      () => 'アーリ'
+    ),
+    'アーリ アーリ ahri 九尾の狐'
+  );
+});
+
+test('champions view champion list filter matches japanese names and english aliases', () => {
+  const statsList = [
+    { championId: 103, mostPlayedLane: 'MIDDLE', games: 120, winRate: 0.515, pickRate: 0.083, banRate: 0.021, tier: 'A', tierScore: 52.12 },
+    { championId: 4, mostPlayedLane: 'MIDDLE', games: 88, winRate: 0.553, pickRate: 0.044, banRate: 0.012, tier: 'S', tierScore: 55.32 }
+  ];
+  const championsById = {
+    4: { id: 4, name: 'ツイステッド・フェイト', alias: 'TwistedFate', title: 'カードマスター' },
+    103: { id: 103, name: 'アーリ', alias: 'Ahri', title: '九尾の狐' }
+  };
+  const championLabel = (championId) => championsById[championId].name;
+
+  assert.deepEqual(
+    filterStatsApiChampionRows(statsList, 'アーリ', championsById, championLabel).map((entry) => entry.championId),
+    [103]
+  );
+  assert.deepEqual(
+    filterStatsApiChampionRows(statsList, 'fate', championsById, championLabel).map((entry) => entry.championId),
+    [4]
+  );
+  assert.deepEqual(
+    filterStatsApiChampionRows(statsList, '', championsById, championLabel).map((entry) => entry.championId),
+    [103, 4]
   );
 });
 

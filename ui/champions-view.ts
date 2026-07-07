@@ -281,6 +281,35 @@
     return options.filter((option) => option.searchText.includes(normalizedQuery));
   }
 
+  function buildStatsApiChampionSearchText(
+    championId: number,
+    championsById: Record<string | number, any> | null | undefined,
+    championLabel: (championId: number) => string = (id) => `Champion ${id}`
+  ): string {
+    const champion = championsById?.[championId] || championsById?.[String(championId)] || null;
+    return normalizeStatsApiSearchText([
+      championLabel(championId),
+      champion?.name,
+      champion?.alias,
+      champion?.title
+    ].filter(Boolean).join(' '));
+  }
+
+  function filterStatsApiChampionRows(
+    statsList: StatsApiChampionStats[],
+    query: unknown,
+    championsById: Record<string | number, any> | null | undefined,
+    championLabel: (championId: number) => string = (championId) => `Champion ${championId}`
+  ): StatsApiChampionStats[] {
+    const normalizedQuery = normalizeStatsApiSearchText(query);
+    if (!normalizedQuery) return statsList;
+    return statsList.filter((stats) => buildStatsApiChampionSearchText(
+      normalizeChampionId(stats?.championId),
+      championsById,
+      championLabel
+    ).includes(normalizedQuery));
+  }
+
   function getStatsApiShardRowIndex(shardId: unknown): number {
     const numericShardId = normalizeChampionId(shardId);
     return STATS_API_SHARD_ROWS.findIndex((rowShardIds) => rowShardIds.some((candidateId) => candidateId === numericShardId));
@@ -611,6 +640,9 @@
     let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
     let statsApiRuneCatalogUrl = '';
     let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
+    let statsApiChampionSearchQuery = '';
+    let statsApiChampionSearchInput: HTMLInputElement | null = null;
+    let lastStatsApiChampionList: StatsApiChampionStats[] = [];
     const statsApiFiltersBar = doc.querySelector<HTMLElement>('.stats-api-filters');
     let statsApiOpponentDropdownButton: HTMLButtonElement | null = null;
     let statsApiOpponentDropdownField: HTMLElement | null = null;
@@ -793,6 +825,34 @@
     function getSelectedOpponentChampionOption(): StatsApiOpponentChampionOption | null {
       return getStatsApiOpponentChampionOptions(deps.getChampionsById?.())
         .find((option) => option.championId === selectedOpponentChampionId) || null;
+    }
+
+    function ensureStatsApiChampionSearchField(): void {
+      if (statsApiChampionSearchInput || !listView) return;
+      const tableWrap = listView.querySelector<HTMLElement>('.stats-table-wrap');
+      const searchField = doc.createElement('label');
+      searchField.className = 'stats-api-list-search';
+      searchField.setAttribute('for', 'statsApiChampionSearchInput');
+
+      statsApiChampionSearchInput = doc.createElement('input');
+      statsApiChampionSearchInput.id = 'statsApiChampionSearchInput';
+      statsApiChampionSearchInput.type = 'search';
+      statsApiChampionSearchInput.className = 'stats-api-list-search-input';
+      statsApiChampionSearchInput.placeholder = 'チャンピオン名で検索';
+      statsApiChampionSearchInput.setAttribute('aria-label', 'チャンピオン名で検索');
+      statsApiChampionSearchInput.autocomplete = 'off';
+      statsApiChampionSearchInput.spellcheck = false;
+      statsApiChampionSearchInput.addEventListener('input', () => {
+        statsApiChampionSearchQuery = statsApiChampionSearchInput?.value || '';
+        renderStatsApiChampionTable(lastStatsApiChampionList);
+      });
+
+      searchField.append(statsApiChampionSearchInput);
+      if (tableWrap) {
+        listView.insertBefore(searchField, tableWrap);
+      } else {
+        listView.prepend(searchField);
+      }
     }
 
     function getStatsApiOpponentSummaryLabel(): string {
@@ -1574,6 +1634,7 @@
     async function initializeStatsApiChampionList(): Promise<void> {
       clearStatsApiRetryTimer();
       ensureStatsApiOpponentFilter();
+      ensureStatsApiChampionSearchField();
       initializeStatsApiRankDropdown();
       initializeStatsApiSortButtons();
       initializeStatsApiDetailsActions();
@@ -1642,15 +1703,26 @@
     }
 
     function clearStatsApiChampionRows(): void {
+      lastStatsApiChampionList = [];
       elements.statsApiChampionsTableBody?.replaceChildren();
       if (elements.statsApiChampionsEmpty) {
         elements.statsApiChampionsEmpty.hidden = false;
+        elements.statsApiChampionsEmpty.textContent = statsApiChampionSearchQuery
+          ? '検索条件に合うチャンピオンがありません。'
+          : '条件に合うチャンピオンがありません。';
       }
     }
 
     function renderStatsApiChampionTable(statsList: StatsApiChampionStats[]): void {
+      lastStatsApiChampionList = Array.isArray(statsList) ? [...statsList] : [];
+      const filteredStatsList = filterStatsApiChampionRows(
+        lastStatsApiChampionList,
+        statsApiChampionSearchQuery,
+        deps.getChampionsById?.(),
+        (championId) => deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`
+      );
       const sortedStatsList = sortStatsApiChampionRows(
-        statsList,
+        filteredStatsList,
         statsApiSortKey,
         statsApiSortDirection,
         (championId) => deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`
@@ -1659,7 +1731,9 @@
       elements.statsApiChampionsTableBody?.replaceChildren(...rows);
       if (elements.statsApiChampionsEmpty) {
         elements.statsApiChampionsEmpty.hidden = sortedStatsList.length > 0;
-        elements.statsApiChampionsEmpty.textContent = '条件に合うチャンピオンがありません。';
+        elements.statsApiChampionsEmpty.textContent = statsApiChampionSearchQuery
+          ? '検索条件に合うチャンピオンがありません。'
+          : '条件に合うチャンピオンがありません。';
       }
       renderStatsApiSortButtons();
     }
@@ -2219,6 +2293,8 @@
     buildStatsApiRunesDataUrl,
     buildStatsApiRuneIconUrl,
     filterStatsApiOpponentChampionOptions,
+    buildStatsApiChampionSearchText,
+    filterStatsApiChampionRows,
     getStatsApiOpponentChampionOptions,
     normalizeStatsApiSearchText,
     sortStatsApiChampionRows

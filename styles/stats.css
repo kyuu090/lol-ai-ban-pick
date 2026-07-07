@@ -197,7 +197,28 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
+  gap: 10px;
   min-height: 0;
+}
+
+.stats-api-list-search {
+  display: grid;
+  gap: 5px;
+  max-width: 320px;
+}
+
+.stats-api-list-search-input {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.stats-api-list-search-input::placeholder {
+  color: var(--muted);
 }
 
 .stats-api-heading {
@@ -239,7 +260,7 @@
 }
 
 .stats-api-lane-filter {
-  flex: 1 1 320px;
+  flex: 0 1 auto;
   min-width: 280px;
 }
 
@@ -539,16 +560,21 @@
 }
 
 .stats-api-back-button {
+  align-items: center;
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: none;
   color: var(--text);
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 20px;
   font-weight: 800;
   min-height: 36px;
-  padding: 0 14px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 36px;
+  padding: 0 10px;
 }
 
 .stats-api-filters-back-button {
@@ -1083,8 +1109,8 @@
 }
 
 .stats-api-rune-node.secondary {
-  min-height: 26px;
-  min-width: 26px;
+  min-height: 32px;
+  min-width: 32px;
 }
 
 .stats-api-rune-node.selected {
@@ -1132,10 +1158,10 @@
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
-  height: 27px;
+  height: 30px;
   justify-content: center;
   padding: 0;
-  width: 27px;
+  width: 30px;
 }
 
 .stats-api-shard-node.selected {
@@ -1155,9 +1181,9 @@
 
 .stats-api-shard-node-icon {
   display: block;
-  height: 16px;
+  height: 18px;
   object-fit: contain;
-  width: 16px;
+  width: 18px;
 }
 
 .stats-api-rune-token {
