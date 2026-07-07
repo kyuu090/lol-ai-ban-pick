@@ -1,3 +1,42 @@
+:root {
+  --stats-api-table-header-bg: rgba(232, 237, 248, 0.96);
+  --stats-api-hero-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(238, 245, 255, 0.76));
+  --stats-api-hero-border: rgba(154, 167, 184, 0.2);
+  --stats-api-portrait-bg: rgba(37, 99, 235, 0.08);
+  --stats-api-portrait-border: rgba(59, 130, 246, 0.14);
+  --stats-api-chip-bg: rgba(255, 255, 255, 0.78);
+  --stats-api-chip-border: rgba(154, 167, 184, 0.22);
+  --stats-api-chip-accent: #15803d;
+  --stats-api-panel-bg: rgba(255, 255, 255, 0.72);
+  --stats-api-panel-strong-bg: rgba(255, 255, 255, 0.94);
+  --stats-api-panel-subtle-bg: rgba(255, 255, 255, 0.48);
+  --stats-api-panel-border: rgba(154, 167, 184, 0.2);
+  --stats-api-panel-border-strong: rgba(154, 167, 184, 0.22);
+  --stats-api-panel-border-soft: rgba(154, 167, 184, 0.16);
+  --stats-api-panel-border-subtle: rgba(154, 167, 184, 0.14);
+  --stats-api-active-border: rgba(59, 130, 246, 0.55);
+  --stats-api-active-shadow: 0 6px 14px rgba(59, 130, 246, 0.1);
+  --stats-api-tab-active-bg: rgba(37, 99, 235, 0.12);
+  --stats-api-tab-active-border: rgba(59, 130, 246, 0.3);
+  --stats-api-tab-active-text: #1d4ed8;
+  --stats-api-tag-bg: rgba(37, 99, 235, 0.08);
+  --stats-api-tag-border: rgba(59, 130, 246, 0.18);
+  --stats-api-tag-text: #1d4ed8;
+  --stats-api-rune-tree-bg: linear-gradient(180deg, rgba(13, 17, 28, 0.96), rgba(27, 34, 51, 0.94));
+  --stats-api-rune-tree-secondary-bg: linear-gradient(180deg, rgba(17, 21, 30, 0.92), rgba(35, 41, 56, 0.9));
+  --stats-api-rune-tree-border: rgba(99, 115, 140, 0.34);
+  --stats-api-rune-node-selected-bg: radial-gradient(circle, rgba(255, 196, 93, 0.24), rgba(255, 196, 93, 0.02));
+  --stats-api-rune-node-selected-shadow: 0 0 0 1px rgba(255, 205, 96, 0.3), 0 10px 20px rgba(6, 10, 18, 0.32);
+  --stats-api-rune-node-muted-filter: grayscale(1) brightness(0.56);
+  --stats-api-shard-bg: rgba(17, 24, 39, 0.8);
+  --stats-api-shard-selected-bg: rgba(17, 24, 39, 0.88);
+  --stats-api-shard-border: rgba(99, 115, 140, 0.3);
+  --stats-api-shard-selected-border: rgba(255, 205, 96, 0.36);
+  --stats-api-shard-selected-shadow: 0 0 0 1px rgba(255, 205, 96, 0.2), 0 0 18px rgba(255, 205, 96, 0.22), 0 8px 16px rgba(6, 10, 18, 0.24);
+  --stats-api-icon-bg: rgba(20, 24, 36, 0.06);
+  --stats-api-icon-border: rgba(154, 167, 184, 0.14);
+}
+
 .champion-pool-header {
   align-items: start;
   display: flex;
@@ -430,8 +469,8 @@
 
 .stats-api-champion-hero {
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(238, 245, 255, 0.76));
-  border: 1px solid rgba(154, 167, 184, 0.2);
+  background: var(--stats-api-hero-bg);
+  border: 1px solid var(--stats-api-hero-border);
   border-radius: 12px;
   display: grid;
   gap: 6px;
@@ -441,8 +480,8 @@
 
 .stats-api-champion-portrait {
   align-items: center;
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.14);
+  background: var(--stats-api-portrait-bg);
+  border: 1px solid var(--stats-api-portrait-border);
   border-radius: 10px;
   display: flex;
   height: 56px;
@@ -485,8 +524,8 @@
 }
 
 .stats-api-summary-chip {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(154, 167, 184, 0.22);
+  background: var(--stats-api-chip-bg);
+  border: 1px solid var(--stats-api-chip-border);
   border-radius: 8px;
   display: grid;
   gap: 1px;
@@ -495,7 +534,7 @@
 }
 
 .stats-api-summary-chip.accent .stats-api-summary-chip-value {
-  color: #16a34a;
+  color: var(--stats-api-chip-accent);
 }
 
 .stats-api-summary-chip-label {
@@ -514,8 +553,8 @@
 
 .stats-api-keystone-panel {
   align-content: start;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.2);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
   border-radius: 12px;
   display: grid;
   gap: 3px;
@@ -549,8 +588,8 @@
 }
 
 .stats-api-keystone-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.22);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-strong);
   border-radius: 8px;
   box-shadow: none;
   color: inherit;
@@ -591,9 +630,9 @@
 }
 
 .stats-api-keystone-card.active {
-  background: rgba(255, 255, 255, 0.94);
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.1);
+  background: var(--stats-api-panel-strong-bg);
+  border-color: var(--stats-api-active-border);
+  box-shadow: var(--stats-api-active-shadow);
 }
 
 .stats-api-keystone-name {
@@ -609,8 +648,8 @@
 }
 
 .stats-api-detail-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.2);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
   border-radius: 9px;
   display: grid;
   gap: 4px;
@@ -638,35 +677,42 @@
 }
 
 .stats-api-detail-card-build .stats-api-detail-card-body {
-  gap: 5px 7px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
 }
 
 .stats-api-detail-card-build .stats-api-detail-subsection {
-  gap: 3px;
+  align-content: start;
+  background: var(--stats-api-panel-subtle-bg);
+  border: 1px solid var(--stats-api-panel-border-subtle);
+  border-radius: 10px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-list {
-  gap: 3px;
+  gap: 6px;
 }
 
 .stats-api-detail-card-build .stats-api-detail-subtitle {
-  font-size: 11px;
+  font-size: 12px;
+  text-align: center;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row {
   border-radius: 8px;
   gap: 4px;
-  padding: 4px 5px;
+  padding: 6px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-body {
-  gap: 0;
+  gap: 3px;
 }
 
 .stats-api-detail-card-build .stats-api-item-icon {
-  height: 20px;
-  width: 20px;
+  height: 28px;
+  width: 28px;
 }
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-option-meta {
@@ -684,6 +730,10 @@
 
 .stats-api-detail-card-build .stats-api-item-set-row .stats-api-summary-chip-value {
   font-size: 8px;
+}
+
+.stats-api-detail-card-build .stats-api-build-stage .stats-api-detail-empty {
+  min-height: 76px;
 }
 
 .stats-api-detail-card-skill {
@@ -715,8 +765,8 @@
 }
 
 .stats-api-rune-tab {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.22);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-strong);
   border-radius: 999px;
   color: var(--muted);
   font: inherit;
@@ -727,9 +777,9 @@
 }
 
 .stats-api-rune-tab.active {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #1d4ed8;
+  background: var(--stats-api-tab-active-bg);
+  border-color: var(--stats-api-tab-active-border);
+  color: var(--stats-api-tab-active-text);
 }
 
 .stats-api-rune-tab-panels {
@@ -766,8 +816,8 @@
 }
 
 .stats-api-detail-option {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.16);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
   border-radius: 8px;
   display: grid;
   gap: 3px;
@@ -835,8 +885,8 @@
 
 .stats-api-rune-tree {
   align-content: start;
-  background: linear-gradient(180deg, rgba(13, 17, 28, 0.96), rgba(27, 34, 51, 0.94));
-  border: 1px solid rgba(99, 115, 140, 0.34);
+  background: var(--stats-api-rune-tree-bg);
+  border: 1px solid var(--stats-api-rune-tree-border);
   border-radius: 9px;
   display: grid;
   gap: 5px;
@@ -845,7 +895,7 @@
 }
 
 .stats-api-rune-tree.secondary {
-  background: linear-gradient(180deg, rgba(17, 21, 30, 0.92), rgba(35, 41, 56, 0.9));
+  background: var(--stats-api-rune-tree-secondary-bg);
 }
 
 .stats-api-rune-tree-slots {
@@ -881,12 +931,12 @@
 }
 
 .stats-api-rune-node.selected {
-  background: radial-gradient(circle, rgba(255, 196, 93, 0.24), rgba(255, 196, 93, 0.02));
-  box-shadow: 0 0 0 1px rgba(255, 205, 96, 0.3), 0 10px 20px rgba(6, 10, 18, 0.32);
+  background: var(--stats-api-rune-node-selected-bg);
+  box-shadow: var(--stats-api-rune-node-selected-shadow);
 }
 
 .stats-api-rune-node.muted {
-  filter: grayscale(1) brightness(0.56);
+  filter: var(--stats-api-rune-node-muted-filter);
   opacity: 0.52;
 }
 
@@ -918,8 +968,8 @@
 
 .stats-api-shard-node {
   align-items: center;
-  background: rgba(17, 24, 39, 0.8);
-  border: 1px solid rgba(99, 115, 140, 0.3);
+  background: var(--stats-api-shard-bg);
+  border: 1px solid var(--stats-api-shard-border);
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
@@ -932,9 +982,9 @@
 }
 
 .stats-api-shard-node.selected {
-  background: rgba(17, 24, 39, 0.88);
-  border-color: rgba(255, 205, 96, 0.36);
-  box-shadow: 0 0 0 1px rgba(255, 205, 96, 0.2), 0 0 18px rgba(255, 205, 96, 0.22), 0 8px 16px rgba(6, 10, 18, 0.24);
+  background: var(--stats-api-shard-selected-bg);
+  border-color: var(--stats-api-shard-selected-border);
+  box-shadow: var(--stats-api-shard-selected-shadow);
 }
 
 .stats-api-shard-node-label {
@@ -942,7 +992,7 @@
 }
 
 .stats-api-shard-node:not(.selected) .stats-api-shard-node-icon {
-  filter: grayscale(1) brightness(0.56);
+  filter: var(--stats-api-rune-node-muted-filter);
   opacity: 0.52;
 }
 
@@ -955,8 +1005,8 @@
 
 .stats-api-rune-token {
   align-items: center;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(154, 167, 184, 0.18);
+  background: var(--stats-api-chip-bg);
+  border: 1px solid var(--stats-api-chip-border);
   border-radius: 999px;
   color: var(--text);
   display: inline-flex;
@@ -994,8 +1044,8 @@
 }
 
 .stats-api-rune-icon {
-  background: rgba(20, 24, 36, 0.06);
-  border: 1px solid rgba(154, 167, 184, 0.14);
+  background: var(--stats-api-icon-bg);
+  border: 1px solid var(--stats-api-icon-border);
   border-radius: 999px;
   display: block;
   flex: 0 0 auto;
@@ -1021,10 +1071,10 @@
 }
 
 .stats-api-tag {
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: var(--stats-api-tag-bg);
+  border: 1px solid var(--stats-api-tag-border);
   border-radius: 999px;
-  color: #1d4ed8;
+  color: var(--stats-api-tag-text);
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
@@ -1036,8 +1086,8 @@
 
 .stats-api-item-set-row {
   align-items: center;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(154, 167, 184, 0.16);
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
   border-radius: 8px;
   display: flex;
   gap: 5px;
@@ -1068,13 +1118,17 @@
   gap: 2px;
 }
 
+.stats-api-detail-card-build .stats-api-item-token-list {
+  gap: 6px;
+}
+
 .stats-api-item-token.icon-only .stats-api-item-icon {
   margin: 0;
 }
 
 .stats-api-item-icon {
-  background: rgba(20, 24, 36, 0.06);
-  border: 1px solid rgba(154, 167, 184, 0.16);
+  background: var(--stats-api-icon-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
   border-radius: 6px;
   display: block;
   height: 22px;
@@ -1128,7 +1182,7 @@
 }
 
 .stats-api-table thead th {
-  background: rgba(24, 27, 55, 0.96);
+  background: var(--stats-api-table-header-bg);
   position: sticky;
   top: 0;
   z-index: 2;

@@ -16,6 +16,34 @@
     --red: #ff6a8d;
     --danger: #ff6a8d;
     --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+    --stats-api-table-header-bg: rgba(24, 27, 55, 0.96);
+    --stats-api-hero-bg: linear-gradient(135deg, rgba(18, 24, 46, 0.96), rgba(22, 33, 60, 0.92));
+    --stats-api-hero-border: rgba(166, 151, 255, 0.2);
+    --stats-api-portrait-bg: rgba(79, 145, 255, 0.14);
+    --stats-api-portrait-border: rgba(98, 162, 255, 0.24);
+    --stats-api-chip-bg: rgba(24, 29, 59, 0.88);
+    --stats-api-chip-border: rgba(166, 151, 255, 0.18);
+    --stats-api-chip-accent: #4ade80;
+    --stats-api-panel-bg: rgba(18, 22, 47, 0.72);
+    --stats-api-panel-strong-bg: rgba(24, 29, 59, 0.92);
+    --stats-api-panel-subtle-bg: rgba(24, 29, 59, 0.72);
+    --stats-api-panel-border: rgba(166, 151, 255, 0.2);
+    --stats-api-panel-border-strong: rgba(166, 151, 255, 0.22);
+    --stats-api-panel-border-soft: rgba(166, 151, 255, 0.18);
+    --stats-api-panel-border-subtle: rgba(166, 151, 255, 0.16);
+    --stats-api-active-border: rgba(98, 162, 255, 0.42);
+    --stats-api-active-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
+    --stats-api-tab-active-bg: rgba(79, 145, 255, 0.18);
+    --stats-api-tab-active-border: rgba(98, 162, 255, 0.34);
+    --stats-api-tab-active-text: #d9e6ff;
+    --stats-api-tag-bg: rgba(79, 145, 255, 0.16);
+    --stats-api-tag-border: rgba(98, 162, 255, 0.24);
+    --stats-api-tag-text: #d9e6ff;
+    --stats-api-rune-tree-border: rgba(132, 145, 176, 0.34);
+    --stats-api-rune-node-muted-filter: grayscale(1) brightness(0.7);
+    --stats-api-shard-border: rgba(132, 145, 176, 0.28);
+    --stats-api-icon-bg: rgba(255, 255, 255, 0.06);
+    --stats-api-icon-border: rgba(166, 151, 255, 0.14);
   }
   :root:not([data-theme]) body {
     background:
@@ -246,6 +274,34 @@
     --red: #ff6a8d;
     --danger: #ff6a8d;
     --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+    --stats-api-table-header-bg: rgba(24, 27, 55, 0.96);
+    --stats-api-hero-bg: linear-gradient(135deg, rgba(18, 24, 46, 0.96), rgba(22, 33, 60, 0.92));
+    --stats-api-hero-border: rgba(166, 151, 255, 0.2);
+    --stats-api-portrait-bg: rgba(79, 145, 255, 0.14);
+    --stats-api-portrait-border: rgba(98, 162, 255, 0.24);
+    --stats-api-chip-bg: rgba(24, 29, 59, 0.88);
+    --stats-api-chip-border: rgba(166, 151, 255, 0.18);
+    --stats-api-chip-accent: #4ade80;
+    --stats-api-panel-bg: rgba(18, 22, 47, 0.72);
+    --stats-api-panel-strong-bg: rgba(24, 29, 59, 0.92);
+    --stats-api-panel-subtle-bg: rgba(24, 29, 59, 0.72);
+    --stats-api-panel-border: rgba(166, 151, 255, 0.2);
+    --stats-api-panel-border-strong: rgba(166, 151, 255, 0.22);
+    --stats-api-panel-border-soft: rgba(166, 151, 255, 0.18);
+    --stats-api-panel-border-subtle: rgba(166, 151, 255, 0.16);
+    --stats-api-active-border: rgba(98, 162, 255, 0.42);
+    --stats-api-active-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
+    --stats-api-tab-active-bg: rgba(79, 145, 255, 0.18);
+    --stats-api-tab-active-border: rgba(98, 162, 255, 0.34);
+    --stats-api-tab-active-text: #d9e6ff;
+    --stats-api-tag-bg: rgba(79, 145, 255, 0.16);
+    --stats-api-tag-border: rgba(98, 162, 255, 0.24);
+    --stats-api-tag-text: #d9e6ff;
+    --stats-api-rune-tree-border: rgba(132, 145, 176, 0.34);
+    --stats-api-rune-node-muted-filter: grayscale(1) brightness(0.7);
+    --stats-api-shard-border: rgba(132, 145, 176, 0.28);
+    --stats-api-icon-bg: rgba(255, 255, 255, 0.06);
+    --stats-api-icon-border: rgba(166, 151, 255, 0.14);
 }
   :root[data-theme="dark"] body {
     background:

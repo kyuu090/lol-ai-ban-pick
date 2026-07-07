@@ -1091,6 +1091,42 @@
       return section;
     }
 
+    function createStatsApiBuildStageSection(
+      title: string,
+      rows: HTMLElement[],
+      emptyMessage = '候補がありません。'
+    ): HTMLElement {
+      const section = doc.createElement('section');
+      section.className = 'stats-api-detail-subsection stats-api-build-stage';
+      section.append(createText('stats-api-detail-subtitle', title, 'h4'));
+      if (!rows.length) {
+        section.append(createStatsApiEmptyState(emptyMessage));
+        return section;
+      }
+      const list = doc.createElement('div');
+      list.className = 'stats-api-item-set-list';
+      list.append(...rows);
+      section.append(list);
+      return section;
+    }
+
+    function createStatsApiBuildStageRowsFromSets(
+      entries: StatsApiItemSet[] | undefined,
+      options: { iconOnly?: boolean } = {}
+    ): HTMLElement[] {
+      return (entries || [])
+        .map((entry) => {
+          const itemIds = Array.isArray(entry.itemIds) ? entry.itemIds : [];
+          if (!itemIds.length) return null;
+          return createStatsApiItemSetRow('', itemIds, entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: options.iconOnly
+          });
+        })
+        .filter((row): row is HTMLElement => Boolean(row));
+    }
+
     function createStatsApiSummonerSpellSection(entries: StatsApiSummonerSpells[] | undefined): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'stats-api-detail-subsection stats-api-rune-summoner-section';
@@ -1756,43 +1792,58 @@
       const runeBodies = createStatsApiRuneTabs(activeKeystone.runes, activeKeystone.statShards);
       runeBodies.push(createStatsApiSummonerSpellSection(activeKeystone.summonerSpells));
 
-      const buildBodies: HTMLElement[] = [];
-      if (activeKeystone.boots?.length) {
-        buildBodies.push(createStatsApiSingleItemRows('ブーツ', activeKeystone.boots));
+      const buildBodies: HTMLElement[] = [
+        createStatsApiBuildStageSection(
+          '開始',
+          createStatsApiBuildStageRowsFromSets(activeKeystone.startingItems, { iconOnly: true })
+        ),
+        createStatsApiBuildStageSection(
+          'ブーツ',
+          (activeKeystone.boots || []).map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: true
+          }))
+        ),
+        createStatsApiBuildStageSection(
+          '1st + 2nd',
+          createStatsApiBuildStageRowsFromSets(activeKeystone.firstSecondCoreItems, { iconOnly: true })
+        ),
+        createStatsApiBuildStageSection(
+          '3rd',
+          (activeKeystone.thirdItems || []).map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: true
+          }))
+        ),
+        createStatsApiBuildStageSection(
+          '4th',
+          (activeKeystone.fourthItems || []).map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: true
+          }))
+        ),
+        createStatsApiBuildStageSection(
+          '5th',
+          (activeKeystone.fifthItems || []).map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: true
+          }))
+        )
+      ];
+      if (activeKeystone.sixthItems?.length) {
+        buildBodies.push(createStatsApiBuildStageSection(
+          '6th',
+          activeKeystone.sixthItems.map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
+            hideTitle: true,
+            hidePickRate: true,
+            iconOnly: true
+          }))
+        ));
       }
-      if (activeKeystone.startingItems?.length) {
-        const wrap = doc.createElement('section');
-        wrap.className = 'stats-api-detail-subsection';
-        wrap.append(createText('stats-api-detail-subtitle', 'スタートアイテム', 'h4'));
-        const list = doc.createElement('div');
-        list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry, {
-          hidePickRate: true,
-          iconOnly: true
-        })));
-        wrap.append(list);
-        buildBodies.push(wrap);
-      }
-      if (activeKeystone.firstSecondCoreItems?.length) {
-        const wrap = doc.createElement('section');
-        wrap.className = 'stats-api-detail-subsection';
-        wrap.append(createText('stats-api-detail-subtitle', '1st + 2nd コア', 'h4'));
-        const list = doc.createElement('div');
-        list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, {
-          arrow: true,
-          hidePickRate: true,
-          iconOnly: true
-        })));
-        wrap.append(list);
-        buildBodies.push(wrap);
-      }
-      buildBodies.push(
-        createStatsApiSingleItemRows('3rd アイテム', activeKeystone.thirdItems),
-        createStatsApiSingleItemRows('4th アイテム', activeKeystone.fourthItems),
-        createStatsApiSingleItemRows('5th アイテム', activeKeystone.fifthItems),
-        createStatsApiSingleItemRows('6th アイテム', activeKeystone.sixthItems)
-      );
 
       const skillBodies = activeKeystone.skillOrders?.length
         ? activeKeystone.skillOrders.map((entry, index) => {
