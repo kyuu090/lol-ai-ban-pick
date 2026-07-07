@@ -2058,7 +2058,7 @@
           summonerBodies
         ),
         createStatsApiDetailCard(
-          '推奨アイテムビルド',
+          'アイテムビルド',
           '開始から 6th までの代表候補',
           buildBodies
         ),
@@ -2150,7 +2150,7 @@
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
 
       const buildCard = createStatsApiDetailCard(
-        '推奨アイテムビルド',
+        'アイテムビルド',
         '',
         buildBodies
       );
