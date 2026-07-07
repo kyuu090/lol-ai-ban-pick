@@ -997,7 +997,7 @@
         button.setAttribute('aria-controls', panelId);
         button.setAttribute('aria-selected', String(index === 0));
         button.tabIndex = index === 0 ? 0 : -1;
-        button.textContent = `${index + 1}位`;
+        button.textContent = `Set${index + 1}`;
         button.addEventListener('click', () => setActiveTab(index));
         buttons.push(button);
         tabList.append(button);
@@ -1137,11 +1137,10 @@
       }
       const list = doc.createElement('div');
       list.className = 'stats-api-rune-summoner-list';
-      list.append(...entries.map((entry, index) => {
+      list.append(...entries.map((entry) => {
         const node = doc.createElement('article');
         node.className = 'stats-api-detail-option';
         node.append(
-          createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
           (() => {
             const wrap = doc.createElement('div');
             wrap.className = 'stats-api-tag-list stats-api-summoner-spell-list';
