@@ -37,6 +37,7 @@ const {
   requestLaneMatchupAnalysis,
   requestPickPhaseAnalysis
 } = require('./ai-analysis-service');
+const { requestStatsDbApiJson } = require('../stats-db-api');
 const { createRiotMatchHistoryService } = require('./riot-match-history-service');
 const { normalizeRiotPlatformRegion } = require('../riot-api');
 const { createStatePublisher } = require('./state-publisher');
@@ -263,6 +264,10 @@ function bootstrap(): void {
     return createPublicSettings(settings);
   }
 
+  async function requestStatsApiJson(_event: unknown, pathOrUrl: unknown): Promise<unknown> {
+    return requestStatsDbApiJson(pathOrUrl);
+  }
+
   function cleanupWebSocket(): void {
     matchHistoryController.cleanup();
     lcuController.cleanup();
@@ -291,6 +296,7 @@ function bootstrap(): void {
         toggleMaximizeWindow,
         closeWindow,
         collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
+        requestStatsApiJson,
         requestPickPhaseAnalysis,
         requestFinalCompositionAnalysis
       }

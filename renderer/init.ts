@@ -24,6 +24,7 @@ const { loadChampionIcon, loadChampionIconEager } = window.UiChampionIcons;
 const { normalizeThemeMode, renderSettings } = window.UiSettingsView;
 const { createChampionPoolView } = window.UiChampionPoolView;
 const { createMatchDataView } = window.UiMatchDataView;
+const { createChampionsView } = window.UiChampionsView;
 const { createStatsView } = window.UiStatsView;
 const { createInGameView } = window.UiInGameView;
 const { createDraftView } = window.UiDraftView;
@@ -72,6 +73,16 @@ matchHistoryController = window.RendererMatchHistoryController.createMatchHistor
     renderMatchHistoryStatus,
     logDebug,
     logWarn
+});
+const { initializeStatsApiChampionList, refreshStatsApiChampionList } = createChampionsView({
+    elements,
+    document,
+    championLabel,
+    getChampionsById: () => rendererState.championsById,
+    createInlineChampionName,
+    loadChampionIcon,
+    requestStatsApiJson: window.lcuApi.requestStatsApiJson,
+    fetch: window.fetch?.bind(window)
 });
 const { renderLaneOpponentStats, renderPlayedChampionStats, setStatsSort } = createStatsView({
     elements,
@@ -796,7 +807,11 @@ elements.opponentStatsSortGamesButton.addEventListener('click', () => {
 elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
     setStatsSort('opponents', 'winRate');
 });
+elements.statsApiPatchSelect.addEventListener('change', () => {
+    refreshStatsApiChampionList();
+});
 setActiveView(rendererState.activeView);
+initializeStatsApiChampionList();
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
 window.lcuApi.onWindowMaximized(renderWindowMaximizedState);

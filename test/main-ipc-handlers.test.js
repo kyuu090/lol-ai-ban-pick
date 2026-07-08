@@ -20,6 +20,7 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
     toggleMaximizeWindow: () => {},
     closeWindow: () => {},
     collectRiotMatchHistory: () => {},
+    requestStatsApiJson: () => {},
     requestPickPhaseAnalysis: () => {},
     requestFinalCompositionAnalysis: () => {}
   };
@@ -49,6 +50,7 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
     'window:toggle-maximize',
     'window:close',
     'riot-match-history:collect',
+    'stats-api:request',
     'openai:pick-phase',
     'openai:final-composition'
   ]);

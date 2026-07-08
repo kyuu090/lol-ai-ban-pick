@@ -782,6 +782,278 @@ min_reliable_games = 300
 
 ## 注意点
 
+### Champions タブの StatsAPI チャンピオン一覧
+
+Champions タブには、外部 StatsAPI のチャンピオン一覧を表示する。タブは ChampionPool と Stats の間に配置する。
+
+利用する API ドメイン:
+
+```text
+https://db.banpick-ai.lol
+```
+
+画面初期化時に `GET /v1/stats/meta` を取得し、`data.patches`, `data.positions`, `data.ranks` をフィルタ候補として使う。チャンピオン一覧は `GET /v1/stats/positions/:position/champions` から取得し、次のフィルタを UI から変更できる。
+
+- `patch`: 単一選択
+- `position`: レーンタブで単一選択。表示文言は `TOP / JG / MID / BOT / SUP` を使い、選択値は path parameter に埋め込む。`TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY` のいずれかを必ず選択する
+- `ranks`: ドロップダウン内で複数選択。Patch / Lane と同じ form control 系の色味で表示する。全 rank 選択時は API 既定値と同じ扱いとして query に含めない。全 rank を Off にした場合は API へ投げず、選択を促す。チェック変更中は即時再取得せず、ドロップダウンを閉じた時点で反映する。
+
+固定 query:
+
+```text
+minPickRate=0.005
+limit=200
+sort=tierScore:desc
+```
+
+`championsAPI` では各 champion 行に `tierScore` と `tier` も含める。表示項目は tier, champion, most played lane, games, win rate, pick rate, ban rate とする。左端の列は `tier` を表示し、この列ヘッダ操作では `tierScore` による昇順 / 降順ソートを行う。`tier` の文字色は `S=金`, `A=赤`, `B=青`, `C=緑`, `D=グレー` とする。フィルター行は `Patch`、`Rank`、`Lane` の順で同じ行に並べる。Lane タブに全レーンは置かず、`TOP / JG / MID / BOT / SUP` のみを表示する。Champions タブでは上部フィルター領域とテーブルヘッダは固定し、チャンピオン一覧の行だけを内部スクロールさせる。champion 名とアイコンは既存の Data Dragon / LCU champion master 表示に合わせ、一覧では視認性を優先してやや大きめに表示する。テーブルの各列ヘッダはクリックで昇順 / 降順を切り替えられるようにし、初期表示は `tierScore` の降順にする。再取得は画面初期化時、Patch 変更時、Lane 変更時、Rank チェック変更後にドロップダウンを閉じた時に行う。
+
+Renderer からの直接 fetch は CORS に依存するため、実リクエストは main process の `stats-api:request` IPC 経由で行う。`https://db.banpick-ai.lol` へのアクセスは `stats-db-api.ts` に集約し、許可する path は `/v1/stats/meta` と `/v1/stats/positions/:position/champions` のみに限定する。Champions タブの UI は Stats タブとは独立した `ui/champions-view.ts` に置く。
+
+429 レート制限時は `Retry-After` ヘッダを秒数に正規化し、UI にレート制限中であることと自動再試行までの秒数を表示する。`Retry-After` がない 429 は 5 秒後に再試行する。`/v1/stats/meta` の 429 は meta 取得から、`/v1/stats/positions/:position/champions` の 429 は champion 一覧取得から再試行する。5xx は自動再試行せず、StatsAPI サーバーエラーとして表示する。
+
+### Champions タブのチャンピオン詳細画面
+
+Champions タブのチャンピオン一覧で champion 行を選択すると、同じ Champions タブ内でチャンピオン詳細画面へ遷移する。詳細画面は、一覧の Patch / Rank / Lane フィルターをそのまま受け継いだ状態で表示する。
+
+画面状態は次の値を持つ。
+
+```text
+view: champions-list | champion-detail
+selectedChampionId
+selectedPatch
+selectedPosition
+selectedRanks
+selectedKeystoneId
+selectedDetailTab: runes | build
+```
+
+戻る操作では `champions-list` に戻し、Patch / Rank / Lane、一覧のソート、スクロール位置を維持する。詳細画面内で Patch / Rank / Lane を変更できるようにする場合も、一覧と同じ状態を更新し、戻った一覧にも反映する。URL を持たない Electron 画面なので、初期実装では renderer state で管理する。将来的に deep link が必要になった場合は hash 形式で `#champions/:championId?patch=...&position=...&ranks=...` を検討する。
+
+詳細画面の上部は以下の構成にする。
+
+```text
+[戻る] champion icon champion name
+Patch: 25.xx / Lane: MID / Rank: Emerald+
+Games / WR / Pick / Ban / Tier
+
+Best Keystones
+[Keystone A] WR 52.1% Pick 24.3% Games 12034
+[Keystone B] WR 51.7% Pick 17.8% Games 8790
+```
+
+具体的な画面構成は、できるだけ 1 画面で全体を把握できるダッシュボード型にする。基本方針は「縦スクロールで読む」ではなく、「画面内の固定領域に要点を圧縮して並べる」とする。スクロールは狭いウィンドウや OS の表示倍率が高い場合の fallback としてだけ許可する。
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ ← Ahri      Patch 25.xx   Rank Emerald+   Lane MID           │
+├──────────────────────────────────────────────────────────────┤
+│ [icon] Ahri   A Tier  Games 120K  WR 50.5  Pick 8.2  Ban 4.1 │
+│ Keystone [Electrocute WR52.1 P24.3] [First Strike WR51.7 P17.8]│
+│ Tabs     [Runes] [Build]                                     │
+├──────────────────────────────────────────────────────────────┤
+│ selected tab fills the remaining height without scrolling     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+上部は 3 行以内に抑える。1 行目に戻る、champion 名、Patch、Rank、Lane、2 行目に champion icon、Tier、Games、WR、Pick、Ban、3 行目にキーストーン 2 件と `Runes` / `Build` タブを置く。キーストーンカードは大きなカードにせず、選択可能な横長チップとして扱う。表示は `icon + name + WR + Pick` を基本にし、Games は tooltip または小さな補助表示に回す。これによりヘッダー高さを抑え、下部の詳細グリッドに十分な面積を残す。
+
+`Runes` タブは 1 画面内に `Main Rune Set`、`Sub Rune Set`、`Rune Shards` を同時表示する。デスクトップ幅では 3 カラム構成にする。
+
+```text
+Runes tab
+┌──────────────────────┬──────────────────────┬──────────────────────┐
+│ Main Rune Set        │ Sub Rune Set         │ Rune Shards          │
+│ [r][r][r][r]         │ [r][r]               │ [off][flex][def]     │
+│ WR 52.3 P18.1 G8K    │ WR 52.0 P20.2 G9K    │ WR 51.8 P14.0 G6K    │
+│ [r][r][r][r]         │ [r][r]               │ [off][flex][def]     │
+│ WR 51.9 P11.3 G5K    │ WR 51.6 P12.0 G5K    │ WR 51.2 P10.8 G4K    │
+└──────────────────────┴──────────────────────┴──────────────────────┘
+```
+
+各カラムは候補を 2 件までに固定する。ルーン名を長く表示すると面積を取るため、基本は icon 中心にし、名前は hover tooltip に回す。見出し、icon 列、`WR / P / G` の 3 要素だけで構成する。`P` は Pick、`G` は Games とし、列見出しまたは tooltip で意味を補足する。
+
+`Build` タブは 1 画面内に Summoners、Core、Later Items、Skill Order を同時表示する。デスクトップ幅では上段 3 カラム、下段 Skill Order の構成にする。
+
+```text
+Build tab
+┌───────────────┬───────────────────────┬───────────────────────────┐
+│ Summoners     │ Core                  │ Later Items               │
+│ [s][s] 52.0   │ First [i][i] 51.8     │ 3rd [i]52.1 [i]51.9      │
+│ [s][s] 51.5   │ 1st+2nd [i]>[i] 52.4 │ 4th [i]53.0 [i]52.2      │
+│               │                       │ 5th [i]54.1 [i]53.7      │
+│               │                       │ 6th [i]55.0 [i]54.4      │
+├───────────────┴───────────────────────┴───────────────────────────┤
+│ Skill Order                                                        │
+│ Q > E > W      1 Q  2 E  3 W  4 Q  5 Q  6 R ... 18 W              │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+上段の高さを固定し、`Summoners` は 2 件、`Core` は First と First + second を各 1 件から 2 件、`Later Items` は 3rd / 4th / 5th / 6th を各 2 件に固定する。Later Items は item 名を出さず icon + WR の最小表示にする。詳細名、Pick、Games は hover tooltip または選択時の右下ミニ詳細に回す。
+
+Skill Order は横長 1 行に圧縮する。優先順位 `Q > E > W` を左に固定し、Lv1-18 は小さなセルで横に並べる。
+
+```text
+Skill Order compact
+┌───────────────────────────────────────────────────────────────┐
+│ Q > E > W   1 Q  2 E  3 W  4 Q  5 Q  6 R  7 Q  8 E  9 Q ...  │
+└───────────────────────────────────────────────────────────────┘
+```
+
+R は色を変え、Lv6 / Lv11 / Lv16 がひと目で分かるようにする。複数候補を出す場合は 2 行までにし、2 件目は少し薄く表示する。
+
+画面高さが足りない場合の優先順位は次の通り。
+
+1. champion identity、フィルタ、キーストーン、タブは必ず表示する
+2. 選択中タブの全セクション見出しは必ず表示する
+3. 各セクションの 1 位候補は必ず表示する
+4. 2 位候補は高さが足りない場合に省略できる
+5. Games、Pick、item/rune name は tooltip に回せる
+
+狭いウィンドウでは 1 画面表示を維持するため、カラム数だけを落とす。
+
+```text
+Medium width
+Runes:  Main + Sub | Shards
+Build:  Summoners + Core | Later Items
+        Skill Order full width
+```
+
+```text
+Small width
+Header compact
+Keystone chips horizontal
+Tabs
+Selected tab sections as compact rows
+```
+
+Small width では全情報の同時表示より破綻しない表示を優先し、必要に応じてセクション内だけ横スクロールを許可する。縦スクロールが発生する場合でも、通常のデスクトップウィンドウでは発生しないことを目標にする。
+
+各候補の通常表示は共通して次の最小情報にする。
+
+```text
+[icons]  WR 52.1  P24.3  G32K
+```
+
+WR は最も目立つ数値、Pick は採用しやすさ、Games は信頼度として扱う。勝率だけが独り歩きしないよう、WR と Games は同じ候補内に必ず含める。採用率しきい値を満たさない場合は候補を出さず、該当セクションに `No qualified data` 相当の短い空状態を表示する。
+
+`Best Keystones` は採用率 15%以上のキーストーンの中から、勝率が高い順に最大 2 件を表示する。勝率が同じ場合は games、pick rate、keystone id の順で安定ソートする。15% 以上の候補が 1 件しかない場合は 1 件だけ表示し、0 件の場合は「採用率15%以上のキーストーンがありません」と表示する。キーストーンカードを選択すると、そのキーストーンを条件に詳細内容を再集計または再取得する。
+
+詳細本体はキーストーンごとに 2 つのタブで表示する。
+
+```text
+[Runes] [Build]
+```
+
+`Runes` タブには、ルーンセットとルーンシャードを表示する。
+
+- ルーンセット: 採用率 10%以上の中で勝率が高いものを表示する。メインツリーとサブツリーは混ぜず、`Main Rune Set` と `Sub Rune Set` の 2 グループで集計する。表示は rune icon の横並び、WR、Pick、Games を持つ横長リストにする。
+- ルーンシャード: 採用率 10%以上の中で勝率が高いものを表示する。Offense / Flex / Defense の 3 段を固定し、3 個の shard icon を 1 セットとして表示する。WR、Pick、Games を添える。
+
+`Build` タブには、サモナースペルとアイテムビルドを表示する。
+
+- サモナースペル: 採用率 20%以上の中で勝率が高い組み合わせを表示する。2 spell icon + WR / Pick / Games のコンパクトな横長リストにする。
+- First items: 採用率 10%以上の中で勝率が高い first item の組み合わせを表示する。
+- First + second items: 採用率 10%以上の中で勝率が高い first / second item の組み合わせを表示する。ここで表示した item は、後続の 3rd 以降の単品候補から除外する。
+- 3rd item: 採用率 10%以上の中で勝率が高い item を最大 2 件表示する。ただし First + second items で表示した item は除外する。
+- 4th item: 採用率 10%以上の中で勝率が高い item を最大 2 件表示する。ただし First + second items で表示した item は除外する。
+- 5th item: 採用率 10%以上の中で勝率が高い item を最大 2 件表示する。ただし First + second items で表示した item は除外する。
+- 6th item: 採用率 10%以上の中で勝率が高い item を最大 2 件表示する。ただし First + second items で表示した item は除外する。
+
+Build タブの表示は、上から「Summoners」「Core」「Later Items」「Skill Order」の順にする。First items と First + second items は `Core` グループにまとめ、3rd 以降は `Later Items` に 4 列グリッドで置く。通常表示は item icon と WR を中心にし、item name、Pick、Games は tooltip または選択時のミニ詳細で補足する。サンプルが少ない候補は勝率だけが目立ちすぎないよう、Games を同じ候補内または tooltip 内に必ず含める。
+
+スキルオーダーは `Build` タブの末尾に表示する。見せ方は次の案を採用する。
+
+```text
+Skill Order
+Priority: Q > E > W
+
+Lv 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18
+   Q  E  W  Q  Q  R  Q  E  Q  E  R  E  E  W  W  R  W  W
+```
+
+理由:
+
+- LoL の利用者は `Q > E > W` のような優先順位を素早く読みたい
+- 実際のレベルごとの取得順も、ゲーム中に確認したくなる
+- 1 行のタイムラインにすると、レベル 6 / 11 / 16 の R を自然に確認できる
+
+UI では、上段に `Q > E > W` の優先順位チップを大きめに表示し、下段に Lv1-18 のスキルタイムラインを表示する。Q/W/E/R は小さな正方形セルにし、R だけアクセント色にする。複数候補を表示する場合は勝率上位 2 件までに絞る。採用率しきい値は初期値 10% とし、データが薄い場合のみ「十分な採用率のスキルオーダーがありません」と表示する。
+
+詳細画面向けの StatsAPI は一覧 API と分ける。
+
+```text
+GET /v1/stats/positions/:position/champions/:championId/details
+```
+
+query:
+
+```text
+patch=25.xx
+ranks=EMERALD,DIAMOND
+```
+
+response の概念構造:
+
+```json
+{
+  "data": {
+    "champion": {
+      "championId": 103,
+      "position": "MIDDLE",
+      "games": 120000,
+      "winRate": 0.505,
+      "pickRate": 0.082,
+      "banRate": 0.041,
+      "tier": "A",
+      "tierScore": 82.1
+    },
+    "keystones": [
+      {
+        "keystoneId": 8369,
+        "games": 32000,
+        "winRate": 0.521,
+        "pickRate": 0.243,
+        "runeSets": {
+          "main": [],
+          "sub": [],
+          "shards": []
+        },
+        "summonerSpells": [],
+        "firstItems": [],
+        "firstSecondItems": [],
+        "thirdItems": [],
+        "fourthItems": [],
+        "fifthItems": [],
+        "sixthItems": [],
+        "skillOpenings": [],
+        "skillPriorities": []
+      }
+    ]
+  },
+  "meta": {
+    "dataset": {
+      "watermark": "2026-07-04T00:00:00.000Z"
+    }
+  }
+}
+```
+
+API 側でしきい値を適用するか、Renderer 側で適用するかは段階実装にする。初期実装では API から候補を多めに返し、Renderer 側で次のしきい値を適用する。
+
+```text
+keystoneMinPickRate = 0.15
+runeSetMinPickRate = 0.10
+runeShardMinPickRate = 0.10
+summonerSpellMinPickRate = 0.20
+firstItemMinPickRate = 0.10
+firstSecondItemMinPickRate = 0.10
+laterItemMinPickRate = 0.10
+skillOrderMinPickRate = 0.10
+```
+
+`stats-db-api.ts` の許可 path には `/v1/stats/positions/:position/champions/:championId/details` を追加する。Renderer からは既存と同じ `stats-api:request` IPC を使う。429 / 5xx の扱いは一覧と同じにし、詳細取得中は詳細領域だけ loading 表示にする。一覧を消さずに遷移するため、取得失敗時は戻る操作を維持したままエラーと再試行ボタンを表示する。
+
 ### BAN 率の取得は難しい
 
 通常の Match-V5 データだけでは、ranked solo queue 全体の ban rate を簡単に集計するには多くの試合データが必要になる。

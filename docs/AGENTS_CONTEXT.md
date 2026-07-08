@@ -91,7 +91,7 @@ AGENTS_CONTEXT.md
 - `main/champion-pool-store.js` は ChampionPool の load / save を担当する。
 - `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当する。
 - `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当する。
-- `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当する。
+- `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当する。メインウィンドウの初期横幅は `minWidth` と同じ値にしており、現在の最小横幅は `1200px`。
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当する。
 - `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当する。
 - `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当する。
@@ -641,6 +641,20 @@ BAN表示:
 - 登録済みカードは選択済み表示
 - 登録済みチャンピオンのロール別戦績は `Games`, `W-L`, `WR`, `KDA` のチップで表示する
 - 保存ボタンで `champion-pool.json` に保存
+
+### Champions
+
+StatsAPI ベースの Champions 画面を実装している。
+
+- 上部に `Patch / Rank / Lane` フィルターを表示する
+- 一覧は `/v1/stats/positions/{position}/champions` を使う
+- 一覧のチャンピオン行を選ぶと、同じフィルター条件のまま `/v1/stats/positions/{position}/champions/{championId}/details` を再取得して詳細画面へ切り替える
+- 詳細画面ではキーストーン、ルーンセット、サモナースペル、開始アイテム、ブーツ、コアアイテム、3rd-6th アイテム、スキルオーダーを表示する
+- ルーン画像と日本語名は Data Dragon の `https://ddragon.leagueoflegends.com/cdn/{version}/data/ja_JP/runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
+- スキル画像は Data Dragon の champion spell metadata をチャンピオンごとに取得してキャッシュし、`Lv1-6` / `優先スキル` の両方で利用する。取得失敗時は `Q/W/E/R` の文字表示に戻す
+- ルーンセットはゲーム内のルーン設定画面に寄せた見た目で、選択中のスタイル配下だけを明るく表示し、未選択ルーンはグレーアウトする
+- フィルター変更時は一覧だけでなく、表示中の詳細チャンピオンにも同じ条件を再適用して API を再取得する
+- `×` ボタンで一覧へ戻るときは選択状態をクリアする
 
 ### Stats
 

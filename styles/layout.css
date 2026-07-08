@@ -60,6 +60,11 @@
   overflow: hidden;
 }
 
+#championsView {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
 .debug-toolbar {
   display: flex;
   gap: 10px;

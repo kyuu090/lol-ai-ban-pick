@@ -27,6 +27,7 @@ interface LcuConnection {
 
 interface LcuClientLike {
   fetchJson: (endpoint: string) => Promise<unknown>;
+  getChampionCatalog: () => Promise<Record<number, any>>;
   getChampionIcon: (_event: unknown, championId: unknown) => Promise<string | null>;
   readLockfile: () => Promise<LcuConnection>;
 }
@@ -105,6 +106,7 @@ function createLcuController({
     getSettings,
     getConnection: () => lcuConnection,
     getStatus: () => getState().lcuStatus,
+    getCachedChampionById: (championId: number) => getState().championsById?.[championId] || null,
     setIconUnavailableUntil: (value: number) => {
       championIconUnavailableUntil = value;
     },
@@ -160,14 +162,18 @@ function createLcuController({
         throw new Error(`LCU API request failed: ${summoner.error}`);
       }
 
-      const championsById = createChampionsById(championSummary);
+      const lcuChampionsById = createChampionsById(championSummary);
+      const championsById = Object.keys(lcuChampionsById).length > 0
+        ? lcuChampionsById
+        : await lcuClient.getChampionCatalog().catch(() => getState().championsById || {});
       log.debug('LCU state refreshed', {
         hasLobby: Boolean(lobby && !hasError(lobby)),
         hasChampSelect: Boolean(champSelect && !hasError(champSelect)),
         hasSummoner: Boolean(summoner && !hasError(summoner)),
         gameflowPhase,
         hasGameflowSession: Boolean(gameflowSession && !hasError(gameflowSession)),
-        championCount: Object.keys(championsById).length
+        championCount: Object.keys(championsById).length,
+        championSource: Object.keys(lcuChampionsById).length > 0 ? 'lcu' : 'data-dragon'
       });
 
       updateState({
@@ -192,6 +198,7 @@ function createLcuController({
       lcuWatch.closeWebSocket();
       lcuConnection = null;
       getLaneMatchupController().clearInFlight();
+      const fallbackChampionsById = await lcuClient.getChampionCatalog().catch(() => getState().championsById || {});
       updateState({
         lcuStatus: 'disconnected',
         websocketStatus: 'disconnected',
@@ -200,7 +207,7 @@ function createLcuController({
         summoner: null,
         lobby: null,
         champSelect: null,
-        championsById: {},
+        championsById: fallbackChampionsById,
         laneMatchupAnalysis: createLaneMatchupAnalysisState(),
         error: normalizedError.message
       });

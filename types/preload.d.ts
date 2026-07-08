@@ -25,6 +25,7 @@ export interface LcuApi {
   closeWindow(): Promise<void>;
   onWindowMaximized(callback: (isMaximized: boolean) => void): () => void;
   collectRiotMatchHistory(options: CollectRiotMatchHistoryOptions): Promise<CollectRiotMatchHistoryResult>;
+  requestStatsApiJson(pathOrUrl: string): Promise<unknown>;
   requestPickPhaseAnalysis(draftContext: PickPhaseDraftContext): Promise<AiAnalysisResponse>;
   requestFinalCompositionAnalysis(draftContext: FinalCompositionDraftContext): Promise<AiAnalysisResponse>;
   onState(callback: (state: AppState) => void): () => void;
