@@ -9,6 +9,7 @@ function registerIpcHandlers({
   ipcMain.handle('champion-pool:get', handlers.getChampionPool);
   ipcMain.handle('champion-pool:save', handlers.saveChampionPool);
   ipcMain.handle('settings:get', handlers.getSettings);
+  ipcMain.handle('app:get-client-version', handlers.getClientVersion);
   ipcMain.handle('settings:choose-lol-install-dir', handlers.chooseLolInstallDir);
   ipcMain.handle('settings:update-lol-install-dir', handlers.updateLolInstallDir);
   ipcMain.handle('settings:update-riot-platform-region', handlers.updateRiotPlatformRegion);
@@ -35,6 +36,7 @@ interface IpcHandlerMap {
   getChampionPool: (...args: any[]) => unknown;
   saveChampionPool: (...args: any[]) => unknown;
   getSettings: (...args: any[]) => unknown;
+  getClientVersion: (...args: any[]) => unknown;
   chooseLolInstallDir: (...args: any[]) => unknown;
   updateLolInstallDir: (...args: any[]) => unknown;
   updateRiotPlatformRegion: (...args: any[]) => unknown;

@@ -1,5 +1,6 @@
 const { app, dialog, ipcMain } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('../logger');
 const {
   createDefaultSettings,
@@ -76,6 +77,7 @@ const APP_ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
+const PACKAGE_LOCK_PATH = path.join(__dirname, '..', 'package-lock.json');
 
 type StoredSettings = {
   lolInstallDir: string;
@@ -268,6 +270,20 @@ function bootstrap(): void {
     return requestStatsDbApiJson(pathOrUrl);
   }
 
+  async function getClientVersion(): Promise<string> {
+    const packageLockText = await fs.readFile(PACKAGE_LOCK_PATH, 'utf8');
+    const packageLock = JSON.parse(packageLockText);
+    const rootPackageVersion = String(packageLock?.packages?.['']?.version || '').trim();
+    const lockfileVersion = String(packageLock?.version || '').trim();
+    const version = rootPackageVersion || lockfileVersion;
+
+    if (!version) {
+      throw new Error('package-lock.json からクライアントバージョンを取得できませんでした');
+    }
+
+    return version;
+  }
+
   function cleanupWebSocket(): void {
     matchHistoryController.cleanup();
     lcuController.cleanup();
@@ -288,6 +304,7 @@ function bootstrap(): void {
         getChampionPool: () => championPool,
         saveChampionPool,
         getSettings: () => createPublicSettings(settings),
+        getClientVersion,
         chooseLolInstallDir,
         updateLolInstallDir,
         updateRiotPlatformRegion,

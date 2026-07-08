@@ -154,6 +154,7 @@ git push origin v0.1.1
 - `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当します。
 - `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当します。メインウィンドウは起動時に `minWidth` と同じ横幅で開き、現在は `1200px` を最小横幅として初期表示しています。
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当します。
+- タブ列の上にあるクライアントバージョン表示は `package-lock.json` の `packages[""].version` を参照し、ビルド時に `dist-app/package-lock.json` へ同梱した値を preload 経由で Renderer に渡します。
 - `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当します。
 - `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当します。
 - `main/lcu-client.js` は lockfile 読み取り、LCU REST request、champion icon 取得を担当します。champion icon は通常 `/lol-game-data/assets/v1/champion-icons/<id>.png` を使い、LCU 未接続時や icon endpoint が一時的に失敗している間は Data Dragon へフォールバックします。champion 名も `championsById` が LCU から取れない場合は Data Dragon の champion catalog で補完します。

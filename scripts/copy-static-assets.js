@@ -34,6 +34,7 @@ if (require.main === module) {
       copyEntry('assets'),
       copyEntry('img'),
       copyEntry('index.html'),
+      copyEntry('package-lock.json'),
       copyEntry('styles')
     ]).catch((error) => {
       console.error(error);
