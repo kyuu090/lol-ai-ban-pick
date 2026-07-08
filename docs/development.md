@@ -17,6 +17,14 @@ npm run dev
 
 `npm run dev` はログレベルを DEBUG にして Electron を起動し、実行ディレクトリ直下の `debug.log` にログを追記します。`debug.log` は `.gitignore` 対象です。
 
+packaged build でもメインプロセスログは常時ローカルへ出力します。Windows では通常、次の場所です。
+
+```text
+C:\Users\<ユーザー名>\AppData\Roaming\banpick-ai\logs\debug.log
+```
+
+ログが約 5MB を超えると `debug.old.log` へローテーションします。
+
 ## テスト
 
 ```bash
@@ -170,7 +178,7 @@ git push origin v0.1.1
 - `riot-match-history.js` は Match-V5 response の正規化と自己戦績集計を担当します。
 - `ui/champions-view.ts` は StatsAPI のメタ情報 / チャンピオン一覧 / チャンピオン詳細画面を担当します。Champions タブでは上部フィルターを保持したまま、一覧行クリックで `/v1/stats/positions/{position}/champions/{championId}/details` を再取得して詳細表示します。詳細表示中は `Lane` の右に対面チャンピオンの単一選択プルダウンを表示し、日本語名と英語 alias の両方で検索できます。候補行だけでなくプルダウンの選択済み表示にもチャンピオンアイコンを出し、フィルタ上のアイコンは候補一覧より少し大きめに表示します。詳細を一覧から開くたび対面チャンピオンは `指定なし` にリセットされ、選択時は `opponentChampionId` を付けて detail API を再取得します。ルーン画像と日本語名は Data Dragon の `runesReforged.json` を `ja_JP` で取得し、keystone / rune / style の表示に使います。スキル画像は別系統として Data Dragon の champion spell metadata をチャンピオンごとに取得してキャッシュし、`Lv1-6` と `優先スキル` の両方で利用します。取得に失敗した場合は既存の `Q/W/E/R` 文字表示へフォールバックし、取得できた画像は大きめに表示します。`Lv1-6` はレベル行とスキル行をそろえた2段レイアウトで表示します。詳細画面のルーンセットはゲーム内ルーンページ寄せの2系統表示で、選択済みルーンのみ明るく、未選択はグレーアウトします。ルーンセットカードでは見出しと `Set1` / `Set2` タブを同じ行に置いて、カード上端の縦余白を増やさず候補切り替えできるようにしています。キーストーン自体は上部のキーストーン選択で見せるため、ルーンセットカード側では主系統・副系統どちらのツリーでもキーストーン行を省略し、サブルーン中心に表示します。カード、余白、アイコン、メトリクスは一覧より高密度な表示に調整しており、推奨アイテムビルドは `WR / Games` のみを残して `PR` を省略し、サモナースペルも `WR / Games` のみを表示します。アイテム行もアイコン中心で圧縮します。ビルドカードは `開始 / ブーツ / 1st + 2nd / 3rd...` の段階別カラムとして並べ、各段階ラベルは大きな見出しではなく小さめのピル状ラベルとして軽く表示しつつ、一覧性を損なわない文字サイズを確保しています。`firstSecondCoreItems` の 2 アイテムは同じボックスの組み合わせとして扱い、その組み合わせ単位で `WR / Games` を表示します。ブロック間の矢印は出しません。キーストーン候補は同じカード幅の中でアイコンと名前を大きめに見せ、詳細グリッドは `左上: ルーンセット / 左下: サモナースペル / 右側: アイテム / 下段全面: スキル` の配置にしています。スキルカードでは `skillOpenings` を `Lv1-6`、`skillPriorities` を `優先スキル` として分けて表示し、優先スキルは `Q > W > E` のような1行表記にしています。推奨アイテムビルドカードではセクション間隔と行の高さも個別に圧縮し、戻るボタンは詳細ヘッダーではなくフィルター行の右端に配置し、配色もテーマ色へ追従させています。
 - `match-history-workflow.js` は match history 更新時の ID 結合、重複排除、キャッシュ済み detail 判定を担当します。
-- `logger.js` で `electron-log` を設定し、`npm run dev` では `debug.log` へ DEBUG ログを出します。
+- `logger.js` で `electron-log` を設定し、`npm run dev` では実行ディレクトリ直下の `debug.log` へ DEBUG ログを出します。packaged build でも `app.getPath('userData')/logs/debug.log` へ INFO 以上を常時出力し、約 5MB で `debug.old.log` へローテーションします。`render-process-gone`、`did-fail-load`、`preload-error` などの Electron 重要イベントも記録します。
 
 ## 安全方針
 
@@ -292,7 +300,7 @@ WebSocket が切断された場合は 3 秒後に再接続を試みます。ア�
 設定と ChampionPool は Electron の `app.getPath('userData')` 配下に保存します。Windows では通常、次のような場所です。
 
 ```text
-C:\Users\<ユーザー名>\AppData\Roaming\lol-ai-draft-coach\
+C:\Users\<ユーザー名>\AppData\Roaming\banpick-ai\
 ```
 
 保存ファイル:

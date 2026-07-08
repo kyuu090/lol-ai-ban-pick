@@ -271,6 +271,7 @@ GitHub Actions でビルドした成果物を、そのまま GitHub Release へ�
 - 更新 URL や provider 情報を Renderer へ公開しない
 - 更新確認が長引くと体感起動が悪くなるため、タイムアウトは短めにする
 - 更新確認タイムアウトは現在 10 秒
+- スプラッシュ読み込みは失敗や 3 秒タイムアウトでも起動フロー全体を止めない
 - `autoUpdater.quitAndInstall()` 実行前に必要ならログ flush を考慮する
 - 未署名 exe は SmartScreen 警告が出やすいので、将来的にはコード署名を検討する
 

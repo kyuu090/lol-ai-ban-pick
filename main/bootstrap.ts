@@ -81,6 +81,7 @@ const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
 const PACKAGE_LOCK_PATH = path.join(__dirname, '..', 'package-lock.json');
+const SPLASH_LOAD_TIMEOUT_MS = 3000;
 
 type StoredSettings = {
   lolInstallDir: string;
@@ -243,10 +244,26 @@ function bootstrap(): void {
       log
     });
     splashWindowLoadPromise = new Promise<void>((resolve) => {
-      if (splashWindow.webContents.isLoadingMainFrame()) {
-        splashWindow.webContents.once('did-finish-load', () => resolve());
-      } else {
+      let settled = false;
+
+      function finish(): void {
+        if (settled) return;
+        settled = true;
         resolve();
+      }
+
+      if (splashWindow.webContents.isLoadingMainFrame()) {
+        splashWindow.webContents.once('did-finish-load', () => finish());
+        splashWindow.webContents.once('did-fail-load', (_event: unknown, errorCode: number, errorDescription: string) => {
+          log.warn('Splash window failed to load', { errorCode, errorDescription });
+          finish();
+        });
+        setTimeout(() => {
+          log.warn('Splash window load timed out. Continuing bootstrap.');
+          finish();
+        }, SPLASH_LOAD_TIMEOUT_MS);
+      } else {
+        finish();
       }
     });
     return splashWindow;
@@ -366,69 +383,78 @@ function bootstrap(): void {
     lcuController.cleanup();
   }
 
-  app.whenReady().then(async () => {
-    log.info('App ready');
-    const splashWindow = createStartupSplashWindow();
-    await setSplashStatus(splashWindow, 'バージョン情報を確認しています...');
-    const currentVersion = await getClientVersion();
-    await setSplashVersion(splashWindow, currentVersion);
-    const startupUpdateResult = await runStartupUpdateFlow({
-      currentVersion,
-      splashWindow,
-      setSplashStatus: (message: string) => setSplashStatus(splashWindow, message),
-      log,
-      serializeForLog
-    });
+  app.whenReady()
+    .then(async () => {
+      log.info('App ready');
+      const splashWindow = createStartupSplashWindow();
+      await setSplashStatus(splashWindow, 'バージョン情報を確認しています...');
+      const currentVersion = await getClientVersion();
+      await setSplashVersion(splashWindow, currentVersion);
+      const startupUpdateResult = await runStartupUpdateFlow({
+        currentVersion,
+        splashWindow,
+        setSplashStatus: (message: string) => setSplashStatus(splashWindow, message),
+        log,
+        serializeForLog
+      });
 
-    if (startupUpdateResult.action === 'quit') {
+      if (startupUpdateResult.action === 'quit') {
+        await closeSplashWindow(splashWindow);
+        return;
+      }
+
+      await setSplashStatus(splashWindow, '設定を読み込んでいます...');
+      await loadSettings();
+      await setSplashStatus(splashWindow, 'チャンピオンプールを読み込んでいます...');
+      await loadChampionPool();
+      await setSplashStatus(splashWindow, '起動準備をしています...');
+
+      registerIpcHandlers({
+        ipcMain: ipcMain as IpcMain,
+        logRendererMessage,
+        handlers: {
+          getState: statePublisher.getState,
+          refreshLcuState: lcuController.refreshLcuState,
+          getChampionIcon: lcuController.getClient().getChampionIcon,
+          getChampionPool: () => championPool,
+          saveChampionPool,
+          getSettings: () => createPublicSettings(settings),
+          getClientVersion,
+          chooseLolInstallDir,
+          updateLolInstallDir,
+          updateRiotPlatformRegion,
+          updateThemeMode,
+          minimizeWindow,
+          toggleMaximizeWindow,
+          closeWindow,
+          collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
+          requestStatsApiJson,
+          requestPickPhaseAnalysis,
+          requestFinalCompositionAnalysis
+        }
+      });
+
+      await setSplashStatus(splashWindow, 'ウィンドウを表示しています...');
+      const nextMainWindow = createWindow();
+      await waitForWindowReady(nextMainWindow);
       await closeSplashWindow(splashWindow);
-      return;
-    }
+      await lcuController.refreshLcuState();
 
-    await setSplashStatus(splashWindow, '設定を読み込んでいます...');
-    await loadSettings();
-    await setSplashStatus(splashWindow, 'チャンピオンプールを読み込んでいます...');
-    await loadChampionPool();
-    await setSplashStatus(splashWindow, '起動準備をしています...');
-
-    registerIpcHandlers({
-      ipcMain: ipcMain as IpcMain,
-      logRendererMessage,
-      handlers: {
-        getState: statePublisher.getState,
-        refreshLcuState: lcuController.refreshLcuState,
-        getChampionIcon: lcuController.getClient().getChampionIcon,
-        getChampionPool: () => championPool,
-        saveChampionPool,
-        getSettings: () => createPublicSettings(settings),
-        getClientVersion,
-        chooseLolInstallDir,
-        updateLolInstallDir,
-        updateRiotPlatformRegion,
-        updateThemeMode,
-        minimizeWindow,
-        toggleMaximizeWindow,
-        closeWindow,
-        collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
-        requestStatsApiJson,
-        requestPickPhaseAnalysis,
-        requestFinalCompositionAnalysis
-      }
+      app.on('activate', () => {
+        if (!hasOpenWindows()) {
+          createWindow();
+          statePublisher.sendState();
+        }
+      });
+    })
+    .catch((error: unknown) => {
+      log.error('Bootstrap failed', serializeForLog(error));
+      dialog.showErrorBox(
+        '起動エラー',
+        'アプリの起動中にエラーが発生しました。debug.log を確認してください。'
+      );
+      app.quit();
     });
-
-    await setSplashStatus(splashWindow, 'ウィンドウを表示しています...');
-    const nextMainWindow = createWindow();
-    await waitForWindowReady(nextMainWindow);
-    await closeSplashWindow(splashWindow);
-    await lcuController.refreshLcuState();
-
-    app.on('activate', () => {
-      if (!hasOpenWindows()) {
-        createWindow();
-        statePublisher.sendState();
-      }
-    });
-  });
 
   app.on('window-all-closed', () => {
     cleanupWebSocket();

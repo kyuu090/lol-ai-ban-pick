@@ -121,10 +121,12 @@ LOG_TO_CWD=1
 
 - 通常のログレベル既定値は `info`
 - `LOG_TO_CWD=1` のとき、実行ディレクトリ直下の `debug.log` に出力する
+- packaged build では `app.getPath('userData')/logs/debug.log` に常時出力する
 - `debug.log` は追記方式
-- `electron-log` の既定により、ログファイルは一定サイズでローテーションされる
+- `debug.log` が約 5MB を超えると `debug.old.log` にローテーションされる
 - `debug.log` は `.gitignore` 対象
 - LCUのpasswordやBasic認証ヘッダはログに出さない
+- `render-process-gone`、`did-fail-load`、`preload-error` などの Electron 重要イベントも記録する
 
 主なログ対象:
 
