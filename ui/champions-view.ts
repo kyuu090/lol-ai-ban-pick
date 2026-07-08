@@ -218,6 +218,24 @@
     }>;
   }
 
+  interface DataDragonChampionSpellImage {
+    full?: string;
+  }
+
+  interface DataDragonChampionSpell {
+    id?: string;
+    image?: DataDragonChampionSpellImage;
+    name?: string;
+  }
+
+  interface DataDragonChampionDataEntry {
+    spells?: DataDragonChampionSpell[];
+  }
+
+  interface DataDragonChampionDataPayload {
+    data?: Record<string, DataDragonChampionDataEntry>;
+  }
+
   interface StatsApiRuneAssetEntry {
     iconPath?: string;
     id: number;
@@ -229,6 +247,13 @@
   interface StatsApiRuneAssetCatalog {
     perks?: Record<string, StatsApiRuneAssetEntry>;
     styles?: Record<string, StatsApiRuneAssetEntry>;
+  }
+
+  interface StatsApiChampionSpellAssetEntry {
+    iconUrl: string;
+    key: string;
+    label: string;
+    name: string;
   }
 
   function normalizeStatsApiPosition(value: unknown): string {
@@ -568,6 +593,23 @@
     return `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/runesReforged.json`;
   }
 
+  function buildStatsApiChampionSpellDataUrl(patch: unknown, alias: unknown, locale = 'ja_JP'): string {
+    const normalizedAlias = String(alias || '').trim();
+    const normalizedPatch = String(patch || '').trim();
+    const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
+      ? normalizedPatch
+      : /^\d+\.\d+$/.test(normalizedPatch)
+        ? `${normalizedPatch}.1`
+        : 'latest';
+    if (!version) {
+      throw new Error('Data Dragon champion version is required.');
+    }
+    if (!normalizedAlias) {
+      throw new Error('Champion alias is required.');
+    }
+    return `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/champion/${encodeURIComponent(normalizedAlias)}.json`;
+  }
+
   function normalizeStatsApiRuneCatalog(data: unknown): StatsApiRuneAssetCatalog {
     const catalog: StatsApiRuneAssetCatalog = {
       perks: {},
@@ -640,6 +682,8 @@
     let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
     let statsApiRuneCatalogUrl = '';
     let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
+    const statsApiChampionSpellCatalogs = new Map<string, Record<string, StatsApiChampionSpellAssetEntry> | null>();
+    const statsApiChampionSpellCatalogPromises = new Map<string, Promise<Record<string, StatsApiChampionSpellAssetEntry> | null>>();
     let statsApiChampionSearchQuery = '';
     let statsApiChampionSearchInput: HTMLInputElement | null = null;
     let lastStatsApiChampionList: StatsApiChampionStats[] = [];
@@ -736,6 +780,95 @@
           statsApiRuneCatalogPromise = null;
         });
       return statsApiRuneCatalogPromise;
+    }
+
+    function getStatsApiChampionAlias(championId: unknown): string {
+      const numericChampionId = normalizeChampionId(championId);
+      if (!numericChampionId) return '';
+      const championsById = deps.getChampionsById?.() || {};
+      const champion = championsById[numericChampionId] || championsById[String(numericChampionId)] || null;
+      return String(champion?.alias || '').trim();
+    }
+
+    function normalizeStatsApiChampionSpellCatalog(
+      payload: unknown,
+      patch: unknown
+    ): Record<string, StatsApiChampionSpellAssetEntry> {
+      const data = (payload as DataDragonChampionDataPayload | null | undefined)?.data || {};
+      const championData = Object.values(data)[0] || null;
+      const spells = Array.isArray(championData?.spells) ? championData.spells : [];
+      const version = getStatsApiDataDragonVersion(String(patch || ''));
+      const skillKeys = ['Q', 'W', 'E', 'R'];
+      return spells.reduce((acc, spell, index) => {
+        const key = skillKeys[index];
+        const imageFull = String(spell?.image?.full || '').trim();
+        if (!key || !imageFull) return acc;
+        acc[key] = {
+          iconUrl: version === 'latest'
+            ? `https://ddragon.leagueoflegends.com/cdn/img/spell/${imageFull}`
+            : `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/${imageFull}`,
+          key,
+          label: key,
+          name: String(spell?.name || key)
+        };
+        return acc;
+      }, {} as Record<string, StatsApiChampionSpellAssetEntry>);
+    }
+
+    async function ensureStatsApiChampionSpellCatalog(
+      championId: unknown
+    ): Promise<Record<string, StatsApiChampionSpellAssetEntry> | null> {
+      const numericChampionId = normalizeChampionId(championId);
+      const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || '';
+      const alias = getStatsApiChampionAlias(numericChampionId);
+      if (!numericChampionId || !alias || !fetchImpl) {
+        return null;
+      }
+      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias);
+      if (statsApiChampionSpellCatalogs.has(catalogUrl)) {
+        return statsApiChampionSpellCatalogs.get(catalogUrl) || null;
+      }
+      const existingPromise = statsApiChampionSpellCatalogPromises.get(catalogUrl);
+      if (existingPromise) {
+        return existingPromise;
+      }
+
+      const promise = fetchImpl(catalogUrl)
+        .then((response: Response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load champion spell catalog: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((payload: unknown) => {
+          const catalog = normalizeStatsApiChampionSpellCatalog(payload, patch);
+          statsApiChampionSpellCatalogs.set(catalogUrl, catalog);
+          return catalog;
+        })
+        .catch(() => {
+          statsApiChampionSpellCatalogs.set(catalogUrl, null);
+          return null;
+        })
+        .finally(() => {
+          statsApiChampionSpellCatalogPromises.delete(catalogUrl);
+        });
+
+      statsApiChampionSpellCatalogPromises.set(catalogUrl, promise);
+      return promise;
+    }
+
+    function getStatsApiChampionSpellAsset(
+      skillLetter: unknown,
+      championId = selectedChampionId
+    ): StatsApiChampionSpellAssetEntry | null {
+      const normalizedSkillLetter = String(skillLetter || '').trim().toUpperCase();
+      const numericChampionId = normalizeChampionId(championId);
+      const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || '';
+      const alias = getStatsApiChampionAlias(numericChampionId);
+      if (!normalizedSkillLetter || !numericChampionId || !alias) return null;
+      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias);
+      const catalog = statsApiChampionSpellCatalogs.get(catalogUrl);
+      return catalog?.[normalizedSkillLetter] || null;
     }
 
     function getItemIconUrl(itemId: unknown): string {
@@ -862,7 +995,23 @@
 
     function updateStatsApiOpponentDropdownLabel(): void {
       if (!statsApiOpponentDropdownLabel) return;
-      statsApiOpponentDropdownLabel.textContent = getStatsApiOpponentSummaryLabel();
+      const selectedOption = getSelectedOpponentChampionOption();
+      if (!selectedOption) {
+        statsApiOpponentDropdownLabel.replaceChildren(createText('stats-api-opponent-dropdown-name', '指定なし'));
+        return;
+      }
+      if (deps.createInlineChampionName) {
+        statsApiOpponentDropdownLabel.replaceChildren(
+          deps.createInlineChampionName(
+            selectedOption.championId,
+            'inline-champion-name stats-api-opponent-dropdown-name'
+          )
+        );
+        return;
+      }
+      statsApiOpponentDropdownLabel.replaceChildren(
+        createText('stats-api-opponent-dropdown-name', selectedOption.name)
+      );
     }
 
     function setStatsApiOpponentDropdownOpen(isOpen: boolean): void {
@@ -946,7 +1095,9 @@
       statsApiOpponentDropdownButton.type = 'button';
       statsApiOpponentDropdownButton.className = 'stats-api-opponent-dropdown-button';
       statsApiOpponentDropdownButton.setAttribute('aria-expanded', 'false');
-      statsApiOpponentDropdownLabel = createText('stats-api-opponent-dropdown-label', '指定なし');
+      statsApiOpponentDropdownLabel = doc.createElement('span');
+      statsApiOpponentDropdownLabel.className = 'stats-api-opponent-dropdown-label';
+      updateStatsApiOpponentDropdownLabel();
       statsApiOpponentDropdownButton.append(statsApiOpponentDropdownLabel);
       statsApiOpponentDropdownButton.addEventListener('click', () => {
         const isOpen = statsApiOpponentDropdownButton?.getAttribute('aria-expanded') === 'true';
@@ -1020,11 +1171,30 @@
     function createStatsApiSkillOpeningRow(entry: StatsApiSkillOpening): HTMLElement {
       const row = doc.createElement('div');
       row.className = 'stats-api-skill-order-row';
+      const table = doc.createElement('div');
+      table.className = 'stats-api-skill-opening-table';
+      entry.skillOrder.forEach((skillId, level) => {
+        table.append(createText('stats-api-skill-opening-level', `Lv${level + 1}`));
+      });
+      entry.skillOrder.forEach((skillId) => {
+        const skillLetter = formatSkillLetter(skillId);
+        const cell = doc.createElement('div');
+        cell.className = 'stats-api-skill-opening-skill';
+        const skillAsset = getStatsApiChampionSpellAsset(skillLetter);
+        if (skillAsset?.iconUrl) {
+          const image = doc.createElement('img');
+          image.alt = '';
+          image.className = 'stats-api-skill-icon';
+          image.loading = 'lazy';
+          image.src = skillAsset.iconUrl;
+          image.title = skillAsset.name;
+          cell.append(image);
+        }
+        cell.append(createText(`stats-api-skill-letter skill-${String(skillLetter || '').toLowerCase()}`, skillLetter));
+        table.append(cell);
+      });
       row.append(
-        createStatsApiSkillTagList(entry.skillOrder.map((skillId, level) => ({
-          prefix: `Lv${level + 1} `,
-          skillLetter: formatSkillLetter(skillId)
-        })), 'stats-api-skill-order'),
+        table,
         createStatsApiOptionMeta(entry)
       );
       return row;
@@ -1034,11 +1204,38 @@
       const row = doc.createElement('div');
       row.className = 'stats-api-skill-order-row';
       row.append(
-        createStatsApiSkillTagList([
-          { prefix: '1st ', skillLetter: formatSkillLetter(entry.firstMaxSkill) },
-          { prefix: '2nd ', skillLetter: formatSkillLetter(entry.secondMaxSkill) },
-          { prefix: '3rd ', skillLetter: formatSkillLetter(entry.thirdMaxSkill) }
-        ], 'stats-api-skill-priority'),
+        (() => {
+          const container = doc.createElement('div');
+          container.className = 'stats-api-skill-priority';
+          const skillLetters = [
+            formatSkillLetter(entry.firstMaxSkill),
+            formatSkillLetter(entry.secondMaxSkill),
+            formatSkillLetter(entry.thirdMaxSkill)
+          ];
+          container.append(...skillLetters.flatMap((skillLetter, index) => {
+            const nodes: Node[] = [];
+            if (index > 0) {
+              nodes.push(createText('stats-api-skill-priority-separator', '>'));
+            }
+            const tag = createText(
+              `stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-${String(skillLetter || '').toLowerCase()}`,
+              skillLetter
+            );
+            const skillAsset = getStatsApiChampionSpellAsset(skillLetter);
+            if (skillAsset?.iconUrl) {
+              const image = doc.createElement('img');
+              image.alt = '';
+              image.className = 'stats-api-skill-icon';
+              image.loading = 'lazy';
+              image.src = skillAsset.iconUrl;
+              image.title = skillAsset.name;
+              tag.prepend(image);
+            }
+            nodes.push(tag);
+            return nodes;
+          }));
+          return container;
+        })(),
         createStatsApiOptionMeta(entry)
       );
       return row;
@@ -1098,6 +1295,16 @@
       container.append(...items.map(({ prefix, skillLetter }) => {
         const tag = doc.createElement('span');
         tag.className = 'stats-api-tag stats-api-skill-tag';
+        const skillAsset = getStatsApiChampionSpellAsset(skillLetter);
+        if (skillAsset?.iconUrl) {
+          const image = doc.createElement('img');
+          image.alt = '';
+          image.className = 'stats-api-skill-icon';
+          image.loading = 'lazy';
+          image.src = skillAsset.iconUrl;
+          image.title = skillAsset.name;
+          tag.append(image);
+        }
         tag.append(
           doc.createTextNode(prefix),
           createText(`stats-api-skill-letter skill-${String(skillLetter || '').toLowerCase()}`, skillLetter)
@@ -1490,7 +1697,7 @@
             wrap.append(...entry.spellIds.map((id) => createStatsApiSummonerSpellToken(id)));
             return wrap;
           })(),
-          createStatsApiOptionMeta(entry)
+          createStatsApiOptionMeta(entry, { hidePickRate: true })
         );
         return node;
       }));
@@ -1883,7 +2090,10 @@
         detailsContent.replaceChildren(createStatsApiEmptyState('詳細データを読み込み中です。'));
       }
       try {
-        await ensureStatsApiRuneCatalog();
+        await Promise.all([
+          ensureStatsApiRuneCatalog(),
+          ensureStatsApiChampionSpellCatalog(championId)
+        ]);
         const response = await fetchStatsApiJson(buildStatsApiChampionDetailsUrl({
           ...filters,
           championId,
@@ -2222,6 +2432,11 @@
         runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
       );
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
+      const runeHeader = runeCard.querySelector('.stats-api-detail-card-header');
+      const runeTabList = runeCard.querySelector('.stats-api-rune-tab-list');
+      if (runeHeader && runeTabList) {
+        runeHeader.append(runeTabList);
+      }
 
       const buildCard = createStatsApiDetailCard(
         'アイテムビルド',

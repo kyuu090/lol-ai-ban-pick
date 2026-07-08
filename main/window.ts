@@ -13,9 +13,9 @@ interface CreateMainWindowDeps {
 function createMainWindow({ iconPath, preloadPath, log }: CreateMainWindowDeps): Electron.BrowserWindow {
   log?.debug?.('Creating main window');
   const mainWindow = new BrowserWindow({
-    width: 1180,
+    width: 1200,
     height: 900,
-    minWidth: 980,
+    minWidth: 1200,
     minHeight: 680,
     title: 'BanPick.AI',
     icon: iconPath,
