@@ -50,7 +50,7 @@ CI がすべて通り、レビューで問題がなければ `main` に merge �
 
 - `build.yml`: PR、`main` push、手動実行でテストと Windows portable exe / NSIS installer のビルドを実行し、確認用 artifact として 3 日間保存します。
 - `security-scan.yml`: PR、`main` push、週次、手動実行で依存関係と静的解析の脆弱性診断を実行します。
-- `release.yml`: `v*` タグ push で Windows portable exe / NSIS installer をビルドし、GitHub Release に添付します。
+- `release.yml`: `v*` タグ push で Windows portable exe / NSIS installer をビルドし、GitHub Release に auto update 用の `latest.yml` / `setup.exe.blockmap` も添付します。
 
 GitHub Actions では lockfile を前提にするため、依存関係の復元は `npm ci` を使います。
 
@@ -121,10 +121,14 @@ git push origin v0.1.1
 - `npm ci`
 - `npm test`
 - `npm run build`
-- `dist/*.exe` を GitHub Release に添付
+- `dist/*-portable.exe`
+- `dist/*-setup.exe`
+- `dist/*-setup.exe.blockmap`
+- `dist/latest.yml`
+- 以上を GitHub Release に添付
 - GitHub の自動生成リリースノートを作成
 
-成果物は `package.json` の `build.portable.artifactName` / `build.nsis.artifactName` に従い、`BanPick-ai-<version>-portable.exe` と `BanPick-ai-<version>-setup.exe` として生成されます。
+成果物は `package.json` の `build.portable.artifactName` / `build.nsis.artifactName` に従い、`BanPick-ai-<version>-portable.exe` と `BanPick-ai-<version>-setup.exe` として生成されます。NSIS installer 向けには `latest.yml` と `BanPick-ai-<version>-setup.exe.blockmap` も生成され、auto update 配布物として GitHub Release に含めます。
 
 リリース作成後は、GitHub Release の内容、添付された exe、リリースノートを確認します。未署名 exe のため、利用者環境では Windows SmartScreen の警告が出る可能性があります。
 
@@ -153,7 +157,9 @@ git push origin v0.1.1
 - `main/match-history-store.js` は PUUID 別 match history / cache path と JSON read / write を担当します。
 - `main/app-state.js` は initial state、match history status / summary、lane matchup analysis state、state patch を担当します。
 - `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当します。メインウィンドウは起動時に `minWidth` と同じ横幅で開き、現在は `1200px` を最小横幅として初期表示しています。
+- `main/auto-update-service.js` は起動前スプラッシュ上での更新確認、`latest.yml` 取得失敗時の通常起動フォールバック、更新ダイアログ、ダウンロード後の install を担当します。
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当します。
+- 起動時アップデート確認を有効にする場合は、更新配信ディレクトリを指す `BANPICK_AI_UPDATE_BASE_URL` を実行環境へ設定します。
 - タブ列の上にあるクライアントバージョン表示は `package-lock.json` の `packages[""].version` を参照し、ビルド時に `dist-app/package-lock.json` へ同梱した値を preload 経由で Renderer に渡します。
 - `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当します。
 - `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当します。
@@ -324,6 +330,7 @@ LCU match history はページングやキャッシュ挙動が不安定だっ�
 ## 関連設計ドキュメント
 
 - `docs/AGENTS_CONTEXT.md`: 現在の実装状況とエージェント向けの作業文脈
+- `docs/auto-update-design.md`: 起動時アップデート確認と VPS 配信前提の自動更新設計
 - `docs/riot-match-history-design.md`: Riot API Match-V5 による自己戦績取得設計
 - `docs/lcu-match-history-design.md`: LCU match history の調査結果と fallback 方針
 - `docs/lcu-event-insights-design.md`: LCU WebSocket event から作れるインサイト案

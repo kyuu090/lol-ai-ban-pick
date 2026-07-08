@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BanPick.AI</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f5fc;
+        --panel: rgba(243, 240, 255, 0.82);
+        --surface-line: rgba(207, 196, 255, 0.96);
+        --surface-glow: 0 22px 58px rgba(108, 76, 255, 0.18);
+        --text: #0e1738;
+        --muted: rgba(96, 104, 143, 0.9);
+        --accent: #6c4cff;
+        --accent-blue: #4d7cff;
+        --accent-soft: rgba(108, 76, 255, 0.16);
+        --accent-strong: rgba(108, 76, 255, 0.34);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(circle at 50% 45%, rgba(181, 170, 255, 0.16), transparent 28%),
+          linear-gradient(145deg, #faf9fe 0%, #f8f6fd 30%, var(--bg) 100%);
+        overflow: hidden;
+        font-family: "Bahnschrift", "Noto Sans JP", "Segoe UI", "Yu Gothic UI", sans-serif;
+        color: var(--text);
+      }
+
+      .shell {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding: 10px;
+      }
+
+      .frame {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 12px;
+        border: 1px solid var(--surface-line);
+        background:
+          radial-gradient(circle at 50% 42%, rgba(194, 185, 255, 0.14), transparent 30%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.74), var(--panel));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.72),
+          var(--surface-glow);
+        backdrop-filter: blur(18px);
+      }
+
+      .frame::before,
+      .frame::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .frame::before {
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.44), transparent 38%),
+          linear-gradient(315deg, rgba(108, 76, 255, 0.04), transparent 36%);
+      }
+
+      .frame::after {
+        background:
+          radial-gradient(circle at 49% 46%, rgba(162, 148, 255, 0.14), transparent 20%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+        opacity: 0.94;
+      }
+
+      .bg-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .bg-left {
+        clip-path: polygon(0 74%, 18% 92%, 32% 100%, 0 100%);
+        background:
+          linear-gradient(45deg, rgba(108, 76, 255, 0.04), rgba(108, 76, 255, 0.12)),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+        opacity: 0.95;
+      }
+
+      .bg-right {
+        clip-path: polygon(67% 0, 100% 0, 100% 100%, 44% 100%);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(108, 76, 255, 0.08));
+        opacity: 0.92;
+      }
+
+      .bg-right::before,
+      .bg-right::after,
+      .bg-left::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+      }
+
+      .bg-right::before {
+        background:
+          linear-gradient(45deg, transparent 0 54%, rgba(108, 76, 255, 0.08) 54% 64%, transparent 64%),
+          linear-gradient(45deg, transparent 0 66%, rgba(108, 76, 255, 0.14) 66% 78%, transparent 78%),
+          linear-gradient(45deg, transparent 0 76%, rgba(108, 76, 255, 0.18) 76% 90%, transparent 90%);
+        opacity: 0.9;
+      }
+
+      .bg-right::after {
+        background:
+          linear-gradient(90deg, transparent 0 44%, rgba(255, 255, 255, 0.16) 44% 46%, transparent 46% 62%, rgba(255, 255, 255, 0.16) 62% 64%, transparent 64%);
+        opacity: 0.55;
+      }
+
+      .bg-left::before {
+        background:
+          linear-gradient(45deg, transparent 0 26%, rgba(255, 255, 255, 0.18) 26% 28%, transparent 28%);
+        opacity: 0.7;
+      }
+
+      .bg-center-glow {
+        position: absolute;
+        inset: 24% 28% 22%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(176, 164, 255, 0.16), transparent 68%);
+        filter: blur(6px);
+        opacity: 0.9;
+        pointer-events: none;
+      }
+
+      .controls {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 2;
+        display: flex;
+        gap: 4px;
+        -webkit-app-region: no-drag;
+      }
+
+      .control-button {
+        width: 18px;
+        height: 18px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: rgba(111, 121, 177, 0.86);
+        font-size: 10px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+      }
+
+      .control-button:hover {
+        background: rgba(122, 94, 255, 0.08);
+        color: #5863a7;
+        transform: translateY(-1px);
+      }
+
+      .hero {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 28px 28px 43px;
+        text-align: center;
+        -webkit-app-region: drag;
+      }
+
+      .brand {
+        font-family: sans-serif;
+        font-size: 54px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.045em;
+      }
+
+      .brand .accent {
+        background: linear-gradient(135deg, var(--accent), #7b5cff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .version-line {
+        position: absolute;
+        left: 14px;
+        bottom: 12px;
+        z-index: 2;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(104, 111, 156, 0.92);
+        letter-spacing: 0.01em;
+      }
+
+      .status-line {
+        position: absolute;
+        right: 14px;
+        bottom: 12px;
+        z-index: 2;
+        max-width: 240px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.45;
+        color: rgba(104, 111, 156, 0.86);
+        text-align: right;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        opacity: 0.96;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell" aria-label="Splash screen">
+      <section class="frame">
+        <div class="bg-layer bg-left"></div>
+        <div class="bg-layer bg-right"></div>
+        <div class="bg-center-glow"></div>
+        <div class="controls">
+          <button id="minimizeButton" class="control-button" type="button" aria-label="最小化">ー</button>
+          <button id="closeButton" class="control-button" type="button" aria-label="閉じる">✕</button>
+        </div>
+        <div class="hero">
+          <div class="brand">BanPick<span class="accent">.ai</span></div>
+        </div>
+        <div id="versionLine" class="version-line">Client v0.0.0</div>
+        <div id="statusLine" class="status-line" aria-live="polite">アップデートを確認しています...</div>
+      </section>
+    </main>
+    <script>
+      function setText(id, fallback, value) {
+        var element = document.getElementById(id);
+        if (!element) return;
+        element.textContent = String(value || "").trim() || fallback;
+      }
+
+      window.setSplashStatus = function setSplashStatus(message) {
+        var nextMessage = String(message || "").trim() || "起動を開始しています...";
+        setText("statusLine", "起動を開始しています...", nextMessage);
+      };
+
+      window.setSplashVersion = function setSplashVersion(version) {
+        var normalizedVersion = String(version || "").trim() || "0.0.0";
+        setText("versionLine", "Client v0.0.0", "Client v" + normalizedVersion);
+      };
+
+      document.getElementById("minimizeButton")?.addEventListener("click", function () {
+        window.lcuApi?.minimizeWindow?.();
+      });
+
+      document.getElementById("closeButton")?.addEventListener("click", function () {
+        window.lcuApi?.closeWindow?.();
+      });
+    </script>
+  </body>
+</html>

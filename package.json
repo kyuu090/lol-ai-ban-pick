@@ -1,6 +1,6 @@
 {
   "name": "banpick-ai",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "League of Legends ban pick insights agent",
   "author": "kyuu090",
   "main": "dist-app/main.js",
@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
     "ws": "^8.18.0"
   },
   "devDependencies": {

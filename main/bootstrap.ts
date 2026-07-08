@@ -2,6 +2,7 @@ const { app, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { configureLogger, log, logRendererMessage, serializeForLog } = require('../logger');
+const { runStartupUpdateFlow } = require('./auto-update-service');
 const {
   createDefaultSettings,
   createPublicSettings,
@@ -28,6 +29,7 @@ const {
 const {
   closeWindow,
   createMainWindow,
+  createSplashWindow,
   hasOpenWindows,
   minimizeWindow,
   toggleMaximizeWindow
@@ -74,6 +76,7 @@ const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const LANE_MATCHUP_RETRY_DELAY_MS = 3000;
 const APP_ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
+const SPLASH_HTML_PATH = path.join(__dirname, '..', 'splash.html');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
@@ -221,12 +224,65 @@ function bootstrap(): void {
     return settings;
   }
 
-  function createWindow(): void {
-    mainWindow = createMainWindow({
+  function createWindow(): BrowserWindow {
+    const window = createMainWindow({
       iconPath: APP_ICON_PATH,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       log
     });
+    mainWindow = window;
+    return window;
+  }
+
+  function createStartupSplashWindow(): BrowserWindow {
+    return createSplashWindow({
+      iconPath: APP_ICON_PATH,
+      splashHtmlPath: SPLASH_HTML_PATH,
+      preloadPath: path.join(__dirname, '..', 'preload.js'),
+      log
+    });
+  }
+
+  async function setSplashStatus(window: BrowserWindow | null, message: string): Promise<void> {
+    if (!window || window.isDestroyed()) return;
+
+    const safeMessage = JSON.stringify(String(message || '').trim() || '起動を開始しています...');
+    try {
+      await window.webContents.executeJavaScript(
+        `window.setSplashStatus && window.setSplashStatus(${safeMessage});`,
+        true
+      );
+    } catch (error) {
+      log.warn('Failed to update splash status', serializeForLog(error));
+    }
+  }
+
+  async function setSplashVersion(window: BrowserWindow | null, version: string): Promise<void> {
+    if (!window || window.isDestroyed()) return;
+
+    const safeVersion = JSON.stringify(String(version || '').trim() || '0.0.0');
+    try {
+      await window.webContents.executeJavaScript(
+        `window.setSplashVersion && window.setSplashVersion(${safeVersion});`,
+        true
+      );
+    } catch (error) {
+      log.warn('Failed to update splash version', serializeForLog(error));
+    }
+  }
+
+  async function waitForWindowReady(window: BrowserWindow): Promise<void> {
+    if (!window || window.isDestroyed()) return;
+    if (window.isVisible()) return;
+
+    await new Promise<void>((resolve) => {
+      window.once('ready-to-show', () => resolve());
+    });
+  }
+
+  async function closeSplashWindow(window: BrowserWindow | null): Promise<void> {
+    if (!window || window.isDestroyed()) return;
+    window.close();
   }
 
   async function chooseLolInstallDir(): Promise<PublicSettings> {
@@ -291,8 +347,28 @@ function bootstrap(): void {
 
   app.whenReady().then(async () => {
     log.info('App ready');
+    const splashWindow = createStartupSplashWindow();
+    await setSplashStatus(splashWindow, 'バージョン情報を確認しています...');
+    const currentVersion = await getClientVersion();
+    await setSplashVersion(splashWindow, currentVersion);
+    const startupUpdateResult = await runStartupUpdateFlow({
+      currentVersion,
+      splashWindow,
+      setSplashStatus: (message: string) => setSplashStatus(splashWindow, message),
+      log,
+      serializeForLog
+    });
+
+    if (startupUpdateResult.action === 'quit') {
+      await closeSplashWindow(splashWindow);
+      return;
+    }
+
+    await setSplashStatus(splashWindow, '設定を読み込んでいます...');
     await loadSettings();
+    await setSplashStatus(splashWindow, 'チャンピオンプールを読み込んでいます...');
     await loadChampionPool();
+    await setSplashStatus(splashWindow, '起動準備をしています...');
 
     registerIpcHandlers({
       ipcMain: ipcMain as IpcMain,
@@ -319,7 +395,10 @@ function bootstrap(): void {
       }
     });
 
-    createWindow();
+    await setSplashStatus(splashWindow, 'ウィンドウを表示しています...');
+    const nextMainWindow = createWindow();
+    await waitForWindowReady(nextMainWindow);
+    await closeSplashWindow(splashWindow);
     await lcuController.refreshLcuState();
 
     app.on('activate', () => {
