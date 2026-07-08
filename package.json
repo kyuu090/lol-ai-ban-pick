@@ -20,6 +20,12 @@
     "appId": "com.banpick.ai",
     "productName": "BanPick-ai",
     "asar": true,
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://update.banpick-ai.lol/app"
+      }
+    ],
     "files": [
       "dist-app/**/*",
       "package.json"

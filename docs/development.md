@@ -159,7 +159,7 @@ git push origin v0.1.1
 - `main/window.js` は BrowserWindow 作成と window 操作 IPC handler を担当します。メインウィンドウは起動時に `minWidth` と同じ横幅で開き、現在は `1200px` を最小横幅として初期表示しています。
 - `main/auto-update-service.js` は起動前スプラッシュ上での更新確認、`latest.yml` 取得失敗時の通常起動フォールバック、更新ダイアログ、ダウンロード後の install を担当します。
 - `main/ipc-handlers.js` は Renderer 向け IPC channel 登録を担当します。
-- 起動時アップデート確認を有効にする場合は、更新配信ディレクトリを指す `BANPICK_AI_UPDATE_BASE_URL` を実行環境へ設定します。
+- 起動時アップデート確認の配信先は `https://update.banpick-ai.lol/app` で固定です。packaged build の `resources/app-update.yml` も同じ URL を向く前提です。
 - タブ列の上にあるクライアントバージョン表示は `package-lock.json` の `packages[""].version` を参照し、ビルド時に `dist-app/package-lock.json` へ同梱した値を preload 経由で Renderer に渡します。
 - `main/ai-analysis-service.js` は OpenAI / BFF analysis request を担当します。
 - `main/riot-match-history-service.js` は Riot BFF の match id / match detail 取得を担当します。

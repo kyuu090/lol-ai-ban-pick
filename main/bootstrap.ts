@@ -92,6 +92,7 @@ function bootstrap(): void {
   let mainWindow: BrowserWindow | null = null;
   let settings: StoredSettings = createDefaultSettings();
   let championPool: ChampionPool = createDefaultChampionPool();
+  let splashWindowLoadPromise: Promise<void> | null = null;
 
   configureElectronRuntimeOptions();
   configureAppUserDataPath();
@@ -235,16 +236,30 @@ function bootstrap(): void {
   }
 
   function createStartupSplashWindow(): BrowserWindow {
-    return createSplashWindow({
+    const splashWindow = createSplashWindow({
       iconPath: APP_ICON_PATH,
       splashHtmlPath: SPLASH_HTML_PATH,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       log
     });
+    splashWindowLoadPromise = new Promise<void>((resolve) => {
+      if (splashWindow.webContents.isLoadingMainFrame()) {
+        splashWindow.webContents.once('did-finish-load', () => resolve());
+      } else {
+        resolve();
+      }
+    });
+    return splashWindow;
+  }
+
+  async function waitForSplashWindowLoaded(window: BrowserWindow | null): Promise<void> {
+    if (!window || window.isDestroyed()) return;
+    await splashWindowLoadPromise;
   }
 
   async function setSplashStatus(window: BrowserWindow | null, message: string): Promise<void> {
     if (!window || window.isDestroyed()) return;
+    await waitForSplashWindowLoaded(window);
 
     const safeMessage = JSON.stringify(String(message || '').trim() || '起動を開始しています...');
     try {
@@ -259,6 +274,7 @@ function bootstrap(): void {
 
   async function setSplashVersion(window: BrowserWindow | null, version: string): Promise<void> {
     if (!window || window.isDestroyed()) return;
+    await waitForSplashWindowLoaded(window);
 
     const safeVersion = JSON.stringify(String(version || '').trim() || '0.0.0');
     try {
@@ -327,17 +343,22 @@ function bootstrap(): void {
   }
 
   async function getClientVersion(): Promise<string> {
-    const packageLockText = await fs.readFile(PACKAGE_LOCK_PATH, 'utf8');
-    const packageLock = JSON.parse(packageLockText);
-    const rootPackageVersion = String(packageLock?.packages?.['']?.version || '').trim();
-    const lockfileVersion = String(packageLock?.version || '').trim();
-    const version = rootPackageVersion || lockfileVersion;
+    try {
+      const packageLockText = await fs.readFile(PACKAGE_LOCK_PATH, 'utf8');
+      const packageLock = JSON.parse(packageLockText);
+      const rootPackageVersion = String(packageLock?.packages?.['']?.version || '').trim();
+      const lockfileVersion = String(packageLock?.version || '').trim();
+      const version = rootPackageVersion || lockfileVersion;
 
-    if (!version) {
-      throw new Error('package-lock.json からクライアントバージョンを取得できませんでした');
+      if (version) return version;
+    } catch (error) {
+      log.warn('package-lock.json version lookup failed. Falling back to app version.', serializeForLog(error));
     }
 
-    return version;
+    const appVersion = String(app.getVersion() || '').trim();
+    if (appVersion) return appVersion;
+
+    throw new Error('クライアントバージョンを取得できませんでした');
   }
 
   function cleanupWebSocket(): void {

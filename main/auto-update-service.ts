@@ -1,4 +1,6 @@
 const { app, dialog } = require('electron');
+const fs = require('node:fs');
+const path = require('node:path');
 
 import type { BrowserWindow } from 'electron';
 import type { AppUpdater, UpdateDownloadedEvent, UpdateInfo } from 'electron-updater';
@@ -12,8 +14,8 @@ const { autoUpdater }: { autoUpdater?: AppUpdater } = (() => {
 })();
 
 const SPLASH_MINIMUM_VISIBLE_MS = 2000;
-const UPDATE_CHECK_TIMEOUT_MS = 15000;
-const UPDATE_BASE_URL = String(process.env.BANPICK_AI_UPDATE_BASE_URL || '').trim();
+const UPDATE_CHECK_TIMEOUT_MS = 10000;
+const UPDATE_BASE_URL = 'https://update.banpick-ai.lol/app';
 
 type StartupUpdateDeps = {
   currentVersion: string;
@@ -38,7 +40,6 @@ type UpdateCheckResult =
 
 function isStartupUpdateSupported(): boolean {
   if (!app.isPackaged) return false;
-  if (!UPDATE_BASE_URL) return false;
   if (!autoUpdater) return false;
 
   // electron-builder portable builds set these env vars. Self-replacing the running
@@ -47,7 +48,19 @@ function isStartupUpdateSupported(): boolean {
     return false;
   }
 
-  return true;
+  return Boolean(UPDATE_BASE_URL) || hasEmbeddedUpdateConfig();
+}
+
+function getEmbeddedUpdateConfigPath(): string {
+  return path.join(process.resourcesPath, 'app-update.yml');
+}
+
+function hasEmbeddedUpdateConfig(): boolean {
+  try {
+    return fs.existsSync(getEmbeddedUpdateConfigPath());
+  } catch {
+    return false;
+  }
 }
 
 function delay(ms: number): Promise<void> {
@@ -207,7 +220,8 @@ async function runStartupUpdateFlow({
     await setSplashStatus?.('アップデート確認をスキップしています...');
     log?.info?.('Startup auto update is disabled', {
       isPackaged: app.isPackaged,
-      hasUpdateBaseUrl: Boolean(UPDATE_BASE_URL),
+      updateBaseUrl: UPDATE_BASE_URL,
+      hasEmbeddedUpdateConfig: hasEmbeddedUpdateConfig(),
       hasUpdaterModule: Boolean(autoUpdater),
       isPortable: Boolean(process.env.PORTABLE_EXECUTABLE_DIR || process.env.PORTABLE_EXECUTABLE_FILE)
     });
@@ -218,6 +232,7 @@ async function runStartupUpdateFlow({
   const updater = autoUpdater as AppUpdater;
   updater.autoDownload = false;
   updater.autoInstallOnAppQuit = false;
+
   updater.setFeedURL({
     provider: 'generic',
     url: UPDATE_BASE_URL
@@ -226,7 +241,8 @@ async function runStartupUpdateFlow({
   await setSplashStatus?.('アップデートを確認しています...');
   log?.info?.('Checking for startup update', {
     currentVersion,
-    updateBaseUrl: UPDATE_BASE_URL
+    updateBaseUrl: UPDATE_BASE_URL,
+    embeddedUpdateConfigPath: hasEmbeddedUpdateConfig() ? getEmbeddedUpdateConfigPath() : null
   });
 
   const checkResult = await checkForUpdatesWithTimeout(updater, UPDATE_CHECK_TIMEOUT_MS);

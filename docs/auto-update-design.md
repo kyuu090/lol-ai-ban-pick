@@ -26,14 +26,14 @@ VPS 上で static file 配信する。
 想定 URL 例:
 
 ```text
-https://download.example.com/banpick-ai/latest.yml
-https://download.example.com/banpick-ai/BanPick-ai-0.6.1-setup.exe
-https://download.example.com/banpick-ai/BanPick-ai-0.6.1-setup.exe.blockmap
+https://update.banpick-ai.lol/app/latest.yml
+https://update.banpick-ai.lol/app/BanPick-ai-0.6.1-setup.exe
+https://update.banpick-ai.lol/app/BanPick-ai-0.6.1-setup.exe.blockmap
 ```
 
 `electron-updater` の generic provider を使うと、VPS 側は nginx / Caddy / Apache などで静的配信するだけでよい。
 
-現在の実装では、この配信先は環境変数 `BANPICK_AI_UPDATE_BASE_URL` から与える。
+現在の実装では、更新配信先は `https://update.banpick-ai.lol/app` で固定している。packaged build に埋め込まれた `resources/app-update.yml` も同じ URL を向く前提にする。
 
 ## 採用案
 
@@ -91,7 +91,7 @@ app.whenReady()
 - `dependencies` に `electron-updater`
 - リリース時に `latest.yml` が生成される前提へ寄せる
 
-URL はコードへ直書きせず、環境変数から注入する。
+URL は `https://update.banpick-ai.lol/app` で固定する。
 
 ## 2. `main/auto-update-service.ts` を新設
 
@@ -270,6 +270,7 @@ GitHub Actions でビルドした成果物を、そのまま GitHub Release へ�
 - `portable` 版を自動更新の対象にしない
 - 更新 URL や provider 情報を Renderer へ公開しない
 - 更新確認が長引くと体感起動が悪くなるため、タイムアウトは短めにする
+- 更新確認タイムアウトは現在 10 秒
 - `autoUpdater.quitAndInstall()` 実行前に必要ならログ flush を考慮する
 - 未署名 exe は SmartScreen 警告が出やすいので、将来的にはコード署名を検討する
 
