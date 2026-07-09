@@ -2,6 +2,7 @@
   const STATS_API_BASE_URL = 'https://db.banpick-ai.lol';
   const STATS_API_MIN_PICK_RATE = 0.005;
   const STATS_API_DEFAULT_RETRY_AFTER_SECONDS = 5;
+  const STATS_API_RESPONSE_CACHE_TTL_MS = 60 * 1000;
   const STATS_API_LANES = [
     { id: 'TOP', label: 'TOP' },
     { id: 'JUNGLE', label: 'JG' },
@@ -254,6 +255,11 @@
     key: string;
     label: string;
     name: string;
+  }
+
+  interface StatsApiResponseCacheEntry {
+    response: any;
+    timestamp: number;
   }
 
   function normalizeStatsApiPosition(value: unknown): string {
@@ -656,6 +662,7 @@
     const doc = (deps.document || root.document) as Document;
     const requestStatsApiJson = deps.requestStatsApiJson || root.lcuApi?.requestStatsApiJson;
     const fetchImpl = deps.fetch || root.fetch?.bind(root);
+    const championsPanel = doc.querySelector<HTMLElement>('.stats-api-champions-panel');
     const detailsView = doc.querySelector<HTMLElement>('#statsApiDetailsView');
     const detailsBackButton = doc.querySelector<HTMLButtonElement>('#statsApiDetailsBackButton');
     const detailsTitle = doc.querySelector<HTMLElement>('#statsApiDetailsTitle');
@@ -694,6 +701,9 @@
     let statsApiOpponentDropdownPanel: HTMLElement | null = null;
     let statsApiOpponentSearchInput: HTMLInputElement | null = null;
     let statsApiOpponentOptionsList: HTMLElement | null = null;
+    let statsApiLoadingCount = 0;
+    let statsApiLoadingOverlay: HTMLElement | null = null;
+    const statsApiResponseCache = new Map<string, StatsApiResponseCacheEntry>();
 
     function formatStatsApiRate(value: unknown): string {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -706,6 +716,7 @@
     function setStatsApiStatus(message: string): void {
       if (elements.statsApiStatus) {
         elements.statsApiStatus.textContent = message;
+        elements.statsApiStatus.hidden = !message;
       }
     }
 
@@ -717,10 +728,35 @@
     }
 
     function setStatsApiLoading(isLoading: boolean): void {
+      statsApiLoadingCount = isLoading
+        ? statsApiLoadingCount + 1
+        : Math.max(0, statsApiLoadingCount - 1);
+      const active = statsApiLoadingCount > 0;
       if (elements.statsApiRefreshButton) {
-        elements.statsApiRefreshButton.disabled = isLoading;
-        elements.statsApiRefreshButton.textContent = isLoading ? '取得中' : '更新';
+        elements.statsApiRefreshButton.disabled = active;
+        elements.statsApiRefreshButton.textContent = active ? '取得中' : '更新';
       }
+      if (championsPanel) {
+        championsPanel.setAttribute('aria-busy', String(active));
+      }
+      if (statsApiLoadingOverlay) {
+        statsApiLoadingOverlay.hidden = !active;
+      }
+    }
+
+    function ensureStatsApiLoadingOverlay(): void {
+      if (statsApiLoadingOverlay || !championsPanel) return;
+      statsApiLoadingOverlay = doc.createElement('div');
+      statsApiLoadingOverlay.className = 'stats-api-loading-overlay';
+      statsApiLoadingOverlay.hidden = true;
+      statsApiLoadingOverlay.setAttribute('aria-hidden', 'true');
+
+      const message = doc.createElement('div');
+      message.className = 'stats-api-loading-overlay-message';
+      message.textContent = 'Now loading ...';
+
+      statsApiLoadingOverlay.append(message);
+      championsPanel.append(statsApiLoadingOverlay);
     }
 
     function setStatsApiDetailsVisible(isVisible: boolean): void {
@@ -739,6 +775,31 @@
       if (!statsApiRetryTimer) return;
       (deps.clearTimeout || root.clearTimeout || clearTimeout)(statsApiRetryTimer);
       statsApiRetryTimer = null;
+    }
+
+    function getStatsApiCacheKey(pathOrUrl: string): string {
+      return String(pathOrUrl || '').trim();
+    }
+
+    function getCachedStatsApiResponse(pathOrUrl: string, now = Date.now()): any | null {
+      const cacheKey = getStatsApiCacheKey(pathOrUrl);
+      if (!cacheKey) return null;
+      const cached = statsApiResponseCache.get(cacheKey);
+      if (!cached) return null;
+      if (now - cached.timestamp > STATS_API_RESPONSE_CACHE_TTL_MS) {
+        statsApiResponseCache.delete(cacheKey);
+        return null;
+      }
+      return cached.response;
+    }
+
+    function setCachedStatsApiResponse(pathOrUrl: string, response: any, now = Date.now()): void {
+      const cacheKey = getStatsApiCacheKey(pathOrUrl);
+      if (!cacheKey) return;
+      statsApiResponseCache.set(cacheKey, {
+        response,
+        timestamp: now
+      });
     }
 
     function getStatsApiDataDragonVersion(patch: string): string {
@@ -1825,8 +1886,14 @@
     }
 
     async function fetchStatsApiJson(pathOrUrl: string): Promise<any> {
+      const cachedResponse = getCachedStatsApiResponse(pathOrUrl);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
       if (requestStatsApiJson) {
-        return requestStatsApiJson(pathOrUrl);
+        const response = await requestStatsApiJson(pathOrUrl);
+        setCachedStatsApiResponse(pathOrUrl, response);
+        return response;
       }
       if (!fetchImpl) {
         throw new Error('この環境ではfetchを利用できません。');
@@ -1835,21 +1902,28 @@
       if (!response.ok) {
         throw createStatsApiHttpError(response.status, response.headers?.get?.('retry-after') || null);
       }
-      return response.json();
+      const json = await response.json();
+      setCachedStatsApiResponse(pathOrUrl, json);
+      return json;
     }
 
     async function initializeStatsApiChampionList(): Promise<void> {
       clearStatsApiRetryTimer();
+      ensureStatsApiLoadingOverlay();
       ensureStatsApiOpponentFilter();
       ensureStatsApiChampionSearchField();
       initializeStatsApiRankDropdown();
       initializeStatsApiSortButtons();
       initializeStatsApiDetailsActions();
-      setStatsApiLoading(true);
-      setStatsApiStatus('StatsAPIのメタ情報を取得しています。');
+      const metaUrl = '/v1/stats/meta';
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(metaUrl));
+      if (!hasCachedResponse) {
+        setStatsApiLoading(true);
+      }
+      setStatsApiStatus('');
       clearStatsApiChampionRows();
       try {
-        const response = await fetchStatsApiJson('/v1/stats/meta');
+        const response = await fetchStatsApiJson(metaUrl);
         statsApiMeta = response?.data || {};
         statsApiSelectedPatch = statsApiMeta?.latestPatch || statsApiMeta?.patches?.[0] || '';
         statsApiSelectedPosition = getAvailableStatsApiLanes(statsApiMeta?.positions)[0]?.id || '';
@@ -2050,10 +2124,14 @@
         return;
       }
       const requestId = ++statsApiRequestId;
-      setStatsApiLoading(true);
-      setStatsApiStatus('チャンピオン一覧を取得しています。');
+      const championsUrl = buildStatsApiChampionsUrl(filters);
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(championsUrl));
+      if (!hasCachedResponse) {
+        setStatsApiLoading(true);
+      }
+      setStatsApiStatus('');
       try {
-        const response = await fetchStatsApiJson(buildStatsApiChampionsUrl(filters));
+        const response = await fetchStatsApiJson(championsUrl);
         if (requestId !== statsApiRequestId) return;
         const statsList = Array.isArray(response?.data) ? response.data : [];
         if (selectedChampionId > 0) {
@@ -2085,20 +2163,21 @@
       const filters = getStatsApiSelectedFilters();
       if (!championId || !filters.position) return;
       const requestId = ++statsApiDetailsRequestId;
-      setStatsApiDetailsStatus('チャンピオン詳細を取得しています。');
-      if (detailsContent && !lastDetailsData) {
-        detailsContent.replaceChildren(createStatsApiEmptyState('詳細データを読み込み中です。'));
+      const detailsUrl = buildStatsApiChampionDetailsUrl({
+        ...filters,
+        championId,
+        opponentChampionId: selectedOpponentChampionId
+      });
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(detailsUrl));
+      if (!hasCachedResponse) {
+        setStatsApiLoading(true);
       }
       try {
         await Promise.all([
           ensureStatsApiRuneCatalog(),
           ensureStatsApiChampionSpellCatalog(championId)
         ]);
-        const response = await fetchStatsApiJson(buildStatsApiChampionDetailsUrl({
-          ...filters,
-          championId,
-          opponentChampionId: selectedOpponentChampionId
-        }));
+        const response = await fetchStatsApiJson(detailsUrl);
         if (requestId !== statsApiDetailsRequestId) return;
         lastDetailsData = response?.data || null;
         renderSelectedChampionDetails(lastDetailsData);
@@ -2107,6 +2186,8 @@
         lastDetailsData = null;
         renderSelectedChampionDetails(null);
         setStatsApiDetailsStatus(`チャンピオン詳細を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+      } finally {
+        setStatsApiLoading(false);
       }
     }
 
