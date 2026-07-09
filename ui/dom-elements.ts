@@ -2,6 +2,7 @@
   function createDomElements(doc: Document = root.document as Document): UiDomElements {
     return {
       windowTitlebar: doc.querySelector('#windowTitlebar'),
+      clientVersionLabel: doc.querySelector('#clientVersionLabel'),
       windowMinimizeButton: doc.querySelector('#windowMinimizeButton'),
       windowMaximizeButton: doc.querySelector('#windowMaximizeButton'),
       windowCloseButton: doc.querySelector('#windowCloseButton'),

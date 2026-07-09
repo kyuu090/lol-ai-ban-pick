@@ -16,6 +16,7 @@ export interface LcuApi {
   saveChampionPool(championPool: ChampionPool): Promise<ChampionPool>;
   log(level: string, message: string, details?: unknown): void;
   getSettings(): Promise<PublicSettings>;
+  getClientVersion(): Promise<string>;
   chooseLolInstallDir(): Promise<PublicSettings>;
   updateLolInstallDir(lolInstallDir: string): Promise<PublicSettings>;
   updateRiotPlatformRegion(riotPlatformRegion: RiotPlatformRegion | string): Promise<PublicSettings>;

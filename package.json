@@ -1,6 +1,6 @@
 {
   "name": "banpick-ai",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "description": "League of Legends ban pick insights agent",
   "author": "kyuu090",
   "main": "dist-app/main.js",
@@ -20,6 +20,12 @@
     "appId": "com.banpick.ai",
     "productName": "BanPick-ai",
     "asar": true,
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://update.banpick-ai.lol/app"
+      }
+    ],
     "files": [
       "dist-app/**/*",
       "package.json"
@@ -48,6 +54,7 @@
   },
   "dependencies": {
     "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
     "ws": "^8.18.0"
   },
   "devDependencies": {

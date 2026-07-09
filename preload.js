@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
   saveChampionPool: (championPool) => ipcRenderer.invoke('champion-pool:save', championPool),
   log: (level, message, details) => ipcRenderer.send('log:renderer', level, message, details),
   getSettings: () => ipcRenderer.invoke('settings:get'),
+  getClientVersion: () => ipcRenderer.invoke('app:get-client-version'),
   chooseLolInstallDir: () => ipcRenderer.invoke('settings:choose-lol-install-dir'),
   updateLolInstallDir: (lolInstallDir) => ipcRenderer.invoke('settings:update-lol-install-dir', lolInstallDir),
   updateRiotPlatformRegion: (riotPlatformRegion) => ipcRenderer.invoke('settings:update-riot-platform-region', riotPlatformRegion),

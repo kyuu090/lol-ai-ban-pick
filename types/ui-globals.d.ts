@@ -141,6 +141,7 @@ declare global {
     IntersectionObserver?: typeof IntersectionObserver;
     lcuApi?: {
       getChampionIcon?(championId: number): Promise<string | null>;
+      getClientVersion?(): Promise<string>;
       requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     };
     UiDomElements?: UiDomElementsApi;

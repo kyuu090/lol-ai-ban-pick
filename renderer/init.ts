@@ -259,6 +259,19 @@ function renderWindowMaximizedState(isMaximized) {
     elements.windowMaximizeButton.textContent = isMaximized ? '❐' : '□';
     elements.windowMaximizeButton.setAttribute('aria-label', isMaximized ? '元に戻す' : '最大化');
 }
+async function renderClientVersion() {
+    if (!elements.clientVersionLabel || !window.lcuApi?.getClientVersion)
+        return;
+    try {
+        const version = await window.lcuApi.getClientVersion();
+        elements.clientVersionLabel.textContent = `Client v${version}`;
+        elements.clientVersionLabel.hidden = false;
+    }
+    catch (error) {
+        logWarn('Client version load failed', { message: error.message, stack: error.stack });
+        elements.clientVersionLabel.hidden = true;
+    }
+}
 function championLabel(championId) {
     const id = Number(championId);
     if (id <= 0)
@@ -812,6 +825,7 @@ elements.statsApiPatchSelect.addEventListener('change', () => {
 });
 setActiveView(rendererState.activeView);
 initializeStatsApiChampionList();
+renderClientVersion();
 window.lcuApi.getState().then(renderState);
 window.lcuApi.getSettings().then(renderSettings);
 window.lcuApi.onWindowMaximized(renderWindowMaximizedState);

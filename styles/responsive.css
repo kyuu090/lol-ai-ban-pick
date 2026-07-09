@@ -10,6 +10,10 @@
     flex-direction: column;
   }
 
+  .header-meta {
+    justify-content: flex-start;
+  }
+
   .status-grid,
   .content-grid,
   .stats-api-filters,
