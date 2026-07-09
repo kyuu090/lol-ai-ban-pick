@@ -131,7 +131,9 @@ declare global {
     elements: UiDomElements;
     championLabel(championId: number): string;
     championTitle(championId: number): string;
+    fetch?: typeof fetch;
     loadChampionIcon(img: HTMLImageElement, championId: number): void;
+    requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
   }
 
   interface UiRoot {

@@ -625,7 +625,8 @@ BAN表示:
 - 自分のBANフェーズ中に自分の予定pickがある場合、`Threats for your {champion} {role}` を先頭に表示する
 - `Threats for your ...` は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` の試合だけを対象にし、相手も同一ロール対面 champion だけを集計する。別ロールや敵チーム全体には fallback しない
 - `Threats for your ...` には W-L / WR / KDA を表示し、少数サンプルには `Low sample` を付ける。対象履歴がない場合は `No same-role matchup history` を表示する
-- 自分のPICKフェーズでは `YOUR PICK` と現在 assignedPosition の ChampionPool 候補を表示する
+- 自分のPICKフェーズでは、まだ自分のpickが未確定なら `YOUR PICK` と現在 assignedPosition の ChampionPool 候補を表示する
+- 自分のpickが確定したあとは、中央パネルで StatsAPI の `/v1/stats/positions/{position}/champions/{championId}/details` を叩き、返ってきた最大2件の keystone 候補を選べるようにする。選択中 keystone に対応するルーンセットとサモナースペルは、Champions 詳細画面の `stats-api-*` デザインに合わせて表示する
 - ChampionPool候補はBAN済み/選択済みを unavailable 表示にし、戦績をチップ表示する
 - 対面想定プレイヤーをマークしており、相手championが見えている場合は、その対面championに対して自分が過去に成績の良かったchampionを表示する
 - 対面別の自分champion実績は ChampionPool 外のchampionも含め、W-L / WR / KDA を表示する

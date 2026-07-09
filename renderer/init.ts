@@ -172,10 +172,12 @@ const { renderChampSelect, renderDraftAiAnalysis } = createDraftView({
     positionLabel,
     getPendingLabel,
     getMemberChampionId,
+    fetch: window.fetch?.bind(window),
     loadChampionIcon,
     createInlineChampionName,
     createChampionStatsElement,
     getChampionRoleDisplayStats,
+    requestStatsApiJson: window.lcuApi.requestStatsApiJson,
     getMarkedLaneOpponentCellId: () => rendererState.markedLaneOpponentCellId,
     setMarkedLaneOpponentCellId: (cellId) => {
         rendererState.markedLaneOpponentCellId = cellId;

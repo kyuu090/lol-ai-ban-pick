@@ -95,7 +95,7 @@
   align-items: stretch;
   display: grid;
   flex: 1 1 auto;
-  grid-template-columns: minmax(230px, 270px) minmax(460px, 1fr) minmax(230px, 270px);
+  grid-template-columns: minmax(204px, 236px) minmax(560px, 1fr) minmax(204px, 236px);
   min-height: 0;
   overflow: hidden;
 }
@@ -246,11 +246,31 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
-  flex: 0 0 72px;
+  flex: 0 0 68px;
   gap: 7px;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
+  padding: 10px 12px;
+  position: relative;
+}
+
+.pick-row::before {
+  background:
+    linear-gradient(90deg, rgba(11, 17, 32, 0.2), rgba(11, 17, 32, 0.84)),
+    var(--pick-card-image, none);
+  background-position: center;
+  background-size: cover;
+  content: "";
+  inset: 0;
+  opacity: var(--pick-card-image-opacity, 0);
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.16s ease;
+}
+
+.pick-row > * {
+  position: relative;
+  z-index: 1;
 }
 
 .pick-row.ally {
@@ -309,10 +329,6 @@
   top: 8px;
 }
 
-.pick-row.local-player .champion-portrait {
-  border-color: rgba(37, 116, 255, 0.66);
-}
-
 .pick-row.active-turn {
   background: linear-gradient(90deg, rgba(97, 54, 255, 0.12), rgba(255, 255, 255, 0.82));
   border-color: rgba(97, 54, 255, 0.38);
@@ -341,69 +357,34 @@
   color: var(--accent);
 }
 
-.pick-row.local-active-turn .champion-portrait {
-  border-color: rgba(97, 54, 255, 0.7);
-}
-
-.pick-portrait-stack {
-  align-items: center;
-  display: flex;
-  flex: 0 0 44px;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.champion-portrait {
-  align-items: center;
-  aspect-ratio: 1;
-  background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.62), transparent 32%),
-    linear-gradient(135deg, rgba(37, 116, 255, 0.22), rgba(97, 54, 255, 0.16));
-  border: 2px solid rgba(97, 54, 255, 0.28);
-  border-radius: 50%;
-  color: var(--accent);
-  display: grid;
-  font-size: 12px;
-  font-weight: 800;
-  justify-content: center;
-  overflow: hidden;
-  width: 40px;
-}
-
 .pick-role-badge {
-  background: rgba(97, 54, 255, 0.12);
-  border: 1px solid rgba(97, 54, 255, 0.26);
+  align-items: center;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(97, 54, 255, 0.28);
   border-radius: 999px;
   color: var(--accent);
-  font-size: 9px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 10px;
   font-weight: 900;
+  justify-content: center;
   line-height: 1;
-  max-width: 46px;
+  min-width: 44px;
   overflow: hidden;
-  padding: 2px 5px;
+  padding: 4px 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pick-row.empty .champion-portrait {
-  border-color: rgba(154, 167, 184, 0.38);
-  color: var(--muted);
-}
-
-.champion-portrait img {
-  height: 100%;
-  object-fit: cover;
-  width: 100%;
-}
-
-.champion-portrait.intent img {
-  filter: brightness(55%) saturate(85%);
+.pick-row.empty::before {
+  display: none;
 }
 
 .pick-meta {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 4px;
   justify-content: center;
   min-width: 0;
@@ -417,12 +398,26 @@
 }
 
 .pick-meta strong {
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+.pick-row.empty .pick-meta strong {
+  color: var(--text);
   font-size: 13px;
 }
 
 .pick-meta span {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.78);
   font-size: 12px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.pick-row.empty .pick-meta span {
+  color: var(--muted);
+  text-shadow: none;
 }
 
 .pick-meta .lane-opponent-marker {
@@ -538,25 +533,25 @@
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  padding: 18px;
+  padding: 18px 16px;
 }
 
 .champion-focus {
   align-items: center;
-  aspect-ratio: 1;
+  aspect-ratio: 1 / 0.9;
   background: rgba(255, 255, 255, 0.52);
   border: 2px solid rgba(97, 54, 255, 0.24);
-  border-radius: 50%;
+  border-radius: 28px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   justify-content: center;
   min-height: 0;
-  max-width: 360px;
+  max-width: 620px;
   overflow: hidden;
-  padding: 28px;
+  padding: 24px 26px;
   text-align: center;
-  width: 82%;
+  width: min(100%, 620px);
 }
 
 .draft-board.local-turn .champion-focus {
@@ -572,12 +567,22 @@
 .champion-focus.has-ban-insights {
   align-items: stretch;
   aspect-ratio: auto;
-  border-radius: 8px;
+  border-radius: 22px;
   gap: 10px;
   max-height: 100%;
-  max-width: 560px;
+  max-width: 620px;
   padding: 14px 16px;
-  width: min(96%, 560px);
+  width: min(100%, 620px);
+}
+
+.champion-focus.recommendation-mode {
+  align-items: stretch;
+  aspect-ratio: auto;
+  gap: 14px;
+  justify-content: flex-start;
+  max-height: 100%;
+  padding: 18px 20px;
+  text-align: left;
 }
 
 .champion-focus.insight-only > .eyebrow,
@@ -612,6 +617,68 @@
   overflow: auto;
   padding-right: 2px;
   text-align: left;
+}
+
+.draft-recommend-panel {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+}
+
+.draft-recommend-shell {
+  display: grid;
+  gap: 6px;
+}
+
+.draft-recommend-shell .stats-api-details-top {
+  grid-template-columns: 1fr;
+}
+
+.draft-recommend-shell .stats-api-keystone-panel {
+  padding: 8px 10px;
+}
+
+.draft-recommend-shell .stats-api-keystone-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.draft-recommend-grid {
+  grid-template-columns: 1fr;
+}
+
+.draft-recommend-grid .stats-api-detail-column {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.draft-recommend-grid .stats-api-detail-card-summoners .stats-api-detail-card-body {
+  grid-template-columns: 1fr;
+}
+
+.draft-recommend-grid .stats-api-rune-summoner-list {
+  grid-template-columns: 1fr;
+}
+
+.draft-recommend-grid .stats-api-rune-page,
+.draft-recommend-grid .stats-api-rune-page-secondary-row {
+  grid-template-columns: 1fr;
+}
+
+.draft-recommend-grid .stats-api-rune-page-shards-header {
+  justify-content: flex-start;
+}
+
+.draft-recommend-grid .stats-api-rune-tree,
+.draft-recommend-grid .stats-api-shard-tree {
+  width: 100%;
+}
+
+.draft-recommend-empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
 }
 
 .ban-insight-panel.ban-mode {
