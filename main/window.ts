@@ -3,6 +3,7 @@ const { BrowserWindow } = require('electron');
 type IpcEventWithSender = { sender: Electron.WebContents };
 
 interface CreateMainWindowDeps {
+  htmlPath: string;
   iconPath: string;
   preloadPath: string;
   log?: {
@@ -19,7 +20,7 @@ interface CreateSplashWindowDeps {
   };
 }
 
-function createMainWindow({ iconPath, preloadPath, log }: CreateMainWindowDeps): Electron.BrowserWindow {
+function createMainWindow({ htmlPath, iconPath, preloadPath, log }: CreateMainWindowDeps): Electron.BrowserWindow {
   log?.debug?.('Creating main window');
   const mainWindow = new BrowserWindow({
     show: false,
@@ -44,7 +45,7 @@ function createMainWindow({ iconPath, preloadPath, log }: CreateMainWindowDeps):
   });
   mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximized', true));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized', false));
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(htmlPath);
   return mainWindow;
 }
 

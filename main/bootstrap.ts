@@ -76,6 +76,7 @@ const AUTO_MATCH_HISTORY_STARTUP_DELAY_MS = 2000;
 const AUTO_MATCH_HISTORY_GAME_END_DELAY_MS = 20000;
 const LANE_MATCHUP_RETRY_DELAY_MS = 3000;
 const APP_ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
+const MAIN_HTML_PATH = path.join(__dirname, '..', 'index.html');
 const SPLASH_HTML_PATH = path.join(__dirname, '..', 'splash.html');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
@@ -228,6 +229,7 @@ function bootstrap(): void {
 
   function createWindow(): BrowserWindow {
     const window = createMainWindow({
+      htmlPath: MAIN_HTML_PATH,
       iconPath: APP_ICON_PATH,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       log
@@ -245,10 +247,15 @@ function bootstrap(): void {
     });
     splashWindowLoadPromise = new Promise<void>((resolve) => {
       let settled = false;
+      let timeoutId: NodeJS.Timeout | null = null;
 
       function finish(): void {
         if (settled) return;
         settled = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         resolve();
       }
 
@@ -258,7 +265,7 @@ function bootstrap(): void {
           log.warn('Splash window failed to load', { errorCode, errorDescription });
           finish();
         });
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           log.warn('Splash window load timed out. Continuing bootstrap.');
           finish();
         }, SPLASH_LOAD_TIMEOUT_MS);
@@ -360,6 +367,11 @@ function bootstrap(): void {
   }
 
   async function getClientVersion(): Promise<string> {
+    if (app.isPackaged) {
+      const packagedVersion = String(app.getVersion() || '').trim();
+      if (packagedVersion) return packagedVersion;
+    }
+
     try {
       const packageLockText = await fs.readFile(PACKAGE_LOCK_PATH, 'utf8');
       const packageLock = JSON.parse(packageLockText);
