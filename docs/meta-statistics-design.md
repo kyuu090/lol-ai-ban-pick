@@ -1052,7 +1052,7 @@ laterItemMinPickRate = 0.10
 skillOrderMinPickRate = 0.10
 ```
 
-`stats-db-api.ts` の許可 path には `/v1/stats/positions/:position/champions/:championId/details` を追加する。Renderer からは既存と同じ `stats-api:request` IPC を使う。429 / 5xx の扱いは一覧と同じにし、詳細取得中は詳細領域だけ loading 表示にする。一覧を消さずに遷移するため、取得失敗時は戻る操作を維持したままエラーと再試行ボタンを表示する。
+`stats-db-api.ts` の許可 path には `/v1/stats/positions/:position/champions/:championId/details` を追加する。Renderer からは既存と同じ `stats-api:request` IPC を使う。429 / 5xx の扱いは一覧と同じにし、StatsAPI 通信中は Champions パネル全体に中央が最も濃く外側に向かって透けていく loading overlay と中央の `Now loading ...` を表示する。フィルタ下の status 行は平常時と通信中は隠し、エラーや入力不足の補助メッセージがあるときだけ表示する。詳細領域には `チャンピオン詳細を取得しています` や `詳細データを読み込み中です` のような通信中テキストは差し込まない。直近 60 秒以内の同一クエリが renderer 側キャッシュにある場合は loading overlay を出さない。一覧を消さずに遷移するため、取得失敗時は戻る操作を維持したままエラーを表示する。
 
 ### BAN 率の取得は難しい
 

@@ -191,6 +191,38 @@
   gap: 10px;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.stats-api-loading-overlay {
+  align-items: center;
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0.82) 0%,
+      rgba(0, 0, 0, 0.72) 10%,
+      rgba(0, 0, 0, 0.44) 22%,
+      rgba(0, 0, 0, 0.22) 34%,
+      rgba(0, 0, 0, 0.08) 46%,
+      rgba(0, 0, 0, 0) 60%
+    );
+  backdrop-filter: blur(2px);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+  z-index: 30;
+}
+
+.stats-api-loading-overlay-message {
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 20px 28px;
+  text-align: center;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  text-transform: uppercase;
 }
 
 .stats-api-view {
