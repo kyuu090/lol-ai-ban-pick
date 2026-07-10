@@ -161,7 +161,7 @@ const { renderInGame, renderInGameFinalCompositionAnalysis } = createInGameView(
     getFinalCompositionAnalysisNotes: () => rendererState.finalCompositionAnalysisNotes,
     getFinalCompositionAnalysisError: () => rendererState.finalCompositionAnalysisError
 });
-const { renderChampSelect, renderDraftAiAnalysis } = createDraftView({
+const { renderChampSelect, renderDraftAiAnalysis, resetDraftRecommendationState } = createDraftView({
     elements,
     document,
     collectBans,
@@ -172,10 +172,13 @@ const { renderChampSelect, renderDraftAiAnalysis } = createDraftView({
     positionLabel,
     getPendingLabel,
     getMemberChampionId,
+    getChampionsById: () => rendererState.championsById,
+    fetch: window.fetch?.bind(window),
     loadChampionIcon,
     createInlineChampionName,
     createChampionStatsElement,
     getChampionRoleDisplayStats,
+    requestStatsApiJson: window.lcuApi.requestStatsApiJson,
     getMarkedLaneOpponentCellId: () => rendererState.markedLaneOpponentCellId,
     setMarkedLaneOpponentCellId: (cellId) => {
         rendererState.markedLaneOpponentCellId = cellId;
@@ -242,6 +245,7 @@ draftController = window.RendererDraftController.createDraftController({
     formatDate,
     renderChampSelect,
     renderInGame,
+    resetDraftRecommendationState,
     resetDraftAiAnalysis,
     resetFinalCompositionAnalysis,
     logDebug

@@ -181,6 +181,19 @@
   .ban-insight-panel {
     grid-template-columns: 1fr;
   }
+
+  .draft-recommend-shell .stats-api-keystone-list,
+  .draft-recommend-grid .stats-api-rune-page,
+  .draft-recommend-grid .stats-api-rune-page-secondary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .champion-focus,
+  .champion-focus.has-ban-insights,
+  .champion-focus.recommendation-mode {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 

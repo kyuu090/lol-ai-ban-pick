@@ -9,6 +9,7 @@
     formatDate(value: any): string;
     renderChampSelect(champSelect: any, gameflowPhase: any): void;
     renderInGame(state: any): void;
+    resetDraftRecommendationState(): void;
     resetDraftAiAnalysis(): void;
     resetFinalCompositionAnalysis(): void;
     logDebug(message: string, details?: any): void;
@@ -32,6 +33,7 @@
       if (!inChampSelect || unsupportedGameMode) {
         elements.champSelectView.classList.remove('local-turn');
         state.markedLaneOpponentCellId = null;
+        deps.resetDraftRecommendationState();
         deps.resetDraftAiAnalysis();
       }
 

@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Draft Locked Pick Mock</title>
+  <link rel="stylesheet" href="../styles/stats.css" />
+  <style>
+    :root {
+      --bg: #eef3ff;
+      --panel: rgba(255, 255, 255, 0.78);
+      --panel-strong: rgba(255, 255, 255, 0.9);
+      --border: rgba(101, 119, 163, 0.18);
+      --text: #1f2b45;
+      --muted: #64718c;
+      --accent: #6447ff;
+      --accent-soft: rgba(100, 71, 255, 0.1);
+      --accent-strong: #4f46e5;
+      --blue: #2574ff;
+      --danger: #dc2626;
+      --red: #f0557d;
+      --border: rgba(101, 119, 163, 0.18);
+      --panel-soft: rgba(255, 255, 255, 0.7);
+      --panel-solid: rgba(255, 255, 255, 0.94);
+      --shadow: 0 20px 50px rgba(69, 92, 148, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(100, 71, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 20% 30%, rgba(37, 116, 255, 0.12), transparent 20%),
+        linear-gradient(180deg, #f8faff 0%, #edf2ff 100%);
+      color: var(--text);
+      font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    }
+
+    .page {
+      display: grid;
+      gap: 18px;
+      padding: 24px;
+    }
+
+    .note {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(100, 71, 255, 0.12);
+      border-radius: 16px;
+      color: var(--muted);
+      padding: 12px 14px;
+    }
+
+    .note strong {
+      color: var(--accent);
+    }
+
+    .draft-board {
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid rgba(100, 71, 255, 0.16);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .draft-header {
+      align-items: center;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr minmax(280px, 360px) 1fr;
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(100, 71, 255, 0.14);
+      background: rgba(255, 255, 255, 0.56);
+    }
+
+    .draft-title {
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .draft-title h1,
+    .draft-title h2,
+    .draft-title h3,
+    .draft-title p,
+    .ban-strip p,
+    .ban-strip h2,
+    .ban-strip h3 {
+      margin: 0;
+    }
+
+    .draft-title h2 {
+      font-size: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .ban-strip {
+      display: grid;
+      gap: 8px;
+    }
+
+    .ban-strip.align-right {
+      justify-items: end;
+      text-align: right;
+    }
+
+    .ban-strip > span:first-child {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .ban-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .ban-token {
+      align-items: center;
+      background: rgba(100, 71, 255, 0.08);
+      border: 1px solid rgba(100, 71, 255, 0.18);
+      border-radius: 999px;
+      color: var(--accent);
+      display: inline-flex;
+      font-size: 12px;
+      gap: 6px;
+      padding: 5px 9px;
+    }
+
+    .ban-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(100, 71, 255, 0.65), rgba(37, 116, 255, 0.6));
+    }
+
+    .teams-layout {
+      display: grid;
+      grid-template-columns: minmax(204px, 236px) minmax(560px, 1fr) minmax(204px, 236px);
+      min-height: 700px;
+    }
+
+    .team-column {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .team-column h3 {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    .enemy h3 {
+      text-align: right;
+    }
+
+    .pick-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pick-row {
+      --card-tint: rgba(11, 17, 32, 0.72);
+      align-items: center;
+      background: rgba(255, 255, 255, 0.66);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      gap: 8px;
+      min-height: 68px;
+      overflow: hidden;
+      padding: 10px 12px;
+      position: relative;
+    }
+
+    .pick-row::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(8, 15, 34, 0.18), var(--card-tint)),
+        var(--bg-art, linear-gradient(135deg, rgba(100, 71, 255, 0.32), rgba(37, 116, 255, 0.24)));
+      background-size: cover;
+      background-position: center;
+    }
+
+    .pick-row > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .pick-row.ally {
+      border-left: 4px solid var(--blue);
+    }
+
+    .pick-row.enemy {
+      border-right: 4px solid var(--red);
+      flex-direction: row-reverse;
+      text-align: right;
+    }
+
+    .pick-row.local-player::after {
+      content: "YOU";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      background: rgba(37, 116, 255, 0.18);
+      border: 1px solid rgba(37, 116, 255, 0.32);
+      border-radius: 999px;
+      color: #d8e7ff;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      padding: 4px 7px;
+    }
+
+    .pick-row.intent::before {
+      filter: saturate(0.78) brightness(0.82);
+    }
+
+    .pick-row.empty::before {
+      background: linear-gradient(135deg, rgba(100, 71, 255, 0.08), rgba(37, 116, 255, 0.06));
+    }
+
+    .pick-role-badge {
+      align-items: center;
+      align-self: stretch;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(100, 71, 255, 0.22);
+      border-radius: 999px;
+      color: var(--accent);
+      display: inline-flex;
+      flex: 0 0 auto;
+      font-size: 10px;
+      font-weight: 900;
+      justify-content: center;
+      min-width: 44px;
+      padding: 4px 8px;
+    }
+
+    .pick-meta {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .pick-meta strong,
+    .pick-meta span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pick-meta strong {
+      color: #fff;
+      font-size: 13px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .pick-meta span {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 12px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .pick-row.empty .pick-meta strong {
+      color: var(--text);
+      text-shadow: none;
+    }
+
+    .pick-row.empty .pick-meta span {
+      color: var(--muted);
+      text-shadow: none;
+    }
+
+    .lane-opponent-marker {
+      align-self: start;
+      width: fit-content;
+      background: rgba(100, 71, 255, 0.18);
+      border: 1px solid rgba(100, 71, 255, 0.28);
+      border-radius: 999px;
+      color: #f4f2ff;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      padding: 4px 7px;
+    }
+
+    .draft-focus {
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      padding: 18px 16px;
+      min-width: 0;
+      background:
+        linear-gradient(135deg, transparent 0 38%, rgba(100, 71, 255, 0.07) 38% 58%, transparent 58%),
+        radial-gradient(circle at 50% 40%, rgba(100, 71, 255, 0.12), transparent 30%),
+        radial-gradient(circle at 50% 44%, rgba(37, 116, 255, 0.08), transparent 44%);
+      border-left: 1px solid rgba(100, 71, 255, 0.1);
+      border-right: 1px solid rgba(100, 71, 255, 0.1);
+    }
+
+    .draft-self-summary {
+      width: min(100%, 620px);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      background: rgba(100, 71, 255, 0.1);
+      border: 1px solid rgba(100, 71, 255, 0.22);
+      border-radius: 12px;
+    }
+
+    .summary-label {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .summary-title {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      min-height: 22px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(101, 119, 163, 0.16);
+      border-radius: 999px;
+    }
+
+    .chip small {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .chip b {
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .champion-focus {
+      width: min(100%, 620px);
+      max-width: 620px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      padding: 18px 20px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 2px solid rgba(100, 71, 255, 0.22);
+      border-radius: 28px;
+      box-shadow: 0 0 0 8px rgba(100, 71, 255, 0.05), 0 20px 44px rgba(84, 65, 170, 0.14);
+    }
+
+    .mock-stats-api-shell {
+      display: grid;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .mock-stats-api-shell .stats-api-details-content {
+      width: 100%;
+    }
+
+    .mock-stats-api-shell .stats-api-details-top {
+      grid-template-columns: 1fr;
+    }
+
+    .mock-stats-api-shell .stats-api-keystone-panel {
+      padding: 8px 10px;
+    }
+
+    .mock-stats-api-shell .stats-api-keystone-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mock-stats-api-shell .stats-api-detail-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .mock-stats-api-shell .stats-api-detail-column {
+      grid-column: auto;
+      grid-row: auto;
+    }
+
+    .mock-stats-api-shell .stats-api-detail-card {
+      padding: 8px;
+    }
+
+    .mock-stats-api-shell .stats-api-detail-card-summoners .stats-api-detail-card-body {
+      grid-template-columns: 1fr;
+    }
+
+    .mock-stats-api-shell .stats-api-rune-summoner-list {
+      grid-template-columns: 1fr;
+    }
+
+    .mock-stats-api-shell .stats-api-rune-page,
+    .mock-stats-api-shell .stats-api-rune-page-secondary-row {
+      grid-template-columns: 1fr;
+    }
+
+    .mock-stats-api-shell .stats-api-rune-page-shards-header {
+      justify-content: flex-start;
+    }
+
+    .mock-stats-api-shell .stats-api-rune-tree,
+    .mock-stats-api-shell .stats-api-shard-tree {
+      width: 100%;
+    }
+
+    .mock-stats-api-shell .stats-api-champion-hero {
+      display: none;
+    }
+
+    .draft-ai-analysis-panel {
+      display: grid;
+      gap: 10px;
+      padding: 14px 20px 16px;
+      background:
+        linear-gradient(135deg, rgba(37, 116, 255, 0.14), rgba(100, 71, 255, 0.16)),
+        rgba(255, 255, 255, 0.78);
+      border-top: 1px solid rgba(100, 71, 255, 0.16);
+    }
+
+    .draft-ai-analysis-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .draft-ai-analysis-header h3,
+    .draft-ai-analysis-header p {
+      margin: 0;
+    }
+
+    .analysis-badge {
+      border-radius: 999px;
+      border: 1px solid rgba(37, 116, 255, 0.24);
+      background: rgba(37, 116, 255, 0.12);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 900;
+      padding: 7px 10px;
+    }
+
+    .analysis-notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .analysis-note {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(100, 71, 255, 0.18);
+      border-radius: 10px;
+    }
+
+    .analysis-note strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .analysis-note p {
+      margin: 0;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .art-ahri { --bg-art: linear-gradient(135deg, rgba(82, 34, 110, 0.3), rgba(236, 96, 176, 0.26)), radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 30%), linear-gradient(120deg, #293356, #8a3d7f); }
+    .art-viego { --bg-art: linear-gradient(135deg, rgba(11, 91, 87, 0.26), rgba(118, 215, 196, 0.18)), linear-gradient(120deg, #122f34, #3d6a68); }
+    .art-renekton { --bg-art: linear-gradient(135deg, rgba(109, 58, 16, 0.32), rgba(240, 170, 74, 0.22)), linear-gradient(120deg, #4d311f, #8e5d2d); }
+    .art-jinx { --bg-art: linear-gradient(135deg, rgba(18, 72, 120, 0.3), rgba(69, 199, 255, 0.24)), linear-gradient(120deg, #1d2959, #265f8f); }
+    .art-leona { --bg-art: linear-gradient(135deg, rgba(145, 97, 12, 0.3), rgba(255, 210, 89, 0.26)), linear-gradient(120deg, #5d4322, #9a7125); }
+    .art-yone { --bg-art: linear-gradient(135deg, rgba(77, 19, 45, 0.3), rgba(255, 113, 146, 0.22)), linear-gradient(120deg, #2f213f, #7a3151); }
+    .art-lee { --bg-art: linear-gradient(135deg, rgba(110, 39, 27, 0.32), rgba(255, 154, 107, 0.22)), linear-gradient(120deg, #46251e, #8b4334); }
+    .art-kaisa { --bg-art: linear-gradient(135deg, rgba(59, 31, 106, 0.34), rgba(144, 112, 255, 0.2)), linear-gradient(120deg, #291d4e, #663f86); }
+    .art-sona { --bg-art: linear-gradient(135deg, rgba(20, 70, 104, 0.32), rgba(113, 197, 255, 0.22)), linear-gradient(120deg, #233e5a, #2f7392); }
+
+    @media (max-width: 1100px) {
+      .draft-header,
+      .teams-layout,
+      .analysis-notes {
+        grid-template-columns: 1fr;
+      }
+
+      .enemy h3,
+      .pick-row.enemy {
+        text-align: left;
+      }
+
+      .pick-row.enemy {
+        flex-direction: row;
+        border-left: 4px solid var(--red);
+        border-right: 1px solid var(--border);
+      }
+
+      .champion-focus,
+      .draft-self-summary {
+        width: 100%;
+        max-width: none;
+      }
+
+      .mock-stats-api-shell .stats-api-keystone-list,
+      .mock-stats-api-shell .stats-api-detail-card-runes .stats-api-rune-page,
+      .mock-stats-api-shell .stats-api-detail-card-runes .stats-api-rune-page-secondary-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="note">
+      <strong>Mock Preview</strong>
+      中央パネルはチャンピオン詳細画面のクラスと見た目に寄せたモックです。キーストーンカードとルーン `Set1 / Set2` タブをクリックすると内容が切り替わります。
+    </section>
+
+    <section class="draft-board">
+      <header class="draft-header">
+        <section class="ban-strip">
+          <span>ALLY BANS</span>
+          <div class="ban-list">
+            <span class="ban-token"><span class="ban-icon"></span> Sett</span>
+            <span class="ban-token"><span class="ban-icon"></span> Naafiri</span>
+            <span class="ban-token"><span class="ban-icon"></span> Brand</span>
+            <span class="ban-token"><span class="ban-icon"></span> Zed</span>
+            <span class="ban-token"><span class="ban-icon"></span> Draven</span>
+          </div>
+        </section>
+
+        <section class="draft-title">
+          <p class="eyebrow">Draft Pick</p>
+          <h2>CHAMPION SELECT</h2>
+        </section>
+
+        <section class="ban-strip align-right">
+          <span>ENEMY BANS</span>
+          <div class="ban-list">
+            <span class="ban-token"><span class="ban-icon"></span> Darius</span>
+            <span class="ban-token"><span class="ban-icon"></span> Nidalee</span>
+            <span class="ban-token"><span class="ban-icon"></span> Blitzcrank</span>
+            <span class="ban-token"><span class="ban-icon"></span> Ezreal</span>
+            <span class="ban-token"><span class="ban-icon"></span> Aurora</span>
+          </div>
+        </section>
+      </header>
+
+      <section class="teams-layout">
+        <section class="team-column ally">
+          <h3>YOUR TEAM</h3>
+          <div class="pick-list">
+            <article class="pick-row ally selected art-renekton">
+              <span class="pick-role-badge">TOP</span>
+              <div class="pick-meta">
+                <strong>Renekton</strong>
+                <span>Locked in</span>
+              </div>
+            </article>
+
+            <article class="pick-row ally selected art-viego">
+              <span class="pick-role-badge">JG</span>
+              <div class="pick-meta">
+                <strong>Viego</strong>
+                <span>Locked in</span>
+              </div>
+            </article>
+
+            <article class="pick-row ally selected local-player art-ahri">
+              <span class="pick-role-badge">MID</span>
+              <div class="pick-meta">
+                <strong>Ahri</strong>
+                <span>Locked in</span>
+              </div>
+            </article>
+
+            <article class="pick-row ally intent art-jinx">
+              <span class="pick-role-badge">BOT</span>
+              <div class="pick-meta">
+                <strong>Jinx</strong>
+                <span>Pick intent</span>
+              </div>
+            </article>
+
+            <article class="pick-row ally empty">
+              <span class="pick-role-badge">SUP</span>
+              <div class="pick-meta">
+                <strong>未選択</strong>
+                <span>Waiting for support</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="draft-focus">
+          <div class="draft-self-summary">
+            <div>
+              <div class="summary-label">Your</div>
+              <div class="summary-title">Ahri</div>
+            </div>
+            <div class="summary-stats">
+              <span class="chip"><small>W-L</small><b>18-10</b></span>
+              <span class="chip"><small>WR</small><b>64%</b></span>
+              <span class="chip"><small>KDA</small><b>4.3</b></span>
+            </div>
+          </div>
+
+          <div class="champion-focus">
+            <div class="mock-stats-api-shell">
+              <section class="stats-api-details-content">
+                <div class="stats-api-details-top">
+                  <section class="stats-api-keystone-panel">
+                    <div class="stats-api-keystone-list">
+                      <button class="stats-api-keystone-card active" type="button" data-pane="electrocute">
+                        <div class="stats-api-keystone-card-header">
+                          <span class="stats-api-rune-token keystone">
+                            <span class="stats-api-rune-token-label stats-api-keystone-name">電撃</span>
+                          </span>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">PR</span><span class="stats-api-summary-chip-value">33%</span></span>
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">52%</span></span>
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">120</span></span>
+                        </div>
+                      </button>
+                      <button class="stats-api-keystone-card" type="button" data-pane="phase-rush">
+                        <div class="stats-api-keystone-card-header">
+                          <span class="stats-api-rune-token keystone">
+                            <span class="stats-api-rune-token-label stats-api-keystone-name">フェイズラッシュ</span>
+                          </span>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">PR</span><span class="stats-api-summary-chip-value">21%</span></span>
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">50%</span></span>
+                          <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">90</span></span>
+                        </div>
+                      </button>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="stats-api-detail-grid">
+                  <div class="stats-api-detail-column">
+                    <section class="stats-api-detail-card stats-api-detail-card-compact stats-api-detail-card-runes">
+                      <div class="stats-api-detail-card-header">
+                        <h3 class="stats-api-detail-card-title">ルーン</h3>
+                        <div class="stats-api-rune-tab-list pane active" data-pane="electrocute">
+                          <button class="stats-api-rune-tab active" type="button" data-rune-pane="electrocute-set1">Set1</button>
+                          <button class="stats-api-rune-tab" type="button" data-rune-pane="electrocute-set2">Set2</button>
+                        </div>
+                        <div class="stats-api-rune-tab-list pane" data-pane="phase-rush" hidden>
+                          <button class="stats-api-rune-tab active" type="button" data-rune-pane="phase-rush-set1">Set1</button>
+                          <button class="stats-api-rune-tab" type="button" data-rune-pane="phase-rush-set2">Set2</button>
+                        </div>
+                      </div>
+
+                      <div class="stats-api-detail-card-body">
+                        <div class="stats-api-rune-tabs pane active" data-pane="electrocute">
+                          <div class="stats-api-rune-tab-panels">
+                            <article class="stats-api-detail-option rune-pane active" data-rune-pane="electrocute-set1">
+                              <div class="stats-api-rune-page">
+                                <div class="stats-api-rune-tree stats-api-rune-page-primary">
+                                  <div class="stats-api-rune-tree-slots">
+                                    <div class="stats-api-rune-tree-row">
+                                      <span class="stats-api-rune-token style">覇道</span>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">電撃</span>
+                                      <span class="stats-api-tag">血の味わい</span>
+                                      <span class="stats-api-tag">グリスリー</span>
+                                      <span class="stats-api-tag">終わりなき糧</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="stats-api-rune-page-secondary-row">
+                                  <div class="stats-api-rune-tree secondary">
+                                    <div class="stats-api-rune-tree-slots">
+                                      <div class="stats-api-rune-tree-row">
+                                        <span class="stats-api-rune-token style">魔道</span>
+                                      </div>
+                                      <div class="stats-api-tag-list">
+                                        <span class="stats-api-tag">マナフローバンド</span>
+                                        <span class="stats-api-tag">追い風</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="stats-api-rune-page-shards">
+                                    <div class="stats-api-rune-page-shards-header">
+                                      <div class="stats-api-option-meta stats-api-rune-set-meta">
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">53%</span></span>
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">80</span></span>
+                                      </div>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Health</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+
+                            <article class="stats-api-detail-option rune-pane" data-rune-pane="electrocute-set2" hidden>
+                              <div class="stats-api-rune-page">
+                                <div class="stats-api-rune-tree stats-api-rune-page-primary">
+                                  <div class="stats-api-rune-tree-slots">
+                                    <div class="stats-api-rune-tree-row">
+                                      <span class="stats-api-rune-token style">覇道</span>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">電撃</span>
+                                      <span class="stats-api-tag">追い打ち</span>
+                                      <span class="stats-api-tag">グリスリー</span>
+                                      <span class="stats-api-tag">賞金首狩り</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="stats-api-rune-page-secondary-row">
+                                  <div class="stats-api-rune-tree secondary">
+                                    <div class="stats-api-rune-tree-slots">
+                                      <div class="stats-api-rune-tree-row">
+                                        <span class="stats-api-rune-token style">魔道</span>
+                                      </div>
+                                      <div class="stats-api-tag-list">
+                                        <span class="stats-api-tag">マナフローバンド</span>
+                                        <span class="stats-api-tag">至高</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="stats-api-rune-page-shards">
+                                    <div class="stats-api-rune-page-shards-header">
+                                      <div class="stats-api-option-meta stats-api-rune-set-meta">
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">51%</span></span>
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">42</span></span>
+                                      </div>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Health</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          </div>
+                        </div>
+
+                        <div class="stats-api-rune-tabs pane" data-pane="phase-rush" hidden>
+                          <div class="stats-api-rune-tab-panels">
+                            <article class="stats-api-detail-option rune-pane active" data-rune-pane="phase-rush-set1">
+                              <div class="stats-api-rune-page">
+                                <div class="stats-api-rune-tree stats-api-rune-page-primary">
+                                  <div class="stats-api-rune-tree-slots">
+                                    <div class="stats-api-rune-tree-row">
+                                      <span class="stats-api-rune-token style">魔道</span>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">フェイズラッシュ</span>
+                                      <span class="stats-api-tag">マナフローバンド</span>
+                                      <span class="stats-api-tag">至高</span>
+                                      <span class="stats-api-tag">追い風</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="stats-api-rune-page-secondary-row">
+                                  <div class="stats-api-rune-tree secondary">
+                                    <div class="stats-api-rune-tree-slots">
+                                      <div class="stats-api-rune-tree-row">
+                                        <span class="stats-api-rune-token style">天啓</span>
+                                      </div>
+                                      <div class="stats-api-tag-list">
+                                        <span class="stats-api-tag">ビスケット</span>
+                                        <span class="stats-api-tag">宇宙の英知</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="stats-api-rune-page-shards">
+                                    <div class="stats-api-rune-page-shards-header">
+                                      <div class="stats-api-option-meta stats-api-rune-set-meta">
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">50%</span></span>
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">60</span></span>
+                                      </div>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Move Speed</span>
+                                      <span class="stats-api-tag">Health</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+
+                            <article class="stats-api-detail-option rune-pane" data-rune-pane="phase-rush-set2" hidden>
+                              <div class="stats-api-rune-page">
+                                <div class="stats-api-rune-tree stats-api-rune-page-primary">
+                                  <div class="stats-api-rune-tree-slots">
+                                    <div class="stats-api-rune-tree-row">
+                                      <span class="stats-api-rune-token style">魔道</span>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">フェイズラッシュ</span>
+                                      <span class="stats-api-tag">ヌルオーブ</span>
+                                      <span class="stats-api-tag">至高</span>
+                                      <span class="stats-api-tag">水走り</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="stats-api-rune-page-secondary-row">
+                                  <div class="stats-api-rune-tree secondary">
+                                    <div class="stats-api-rune-tree-slots">
+                                      <div class="stats-api-rune-tree-row">
+                                        <span class="stats-api-rune-token style">覇道</span>
+                                      </div>
+                                      <div class="stats-api-tag-list">
+                                        <span class="stats-api-tag">血の味わい</span>
+                                        <span class="stats-api-tag">究極の賞金首狩り</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="stats-api-rune-page-shards">
+                                    <div class="stats-api-rune-page-shards-header">
+                                      <div class="stats-api-option-meta stats-api-rune-set-meta">
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">49%</span></span>
+                                        <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">30</span></span>
+                                      </div>
+                                    </div>
+                                    <div class="stats-api-tag-list">
+                                      <span class="stats-api-tag">Adaptive Force</span>
+                                      <span class="stats-api-tag">Move Speed</span>
+                                      <span class="stats-api-tag">Health</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="stats-api-detail-card stats-api-detail-card-summoners">
+                      <div class="stats-api-detail-card-header">
+                        <h3 class="stats-api-detail-card-title">サモナースペル</h3>
+                      </div>
+                      <div class="stats-api-detail-card-body">
+                        <section class="stats-api-detail-subsection stats-api-rune-summoner-section pane active" data-pane="electrocute">
+                          <div class="stats-api-rune-summoner-list">
+                            <article class="stats-api-detail-option">
+                              <div class="stats-api-tag-list stats-api-summoner-spell-list">
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Flash</span></span>
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Ignite</span></span>
+                              </div>
+                              <div class="stats-api-option-meta">
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">51%</span></span>
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">72</span></span>
+                              </div>
+                            </article>
+                            <article class="stats-api-detail-option">
+                              <div class="stats-api-tag-list stats-api-summoner-spell-list">
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Flash</span></span>
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Teleport</span></span>
+                              </div>
+                              <div class="stats-api-option-meta">
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">50%</span></span>
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">29</span></span>
+                              </div>
+                            </article>
+                          </div>
+                        </section>
+
+                        <section class="stats-api-detail-subsection stats-api-rune-summoner-section pane" data-pane="phase-rush" hidden>
+                          <div class="stats-api-rune-summoner-list">
+                            <article class="stats-api-detail-option">
+                              <div class="stats-api-tag-list stats-api-summoner-spell-list">
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Flash</span></span>
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Teleport</span></span>
+                              </div>
+                              <div class="stats-api-option-meta">
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">50%</span></span>
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">48</span></span>
+                              </div>
+                            </article>
+                            <article class="stats-api-detail-option">
+                              <div class="stats-api-tag-list stats-api-summoner-spell-list">
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Flash</span></span>
+                                <span class="stats-api-rune-token stats-api-summoner-spell-token"><span class="stats-api-rune-token-label">Cleanse</span></span>
+                              </div>
+                              <div class="stats-api-option-meta">
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">WR</span><span class="stats-api-summary-chip-value">48%</span></span>
+                                <span class="stats-api-summary-chip"><span class="stats-api-summary-chip-label">Games</span><span class="stats-api-summary-chip-value">18</span></span>
+                              </div>
+                            </article>
+                          </div>
+                        </section>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="team-column enemy">
+          <h3>ENEMY TEAM</h3>
+          <div class="pick-list">
+            <article class="pick-row enemy selected art-yone">
+              <span class="pick-role-badge">MID</span>
+              <div class="pick-meta">
+                <strong>Yone</strong>
+                <span>Locked in</span>
+                <span class="lane-opponent-marker">MID OPPONENT</span>
+              </div>
+            </article>
+
+            <article class="pick-row enemy selected art-lee">
+              <span class="pick-role-badge">JG</span>
+              <div class="pick-meta">
+                <strong>Lee Sin</strong>
+                <span>Locked in</span>
+              </div>
+            </article>
+
+            <article class="pick-row enemy intent art-kaisa">
+              <span class="pick-role-badge">BOT</span>
+              <div class="pick-meta">
+                <strong>Kai'Sa</strong>
+                <span>Pick intent</span>
+              </div>
+            </article>
+
+            <article class="pick-row enemy intent art-sona">
+              <span class="pick-role-badge">SUP</span>
+              <div class="pick-meta">
+                <strong>Sona</strong>
+                <span>Pick intent</span>
+              </div>
+            </article>
+
+            <article class="pick-row enemy empty">
+              <span class="pick-role-badge">TOP</span>
+              <div class="pick-meta">
+                <strong>未選択</strong>
+                <span>Waiting for top</span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="draft-ai-analysis-panel">
+        <div class="draft-ai-analysis-header">
+          <div>
+            <p class="eyebrow">AI Analysis</p>
+            <h3>バンピック分析</h3>
+          </div>
+          <span class="analysis-badge">DONE</span>
+        </div>
+
+        <div class="analysis-notes">
+          <article class="analysis-note">
+            <strong>Lane Plan</strong>
+            <p>Yone 対面は Lv3 までは wave を寄せすぎず、Charm の返しで短く取る前提が安定。</p>
+          </article>
+          <article class="analysis-note">
+            <strong>Jungle Sync</strong>
+            <p>Lee Sin が見えているので、最初の ward は raptor side を優先。Viego の mid cover が強い。</p>
+          </article>
+          <article class="analysis-note">
+            <strong>Team Damage</strong>
+            <p>味方は前寄りなので、Ahri は pick 専用よりも継戦寄り rune の比較価値も高い。</p>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const buttons = Array.from(document.querySelectorAll('.stats-api-keystone-card'));
+    const panes = Array.from(document.querySelectorAll('.pane'));
+    const runeTabs = Array.from(document.querySelectorAll('.stats-api-rune-tab'));
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const paneId = button.dataset.pane;
+        buttons.forEach((entry) => entry.classList.toggle('active', entry === button));
+        panes.forEach((pane) => {
+          const visible = pane.dataset.pane === paneId;
+          pane.hidden = !visible;
+          pane.classList.toggle('active', visible);
+        });
+      });
+    });
+
+    runeTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const runePaneId = tab.dataset.runePane;
+        const runeTabGroup = tab.closest('.stats-api-rune-tab-list');
+        const paneId = runeTabGroup?.dataset.pane;
+        if (!paneId || !runePaneId) return;
+
+        runeTabGroup.querySelectorAll('.stats-api-rune-tab').forEach((entry) => {
+          entry.classList.toggle('active', entry === tab);
+        });
+
+        document.querySelectorAll(`.stats-api-rune-tabs[data-pane="${paneId}"] .rune-pane`).forEach((pane) => {
+          const visible = pane.dataset.runePane === runePaneId;
+          pane.hidden = !visible;
+          pane.classList.toggle('active', visible);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

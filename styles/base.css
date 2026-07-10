@@ -25,6 +25,27 @@
   display: none !important;
 }
 
+.champion-portrait {
+  align-items: center;
+  aspect-ratio: 1;
+  border: 2px solid rgba(97, 54, 255, 0.28);
+  border-radius: 50%;
+  color: var(--accent);
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.champion-portrait img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

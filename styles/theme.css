@@ -135,10 +135,16 @@
   :root:not([data-theme]) .match-data-season-hint,
   :root:not([data-theme]) .low-sample-badge,
   :root:not([data-theme]) .ban-token,
-  :root:not([data-theme]) .pick-meta .lane-opponent-marker,
   :root:not([data-theme]) .pick-pool-candidate em {
     background: rgba(155, 124, 255, 0.18);
     border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root:not([data-theme]) .lane-opponent-marker {
+    background: linear-gradient(180deg, rgba(72, 32, 168, 0.98), rgba(112, 52, 214, 0.95));
+    border-color: rgba(231, 220, 255, 0.88);
+    box-shadow: 0 6px 18px rgba(19, 6, 56, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    color: #ffffff;
   }
 
   :root:not([data-theme]) .stats-opponent-detail-group.won,
@@ -393,10 +399,16 @@
   :root[data-theme="dark"] .match-data-season-hint,
   :root[data-theme="dark"] .low-sample-badge,
   :root[data-theme="dark"] .ban-token,
-  :root[data-theme="dark"] .pick-meta .lane-opponent-marker,
   :root[data-theme="dark"] .pick-pool-candidate em {
     background: rgba(155, 124, 255, 0.18);
     border-color: rgba(155, 124, 255, 0.32);
+  }
+
+  :root[data-theme="dark"] .lane-opponent-marker {
+    background: linear-gradient(180deg, rgba(72, 32, 168, 0.98), rgba(112, 52, 214, 0.95));
+    border-color: rgba(231, 220, 255, 0.88);
+    box-shadow: 0 6px 18px rgba(19, 6, 56, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    color: #ffffff;
   }
 
   :root[data-theme="dark"] .stats-opponent-detail-group.won,

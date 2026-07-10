@@ -37,7 +37,6 @@ type SortableStats = DraftAnyRecord;
     bottom: 'BOTTOM',
     utility: 'UTILITY'
   };
-  const SUPPORTED_DRAFT_QUEUE_IDS = new Set([400, 420, 440]);
   const SUMMONERS_RIFT_MAP_ID = 11;
 
   function hasUsableData(value: any): value is DraftAnyRecord {
@@ -348,19 +347,10 @@ type SortableStats = DraftAnyRecord;
     return candidates.filter(({ gameData, queue }) => hasQueueEvidence(gameData, queue));
   }
 
-  function isSupportedDraftCandidate({ gameData, queue }: { gameData: DraftAnyRecord; queue: DraftAnyRecord }): boolean {
-    const queueId = normalizeQueueId(queue.id ?? queue.queueId ?? gameData.queueId);
-    if (SUPPORTED_DRAFT_QUEUE_IDS.has(queueId)) return true;
-
-    if (!isSummonersRiftClassicGame(gameData, queue)) return false;
-
-    const isRanked = queue.isRanked === true || String(queue.type || '').toUpperCase() === 'RANKED';
-    if (isRanked && hasDraftPickMode(queue)) return true;
-
-    const isCustom = queue.isCustom === true ||
-      gameData.isCustomGame === true ||
-      String(queue.type || '').toUpperCase() === 'CUSTOM';
-    return isCustom && hasDraftPickMode(queue);
+  function isSupportedDraftCandidate(
+    { gameData, queue }: { gameData: DraftAnyRecord; queue: DraftAnyRecord }
+  ): boolean {
+    return isSummonersRiftGame(gameData, queue);
   }
 
   function hasQueueEvidence(gameData: DraftAnyRecord, queue: DraftAnyRecord): boolean {
@@ -375,10 +365,9 @@ type SortableStats = DraftAnyRecord;
     );
   }
 
-  function isSummonersRiftClassicGame(gameData: DraftAnyRecord, queue: DraftAnyRecord): boolean {
+  function isSummonersRiftGame(gameData: DraftAnyRecord, queue: DraftAnyRecord): boolean {
     const mapId = normalizeQueueId(queue?.mapId ?? gameData?.mapId ?? gameData?.map?.id);
-    const gameMode = String(queue?.gameMode || gameData?.gameMode || gameData?.map?.gameMode || '').toUpperCase();
-    return mapId === SUMMONERS_RIFT_MAP_ID && gameMode === 'CLASSIC';
+    return mapId === SUMMONERS_RIFT_MAP_ID;
   }
 
   function normalizeQueueId(value: any): number {
@@ -402,6 +391,22 @@ type SortableStats = DraftAnyRecord;
       text.includes('tournament') ||
       text.includes('ドラフト') ||
       text.includes('トーナメント');
+  }
+
+  function hasDraftLikeChampSelect(champSelect: ChampSelectSessionRecord | null | undefined): boolean {
+    const actions = Array.isArray(champSelect?.actions) ? champSelect.actions.flat() : [];
+    if (actions.some((action) => String(action?.type || '').toLowerCase() === 'ban')) {
+      return true;
+    }
+
+    const myTeamBans: Array<number | string | null | undefined> = Array.isArray(champSelect?.bans?.myTeamBans)
+      ? champSelect.bans.myTeamBans
+      : [];
+    const theirTeamBans: Array<number | string | null | undefined> = Array.isArray(champSelect?.bans?.theirTeamBans)
+      ? champSelect.bans.theirTeamBans
+      : [];
+    return myTeamBans.some((championId) => normalizeChampionId(championId) !== null) ||
+      theirTeamBans.some((championId) => normalizeChampionId(championId) !== null);
   }
 
   function createInGameContext({
