@@ -95,6 +95,8 @@
     let draftRecommendationError = '';
     let draftRecommendationData: any = null;
     let selectedRecommendationKeystoneId = 0;
+    let draftRecommendationOpponentChampionId = 0;
+    const draftRecommendationResponseCache = new Map<string, any>();
     interface DraftRuneAssetEntry {
       iconPath?: string;
       id: number;
@@ -110,6 +112,15 @@
     function normalizePositiveId(value: unknown): number {
       const numericValue = Number(value);
       return Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0;
+    }
+
+    function getChampionBackgroundUrl(championId: unknown): string {
+      const numericChampionId = normalizePositiveId(championId);
+      if (!numericChampionId) return '';
+      const championsById = deps.getChampionsById?.() || {};
+      const champion = championsById[numericChampionId] || championsById[String(numericChampionId)] || null;
+      const alias = String(champion?.alias || '').trim();
+      return alias ? `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${encodeURIComponent(alias)}_0.jpg` : '';
     }
 
     function getKeystoneLabel(keystoneId: unknown): string {
@@ -154,6 +165,38 @@
       const position = String(localMember?.assignedPosition || '').trim().toUpperCase();
       if (!championId || !position) return null;
       return { championId, position };
+    }
+
+    function getDraftRecommendationOpponentChampionId(champSelect: any): number {
+      return getMarkedLaneOpponentChampionId(champSelect) || 0;
+    }
+
+    function buildDraftRecommendationRequestUrl(localMember: any, champSelect: any): string | null {
+      const context = getLockedRecommendationContext(localMember);
+      if (!context) return null;
+      return buildStatsApiChampionDetailsUrl({
+        championId: context.championId,
+        position: context.position,
+        opponentChampionId: getDraftRecommendationOpponentChampionId(champSelect)
+      });
+    }
+
+    function applyDraftRecommendationResponse(response: any): void {
+      draftRecommendationData = (response as any)?.data || null;
+      const keystones = Array.isArray(draftRecommendationData?.keystones) ? draftRecommendationData.keystones : [];
+      selectedRecommendationKeystoneId = normalizePositiveId(keystones[0]?.keystoneId);
+    }
+
+    function resetDraftRecommendationState(): void {
+      draftRecommendationRequestId += 1;
+      draftRecommendationQueryKey = '';
+      draftRecommendationStatus = 'idle';
+      draftRecommendationError = '';
+      draftRecommendationData = null;
+      selectedRecommendationKeystoneId = 0;
+      draftRecommendationOpponentChampionId = 0;
+      draftRecommendationResponseCache.clear();
+      setDraftRecommendationVisibility(false);
     }
 
     function ensureDraftRecommendationPanel(): HTMLElement | null {
@@ -257,6 +300,16 @@
       meta.append(
         createStatsApiSummaryChip('WR', formatRate(entry?.winRate)),
         createStatsApiSummaryChip('Games', formatGames(entry?.games))
+      );
+      return meta;
+    }
+
+    function createStatsApiSummonerSpellMeta(entry: any): HTMLElement {
+      const meta = doc.createElement('div');
+      meta.className = 'stats-api-option-meta stats-api-summoner-spell-meta';
+      meta.append(
+        createStatsApiSummaryChip('Games', formatGames(entry?.games)),
+        createStatsApiSummaryChip('WR', formatRate(entry?.winRate))
       );
       return meta;
     }
@@ -546,7 +599,7 @@
         const wrap = doc.createElement('div');
         wrap.className = 'stats-api-tag-list stats-api-summoner-spell-list';
         wrap.append(...(Array.isArray(entry?.spellIds) ? entry.spellIds : []).map((id: unknown) => createStatsApiSummonerSpellToken(id)));
-        node.append(wrap, createStatsApiOptionMeta(entry, { hidePickRate: true }));
+        node.append(wrap, createStatsApiSummonerSpellMeta(entry));
         return node;
       }));
       section.append(list);
@@ -631,19 +684,21 @@
       await draftRuneCatalogPromise;
     }
 
-    async function refreshDraftRecommendations(localMember: any): Promise<void> {
-      const context = getLockedRecommendationContext(localMember);
-      if (!context) {
+    async function refreshDraftRecommendations(localMember: any, champSelect: any): Promise<void> {
+      const detailsUrl = buildDraftRecommendationRequestUrl(localMember, champSelect);
+      if (!detailsUrl) {
         draftRecommendationQueryKey = '';
         draftRecommendationStatus = 'idle';
         draftRecommendationError = '';
         draftRecommendationData = null;
         selectedRecommendationKeystoneId = 0;
+        draftRecommendationOpponentChampionId = 0;
         renderDraftRecommendation(localMember);
         return;
       }
 
-      const queryKey = `${context.position}:${context.championId}`;
+      const queryKey = detailsUrl;
+      draftRecommendationOpponentChampionId = getDraftRecommendationOpponentChampionId(champSelect);
       if (
         draftRecommendationQueryKey === queryKey &&
         (draftRecommendationStatus === 'loading' || draftRecommendationStatus === 'ready')
@@ -669,15 +724,18 @@
       const requestId = ++draftRecommendationRequestId;
       try {
         await ensureDraftRuneCatalog();
-        const detailsUrl = buildStatsApiChampionDetailsUrl({
-          championId: context.championId,
-          position: context.position
-        });
+        const cachedResponse = draftRecommendationResponseCache.get(queryKey);
+        if (cachedResponse) {
+          if (requestId !== draftRecommendationRequestId || draftRecommendationQueryKey !== queryKey) return;
+          applyDraftRecommendationResponse(cachedResponse);
+          draftRecommendationStatus = 'ready';
+          renderDraftRecommendation(localMember);
+          return;
+        }
         const response = await deps.requestStatsApiJson(detailsUrl);
         if (requestId !== draftRecommendationRequestId || draftRecommendationQueryKey !== queryKey) return;
-        draftRecommendationData = (response as any)?.data || null;
-        const keystones = Array.isArray(draftRecommendationData?.keystones) ? draftRecommendationData.keystones : [];
-        selectedRecommendationKeystoneId = normalizePositiveId(keystones[0]?.keystoneId);
+        draftRecommendationResponseCache.set(queryKey, response);
+        applyDraftRecommendationResponse(response);
         draftRecommendationStatus = 'ready';
         renderDraftRecommendation(localMember);
       } catch (error: any) {
@@ -720,6 +778,18 @@
 
       const top = doc.createElement('section');
       top.className = 'stats-api-details-top';
+      if (draftRecommendationOpponentChampionId) {
+        const heading = doc.createElement('div');
+        heading.className = 'draft-recommend-heading';
+        heading.append(
+          createText('draft-recommend-heading-prefix', 'vs '),
+          deps.createInlineChampionName(
+            draftRecommendationOpponentChampionId,
+            'inline-champion-name draft-recommend-heading-opponent'
+          )
+        );
+        top.append(heading);
+      }
       const keystonePanel = doc.createElement('section');
       keystonePanel.className = 'stats-api-keystone-panel';
       const keystoneList = doc.createElement('div');
@@ -781,13 +851,22 @@
 
     function applyPickCardBackground(row: HTMLElement, championId: number, options: { selected?: boolean; intent?: boolean } = {}): void {
       if (!championId) return;
-      const image = doc.createElement('img');
-      const applyBackground = () => {
-        const src = String((image as HTMLImageElement).src || '');
+      const setBackground = (src: string) => {
         if (!src) return;
         row.style.setProperty('--pick-card-image', `url("${src}")`);
         row.style.setProperty('--pick-card-image-opacity', options.selected ? '0.98' : options.intent ? '0.82' : '0.9');
         row.classList.add('has-champion-background');
+      };
+      const backgroundUrl = getChampionBackgroundUrl(championId);
+      if (backgroundUrl) {
+        setBackground(backgroundUrl);
+        return;
+      }
+
+      const image = doc.createElement('img');
+      const applyBackground = () => {
+        const src = String((image as HTMLImageElement).src || '');
+        setBackground(src);
       };
       image.addEventListener('load', applyBackground);
       deps.loadChampionIcon(image as HTMLImageElement, championId);
@@ -818,7 +897,7 @@
         localAssignedPosition: localMember?.assignedPosition,
         markedLaneOpponentCellId: deps.getMarkedLaneOpponentCellId()
       });
-      void refreshDraftRecommendations(localMember);
+      void refreshDraftRecommendations(localMember, champSelect);
       renderDraftFocus(champSelect, activeAction);
       if (isLocalPickTurn) {
         deps.requestDraftAiAnalysisIfNeeded(champSelect, localMember, activeAction);
@@ -970,15 +1049,16 @@
         champion.textContent = selected ? deps.championLabel(member.championId) : deps.getPendingLabel(member, deps.championLabel);
 
         meta.append(champion);
+        if (side !== 'enemy') {
+          row.append(roleBadge);
+        }
+        row.append(meta);
         if (isMarkedLaneOpponent) {
           const marker = doc.createElement('span');
           marker.className = 'lane-opponent-marker';
-          marker.textContent = turnState.localAssignedPosition
-            ? `${deps.positionLabel(turnState.localAssignedPosition)} OPPONENT`
-            : 'LANE OPPONENT';
-          meta.append(marker);
+          marker.textContent = 'OPPONENT';
+          row.append(marker);
         }
-        row.append(roleBadge, meta);
         return row;
       }));
     }
@@ -1424,7 +1504,8 @@
 
     return {
       renderChampSelect,
-      renderDraftAiAnalysis
+      renderDraftAiAnalysis,
+      resetDraftRecommendationState
     };
   }
 

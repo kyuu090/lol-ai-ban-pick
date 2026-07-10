@@ -95,7 +95,7 @@
   align-items: stretch;
   display: grid;
   flex: 1 1 auto;
-  grid-template-columns: minmax(204px, 236px) minmax(560px, 1fr) minmax(204px, 236px);
+  grid-template-columns: minmax(136px, 164px) minmax(0, 1fr) minmax(136px, 164px);
   min-height: 0;
   overflow: hidden;
 }
@@ -217,10 +217,10 @@
   align-self: start;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
   min-height: 0;
   overflow: hidden;
-  padding: 12px;
+  padding: 10px 6px;
 }
 
 .team-column h3 {
@@ -235,7 +235,7 @@
 .pick-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
   min-height: 0;
   overflow: hidden;
 }
@@ -246,11 +246,11 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
-  flex: 0 0 68px;
-  gap: 7px;
+  flex: 0 0 86px;
+  gap: 6px;
   min-height: 0;
   overflow: hidden;
-  padding: 10px 12px;
+  padding: 10px 8px 20px;
   position: relative;
 }
 
@@ -309,23 +309,25 @@
   background: linear-gradient(90deg, rgba(37, 116, 255, 0.18), rgba(255, 255, 255, 0.84));
   border-color: rgba(37, 116, 255, 0.46);
   box-shadow: inset 0 0 0 1px rgba(37, 116, 255, 0.1);
-  padding-right: 42px;
+  padding-right: 40px;
   position: relative;
 }
 
 .pick-row.local-player::after {
-  background: rgba(37, 116, 255, 0.12);
-  border: 1px solid rgba(37, 116, 255, 0.3);
+  background: linear-gradient(180deg, rgba(16, 32, 74, 0.94), rgba(18, 60, 142, 0.9));
+  border: 1px solid rgba(122, 177, 255, 0.72);
+  box-shadow: 0 4px 14px rgba(9, 18, 44, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  color: var(--blue);
+  color: #f8fbff;
   content: "YOU";
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
   line-height: 1;
   padding: 4px 7px;
   position: absolute;
   right: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
   top: 8px;
 }
 
@@ -352,27 +354,29 @@
 }
 
 .pick-row.local-active-turn::after {
-  background: rgba(97, 54, 255, 0.16);
-  border-color: rgba(97, 54, 255, 0.34);
-  color: var(--accent);
+  background: linear-gradient(180deg, rgba(67, 30, 155, 0.96), rgba(103, 58, 183, 0.92));
+  border-color: rgba(201, 176, 255, 0.76);
+  color: #fcfaff;
 }
 
 .pick-role-badge {
   align-items: center;
-  align-self: stretch;
+  bottom: 6px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(97, 54, 255, 0.28);
   border-radius: 999px;
   color: var(--accent);
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   justify-content: center;
   line-height: 1;
-  min-width: 44px;
+  left: 8px;
+  min-width: 45px;
   overflow: hidden;
-  padding: 4px 8px;
+  padding: 3px 8px;
+  position: absolute;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -385,9 +389,10 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 4px;
+  gap: 2px;
   justify-content: center;
   min-width: 0;
+  padding-bottom: 14px;
 }
 
 .pick-meta strong,
@@ -399,7 +404,7 @@
 
 .pick-meta strong {
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
@@ -411,7 +416,7 @@
 
 .pick-meta span {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
+  font-size: 10px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
@@ -420,17 +425,26 @@
   text-shadow: none;
 }
 
-.pick-meta .lane-opponent-marker {
-  align-self: flex-end;
-  background: rgba(97, 54, 255, 0.12);
-  border: 1px solid rgba(97, 54, 255, 0.3);
+.lane-opponent-marker {
+  background: linear-gradient(180deg, rgba(59, 23, 132, 0.96), rgba(92, 42, 176, 0.92));
+  border: 1px solid rgba(206, 182, 255, 0.76);
+  box-shadow: 0 4px 14px rgba(28, 10, 71, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  color: var(--accent);
+  color: #fcfaff;
+  display: inline-flex;
+  align-items: center;
   font-size: 10px;
   font-weight: 900;
+  letter-spacing: 0.02em;
   line-height: 1;
+  left: 8px;
+  max-width: calc(100% - 16px);
   padding: 4px 7px;
+  position: absolute;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+  top: 8px;
   width: fit-content;
+  z-index: 2;
 }
 
 .draft-champion-stats {
@@ -568,20 +582,21 @@
   align-items: stretch;
   aspect-ratio: auto;
   border-radius: 22px;
-  gap: 10px;
+  gap: 8px;
   max-height: 100%;
-  max-width: 620px;
-  padding: 14px 16px;
-  width: min(100%, 620px);
+  max-width: 720px;
+  padding: 12px 14px;
+  width: min(100%, 720px);
 }
 
 .champion-focus.recommendation-mode {
   align-items: stretch;
   aspect-ratio: auto;
-  gap: 14px;
+  gap: 10px;
   justify-content: flex-start;
   max-height: 100%;
-  padding: 18px 20px;
+  max-width: 720px;
+  padding: 12px 14px;
   text-align: left;
 }
 
@@ -621,7 +636,7 @@
 
 .draft-recommend-panel {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
   overflow: auto;
   width: 100%;
@@ -629,15 +644,38 @@
 
 .draft-recommend-shell {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .draft-recommend-shell .stats-api-details-top {
   grid-template-columns: 1fr;
 }
 
+.draft-recommend-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.draft-recommend-heading-prefix {
+  color: var(--muted);
+}
+
+.draft-recommend-heading .inline-champion-name {
+  font-size: 12px;
+}
+
+.draft-recommend-heading .inline-champion-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .draft-recommend-shell .stats-api-keystone-panel {
-  padding: 8px 10px;
+  padding: 7px 8px;
 }
 
 .draft-recommend-shell .stats-api-keystone-list {
@@ -653,26 +691,179 @@
   grid-row: auto;
 }
 
-.draft-recommend-grid .stats-api-detail-card-summoners .stats-api-detail-card-body {
-  grid-template-columns: 1fr;
-}
-
 .draft-recommend-grid .stats-api-rune-summoner-list {
-  grid-template-columns: 1fr;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .draft-recommend-grid .stats-api-rune-page,
 .draft-recommend-grid .stats-api-rune-page-secondary-row {
-  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 6px;
+  grid-template-columns: max-content max-content;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 100%;
+  width: fit-content;
 }
 
 .draft-recommend-grid .stats-api-rune-page-shards-header {
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .draft-recommend-grid .stats-api-rune-tree,
 .draft-recommend-grid .stats-api-shard-tree {
   width: 100%;
+}
+
+.draft-recommend-grid .stats-api-detail-card-body,
+.draft-recommend-grid .stats-api-detail-subsection,
+.draft-recommend-grid .stats-api-item-set-list,
+.draft-recommend-grid .stats-api-rune-tabs,
+.draft-recommend-grid .stats-api-rune-tab-panels {
+  gap: 4px;
+}
+
+.draft-recommend-grid .stats-api-detail-card {
+  padding: 8px 9px;
+}
+
+.draft-recommend-grid .stats-api-detail-card-header {
+  gap: 1px;
+}
+
+.draft-recommend-grid .stats-api-detail-option {
+  gap: 2px;
+  padding: 4px;
+}
+
+.draft-recommend-grid .stats-api-rune-tab-panels .stats-api-detail-option {
+  padding: 6px 7px;
+}
+
+.draft-recommend-grid .stats-api-detail-title {
+  font-size: 12px;
+}
+
+.draft-recommend-grid .stats-api-detail-option-title,
+.draft-recommend-grid .stats-api-detail-subtitle {
+  font-size: 10px;
+}
+
+.draft-recommend-grid .stats-api-detail-card-title,
+.draft-recommend-grid .stats-api-rune-summoner-section > .stats-api-detail-subtitle {
+  display: none;
+}
+
+.draft-recommend-grid .stats-api-detail-card-header:has(.stats-api-detail-card-title:only-child) {
+  display: none;
+}
+
+.draft-recommend-grid .stats-api-rune-tree,
+.draft-recommend-grid .stats-api-shard-tree {
+  gap: 4px;
+  padding: 6px;
+}
+
+.draft-recommend-grid .stats-api-rune-page-primary,
+.draft-recommend-grid .stats-api-rune-style-badge,
+.draft-recommend-grid .stats-api-rune-page-shards {
+  justify-self: center;
+}
+
+.draft-recommend-grid .stats-api-rune-page-shards {
+  justify-items: center;
+}
+
+.draft-recommend-grid .stats-api-rune-tree-slots,
+.draft-recommend-grid .stats-api-rune-tree-row {
+  gap: 4px;
+  justify-content: center;
+}
+
+.draft-recommend-grid .stats-api-rune-node {
+  min-height: 42px;
+  min-width: 42px;
+}
+
+.draft-recommend-grid .stats-api-rune-node.keystone {
+  min-height: 46px;
+  min-width: 46px;
+}
+
+.draft-recommend-grid .stats-api-rune-node-icon {
+  height: 30px;
+  width: 30px;
+}
+
+.draft-recommend-grid .stats-api-rune-node.keystone .stats-api-rune-node-icon {
+  height: 32px;
+  width: 32px;
+}
+
+.draft-recommend-grid .stats-api-rune-token {
+  gap: 4px;
+  min-height: 24px;
+  padding: 3px 6px;
+}
+
+.draft-recommend-grid .stats-api-rune-token .stats-api-rune-icon {
+  height: 18px;
+  width: 18px;
+}
+
+.draft-recommend-grid .stats-api-rune-token.keystone .stats-api-rune-icon {
+  height: 24px;
+  width: 24px;
+}
+
+.draft-recommend-grid .stats-api-rune-token-label {
+  font-size: 10px;
+}
+
+.draft-recommend-grid .stats-api-rune-summoner-list .stats-api-detail-option {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.draft-recommend-grid .stats-api-summoner-spell-list {
+  flex-wrap: nowrap;
+}
+
+.draft-recommend-grid .stats-api-summoner-spell-token .stats-api-rune-token-label {
+  display: none;
+}
+
+.draft-recommend-grid .stats-api-summoner-spell-token {
+  min-height: 38px;
+  padding: 2px;
+}
+
+.draft-recommend-grid .stats-api-summoner-spell-token .stats-api-rune-icon {
+  height: 34px;
+  width: 34px;
+}
+
+.draft-recommend-grid .stats-api-summoner-spell-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.draft-recommend-grid .stats-api-summary-chip {
+  min-width: 52px;
+  padding: 3px 5px;
+}
+
+.draft-recommend-grid .stats-api-summary-chip-label {
+  font-size: 8px;
+}
+
+.draft-recommend-grid .stats-api-summary-chip-value {
+  font-size: 10px;
 }
 
 .draft-recommend-empty {

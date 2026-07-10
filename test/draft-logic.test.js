@@ -142,7 +142,7 @@ test('getDraftPanelState distinguishes logged out, champ select, and in-game sta
   });
 });
 
-test('isSupportedDraftGameMode allows supported Summoners Rift draft queues only', () => {
+test('isSupportedDraftGameMode allows any Summoners Rift champ select mode', () => {
   assert.equal(isSupportedDraftGameMode({
     gameflowSession: createGameflowSession({ queue: { id: 400 } })
   }), true);
@@ -155,7 +155,7 @@ test('isSupportedDraftGameMode allows supported Summoners Rift draft queues only
   assert.equal(isSupportedDraftGameMode({
     gameflowSession: { error: 'not ready' },
     lobby: createLobby({ queueId: 420, mapId: undefined, gameMode: undefined })
-  }), true);
+  }), false);
   assert.equal(isSupportedDraftGameMode({
     gameflowSession: createGameflowSession({
       isCustomGame: true,
@@ -169,8 +169,17 @@ test('isSupportedDraftGameMode allows supported Summoners Rift draft queues only
     })
   }), true);
   assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({
+      isCustomGame: true,
+      queue: { isCustom: true, id: 0, pickMode: '' }
+    })
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
     gameflowSession: createGameflowSession({ queue: { id: 430, pickMode: 'TeamBuilderBlindPickStrategy' } })
-  }), false);
+  }), true);
+  assert.equal(isSupportedDraftGameMode({
+    gameflowSession: createGameflowSession({ queue: { id: 999, mapId: 11, gameMode: 'ULTBOOK' } })
+  }), true);
   assert.equal(isSupportedDraftGameMode({
     gameflowSession: createGameflowSession({ queue: { id: 450, mapId: 12, gameMode: 'ARAM' } })
   }), false);
