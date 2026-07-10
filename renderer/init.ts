@@ -144,12 +144,15 @@ const { renderLaneOpponentStats, renderPlayedChampionStats, setStatsSort } = cre
 const { renderInGame, renderInGameFinalCompositionAnalysis } = createInGameView({
     elements,
     document,
+    fetch: window.fetch?.bind(window),
     createInGameContext,
     getLastChampSelectSnapshot: () => rendererState.lastChampSelectSnapshot,
     getSummonerName,
     getMatchHistorySelfVsLaneOpponentStats: () => rendererState.matchHistorySelfVsLaneOpponentStats,
     championLabel,
     championTitle,
+    createInlineChampionName,
+    getChampionsById: () => rendererState.championsById,
     positionLabel,
     loadChampionIcon,
     loadChampionIconEager,
@@ -157,6 +160,7 @@ const { renderInGame, renderInGameFinalCompositionAnalysis } = createInGameView(
     createPickPoolStatChip,
     formatPercent,
     formatAverageKda,
+    requestStatsApiJson: window.lcuApi.requestStatsApiJson,
     getFinalCompositionAnalysisStatus: () => rendererState.finalCompositionAnalysisStatus,
     getFinalCompositionAnalysisNotes: () => rendererState.finalCompositionAnalysisNotes,
     getFinalCompositionAnalysisError: () => rendererState.finalCompositionAnalysisError

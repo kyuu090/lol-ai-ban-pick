@@ -114,6 +114,7 @@
 
   interface StatsApiChampionDetailsFilters extends StatsApiFilters {
     championId?: number;
+    keystoneId?: number;
     opponentChampionId?: number;
   }
 
@@ -515,6 +516,10 @@
     const opponentChampionId = normalizeChampionId(filters.opponentChampionId);
     if (opponentChampionId) {
       url.searchParams.set('opponentChampionId', String(opponentChampionId));
+    }
+    const keystoneId = normalizeChampionId(filters.keystoneId);
+    if (keystoneId) {
+      url.searchParams.set('keystoneId', String(keystoneId));
     }
     return url.toString();
   }

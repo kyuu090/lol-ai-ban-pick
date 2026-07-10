@@ -347,6 +347,7 @@ test('createInGameContext extracts local pick, same-position opponent, and draft
     matchupStats: [matchup]
   }), {
     championId: 103,
+    keystoneId: 0,
     position: 'MIDDLE',
     summonerName: 'Tester',
     opponentChampionId: 134,
@@ -359,6 +360,7 @@ test('createInGameContext extracts local pick, same-position opponent, and draft
 test('createInGameContext handles missing champ-select snapshot', () => {
   assert.deepEqual(createInGameContext(), {
     championId: 0,
+    keystoneId: 0,
     position: '',
     summonerName: '',
     opponentChampionId: 0,
@@ -396,6 +398,7 @@ test('createInGameContext ignores off-position opponents and caps team snapshots
     matchupStats: [wrongPositionMatchup, middleMatchup]
   }), {
     championId: 103,
+    keystoneId: 0,
     position: 'MIDDLE',
     summonerName: '',
     opponentChampionId: 134,
@@ -403,6 +406,28 @@ test('createInGameContext ignores off-position opponents and caps team snapshots
     allyChampionIds: [103, 122, 64, 202, 412],
     enemyChampionIds: [24, 121, 145, 111, 134]
   });
+});
+
+test('createInGameContext includes local keystone id from champ-select perks', () => {
+  const champSelect = {
+    localPlayerCellId: 2,
+    myTeam: [
+      { cellId: 1, championId: 122, assignedPosition: 'TOP' },
+      {
+        cellId: 2,
+        championId: 103,
+        assignedPosition: 'MIDDLE',
+        perks: {
+          perkIds: [8112, 8139, 8138]
+        }
+      }
+    ],
+    theirTeam: [
+      { cellId: 7, championId: 134, assignedPosition: 'MIDDLE' }
+    ]
+  };
+
+  assert.equal(createInGameContext({ champSelect }).keystoneId, 8112);
 });
 
 test('createPickPhaseDraftContext omits role fields from BFF analysis payload', () => {

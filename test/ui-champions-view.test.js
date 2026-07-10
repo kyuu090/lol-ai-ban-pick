@@ -42,6 +42,7 @@ test('champions view detail URL keeps current filters and selected champion id',
     patch: '16.13',
     position: 'MIDDLE',
     championId: 103,
+    keystoneId: 8112,
     ranks: ['MASTER', 'GRANDMASTER'],
     opponentChampionId: 238
   }));
@@ -50,6 +51,7 @@ test('champions view detail URL keeps current filters and selected champion id',
   assert.equal(url.pathname, '/v1/stats/positions/MIDDLE/champions/103/details');
   assert.equal(url.searchParams.get('patch'), '16.13');
   assert.equal(url.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(url.searchParams.get('keystoneId'), '8112');
   assert.equal(url.searchParams.get('opponentChampionId'), '238');
 });
 

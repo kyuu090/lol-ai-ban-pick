@@ -93,12 +93,15 @@
               <p class="eyebrow">Current Game</p>
               <h2 id="inGameChampionName">試合中です</h2>
               <p id="inGameChampionDetail">試合が終了したら、次のドラフトを監視します。</p>
+              <div id="inGameKeystone" class="in-game-keystone"></div>
               <div id="inGameSelfStats" class="in-game-stat-row"></div>
             </div>
+            <div id="inGameSkillOrder" class="in-game-skill-order" aria-live="polite"></div>
+            <div id="inGameRecommendations" class="in-game-recommendations" aria-live="polite"></div>
           </section>
 
           <section class="in-game-grid">
-            <article class="in-game-card">
+            <article class="in-game-card in-game-analysis-card">
               <div id="inGameLaneMatchupAnalysis" class="in-game-ai-analysis" aria-live="polite"></div>
               <div id="inGameFinalCompositionAnalysis" class="in-game-ai-analysis" aria-live="polite"></div>
             </article>

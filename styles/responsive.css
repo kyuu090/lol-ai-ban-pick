@@ -39,6 +39,16 @@
     justify-items: center;
   }
 
+  .in-game-skill-order,
+  .in-game-recommendations {
+    grid-column: auto;
+    grid-row: auto;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    width: 100%;
+  }
+
   .in-game-main h2 {
     font-size: 28px;
   }

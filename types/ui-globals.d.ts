@@ -119,10 +119,14 @@ declare global {
     [key: string]: any;
     document?: Document;
     elements: UiDomElements;
+    fetch?: typeof fetch;
     championLabel(championId: number): string;
     championTitle(championId: number): string;
+    createInlineChampionName?(championId: number, className?: string): HTMLElement;
+    getChampionsById?(): Record<string | number, ChampionSummaryItem>;
     loadChampionIcon(img: HTMLImageElement, championId: number): void;
     loadChampionIconEager(img: HTMLImageElement, championId: number): void;
+    requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
   }
 
   interface DraftViewDeps {
