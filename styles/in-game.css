@@ -419,8 +419,8 @@
 }
 
 .in-game-recommend-card .stats-api-detail-card-build .stats-api-item-icon {
-  height: 30px;
-  width: 30px;
+  height: 34px;
+  width: 34px;
 }
 
 .in-game-recommend-summary .stats-api-summary-chip {
@@ -517,6 +517,11 @@
 .in-game-skill-order .stats-api-skill-priority-tag {
   min-width: 22px;
   padding: 0 4px;
+}
+
+.in-game-skill-order .stats-api-skill-icon {
+  height: 38px;
+  width: 38px;
 }
 
 .in-game-recommend-card .stats-api-skill-priority-tag {

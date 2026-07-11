@@ -72,23 +72,25 @@
   border-radius: 999px;
   color: var(--accent);
   display: inline-flex;
-  font-size: 12px;
-  gap: 5px;
-  min-height: 26px;
-  padding: 4px 8px;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 38px;
+  padding: 3px;
 }
 
 .ban-token-icon {
   aspect-ratio: 1;
   border-radius: 50%;
-  height: 18px;
+  height: 30px;
   object-fit: cover;
-  width: 18px;
+  width: 30px;
 }
 
 .ban-token.empty {
   border-color: var(--border);
   color: var(--muted);
+  min-width: 54px;
+  padding: 3px 8px;
 }
 
 .teams-layout {

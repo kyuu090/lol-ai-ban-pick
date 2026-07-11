@@ -989,11 +989,7 @@
         icon.alt = '';
         icon.className = 'ban-token-icon';
         deps.loadChampionIcon(icon, championId);
-
-        const label = doc.createElement('span');
-        label.textContent = deps.championLabel(championId);
-
-        item.append(icon, label);
+        item.append(icon);
         return item;
       }));
 
