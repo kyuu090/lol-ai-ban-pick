@@ -18,6 +18,7 @@ function registerIpcHandlers({
   ipcMain.handle('window:toggle-maximize', handlers.toggleMaximizeWindow);
   ipcMain.handle('window:close', handlers.closeWindow);
   ipcMain.handle('riot-match-history:collect', handlers.collectRiotMatchHistory);
+  ipcMain.handle('lcu:resolve-in-game-stats-opponent', handlers.resolveInGameStatsOpponent);
   ipcMain.handle('stats-api:request', handlers.requestStatsApiJson);
   ipcMain.handle('openai:pick-phase', handlers.requestPickPhaseAnalysis);
   ipcMain.handle('openai:final-composition', handlers.requestFinalCompositionAnalysis);
@@ -45,6 +46,7 @@ interface IpcHandlerMap {
   toggleMaximizeWindow: (...args: any[]) => unknown;
   closeWindow: (...args: any[]) => unknown;
   collectRiotMatchHistory: (...args: any[]) => unknown;
+  resolveInGameStatsOpponent: (...args: any[]) => unknown;
   requestStatsApiJson: (...args: any[]) => unknown;
   requestPickPhaseAnalysis: (...args: any[]) => unknown;
   requestFinalCompositionAnalysis: (...args: any[]) => unknown;

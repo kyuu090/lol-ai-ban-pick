@@ -66,7 +66,7 @@
       <strong>Mock Preview</strong>
       試合をしなくても、ゲーム中画面の見た目をブラウザで確認できます。
       このページはアプリ本体の `styles/*.css` を直接読むので、デザイン調整の確認に使えます。
-      推奨ビルドは本体と同じくタブ切り替えで確認できます。
+      推奨ビルドは本体と同じくタブ切り替えで確認でき、チャンピオンカード横のキーストーン表示も合わせて確認できます。
     </section>
 
     <div class="mock-theme-toggle">
@@ -83,7 +83,19 @@
 
           <div class="in-game-main">
             <p class="eyebrow">Current Game</p>
-            <h2>リサンドラ</h2>
+            <div class="in-game-champion-row">
+              <div class="in-game-keystone">
+                <div class="stats-api-rune-token in-game-keystone-chip">
+                  <img
+                    class="stats-api-rune-icon"
+                    alt=""
+                    src="https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Conqueror/Conqueror.png"
+                  />
+                  <span class="stats-api-rune-token-label">征服者</span>
+                </div>
+              </div>
+              <h2>リサンドラ</h2>
+            </div>
             <p>MID / ぽせいどん</p>
             <div class="in-game-self-stats">
               <span class="pick-pool-stat-chip"><small>Games</small><b>15</b></span>
@@ -472,19 +484,48 @@
             <div class="in-game-ai-analysis">
               <div class="in-game-ai-analysis-header">
                 <p class="eyebrow">AI Matchup</p>
-                <div class="in-game-ai-analysis-header-meta">
-                  <span class="draft-ai-analysis-badge waiting">WAITING</span>
-                </div>
               </div>
-              <p class="draft-ai-analysis-status">GameStart / InProgress の対面情報を待っています。</p>
+              <div class="in-game-ai-analysis-notes">
+                <article class="draft-ai-analysis-note lane-matchup-goal">
+                  <div class="lane-matchup-card-header">
+                    <strong>Lane Plan</strong>
+                    <div class="lane-matchup-card-badges">
+                      <span class="lane-matchup-badge"><small>Lane</small><b>MID</b></span>
+                      <span class="lane-matchup-badge"><small>Win Rate</small><b>58%</b></span>
+                    </div>
+                  </div>
+                  <p class="lane-matchup-goal-text">
+                    <span class="lane-matchup-title-opponent" title="vs ビクター">
+                      <span>vs</span>
+                      <img
+                        class="lane-matchup-title-opponent-icon"
+                        alt=""
+                        src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/Viktor.png"
+                      />
+                      <span>ビクター</span>
+                    </span>
+                    レベル6までは無理に前へ出ず、ウェーブを整えながら視界確保とローム角度を優先します。
+                  </p>
+                </article>
+                <article class="draft-ai-analysis-note">
+                  <div class="lane-matchup-card-header">
+                    <strong>Detail</strong>
+                    <div class="lane-matchup-card-badges">
+                      <span class="lane-matchup-badge"><small>Focus</small><b>Wave</b></span>
+                    </div>
+                  </div>
+                  <ul class="lane-matchup-detail-list">
+                    <li>序盤は <span class="lane-matchup-inline-champion"><img class="lane-matchup-inline-champion-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/Viktor.png" />ビクター</span> のレーザーを受けすぎない位置で CS を取る。</li>
+                    <li>ジャングル位置が見えない時間帯は E で退路を確保してからトレードする。</li>
+                    <li>征服者前提なので、短すぎる当たり合いよりも Q 始動で継続して触れる形を狙う。</li>
+                  </ul>
+                </article>
+              </div>
             </div>
 
             <div class="in-game-ai-analysis">
               <div class="in-game-ai-analysis-header">
                 <p class="eyebrow">AI Analysis</p>
-                <div class="in-game-ai-analysis-header-meta">
-                  <span class="draft-ai-analysis-badge ready">DONE</span>
-                </div>
               </div>
 
               <div class="in-game-ai-analysis-notes">

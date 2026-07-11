@@ -2,6 +2,7 @@
   function createInGameView(deps: InGameViewDeps) {
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
+    const rendererLog = (root as any).lcuApi?.log;
     const statsApiHelpers = (root.UiChampionsView || {}) as any;
     const buildStatsApiChampionDetailsUrl = typeof statsApiHelpers.buildStatsApiChampionDetailsUrl === 'function'
       ? statsApiHelpers.buildStatsApiChampionDetailsUrl
@@ -16,6 +17,10 @@
         if (opponentChampionId > 0) {
           url.searchParams.set('opponentChampionId', String(opponentChampionId));
         }
+        const keystoneId = Number(filters?.keystoneId) || 0;
+        if (keystoneId > 0) {
+          url.searchParams.set('keystoneId', String(keystoneId));
+        }
         return url.toString();
       };
     const formatStatsApiErrorMessage = typeof statsApiHelpers.formatStatsApiErrorMessage === 'function'
@@ -27,6 +32,21 @@
     const buildRunesDataUrl = typeof statsApiHelpers.buildStatsApiRunesDataUrl === 'function'
       ? statsApiHelpers.buildStatsApiRunesDataUrl
       : null;
+    const buildChampionSpellDataUrl = typeof statsApiHelpers.buildStatsApiChampionSpellDataUrl === 'function'
+      ? statsApiHelpers.buildStatsApiChampionSpellDataUrl
+      : (patch: string, alias: string, locale = 'ja_JP') => {
+        const normalizedAlias = String(alias || '').trim();
+        const normalizedPatch = String(patch || '').trim();
+        const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
+          ? normalizedPatch
+          : /^\d+\.\d+$/.test(normalizedPatch)
+            ? `${normalizedPatch}.1`
+            : 'latest';
+        if (!normalizedAlias) {
+          throw new Error('Champion alias is required.');
+        }
+        return `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/champion/${encodeURIComponent(normalizedAlias)}.json`;
+      };
     const buildRuneIconUrl = typeof statsApiHelpers.buildStatsApiRuneIconUrl === 'function'
       ? statsApiHelpers.buildStatsApiRuneIconUrl
       : (iconPath: string) => iconPath ? `https://ddragon.leagueoflegends.com/cdn/img/${String(iconPath).replace(/^\/+/, '')}` : '';
@@ -39,12 +59,20 @@
       general: createRecommendationSlotState(),
       matchup: createRecommendationSlotState()
     };
+    let dataDragonVersion = 'latest';
+    let dataDragonVersionPromise: Promise<string> | null = null;
     let runeCatalog: any = null;
     let runeCatalogPromise: Promise<any> | null = null;
     const championSpellCatalogs = new Map<string, Record<string, { iconUrl: string; key: string; label: string; name: string }> | null>();
     const championSpellCatalogPromises = new Map<string, Promise<Record<string, { iconUrl: string; key: string; label: string; name: string }> | null>>();
     let activeRecommendationTab: 'general' | 'matchup' = 'general';
     let lastRecommendationContext: any = null;
+    let resolveStatsOpponentRequestId = 0;
+
+    function logDebug(message: string, details?: any): void {
+      if (typeof rendererLog !== 'function') return;
+      rendererLog('debug', message, details);
+    }
 
     function createRecommendationSlotState() {
       return {
@@ -100,12 +128,17 @@
       const championData = Object.values(data)[0] as any;
       const spells = Array.isArray(championData?.spells) ? championData.spells as any[] : [];
       const skillKeys = ['Q', 'W', 'E', 'R'];
+      const version = /^\d+\.\d+\.\d+$/.test(String(dataDragonVersion || '').trim())
+        ? String(dataDragonVersion).trim()
+        : 'latest';
       return spells.reduce((acc: Record<string, { iconUrl: string; key: string; label: string; name: string }>, spell: any, index: number) => {
         const key = skillKeys[index];
         const imageFull = String(spell?.image?.full || '').trim();
         if (!key || !imageFull) return acc;
         acc[key] = {
-          iconUrl: `https://ddragon.leagueoflegends.com/cdn/img/spell/${imageFull}`,
+          iconUrl: version === 'latest'
+            ? `https://ddragon.leagueoflegends.com/cdn/15.1.1/img/spell/${imageFull}`
+            : `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/${imageFull}`,
           key,
           label: key,
           name: String(spell?.name || key)
@@ -114,11 +147,44 @@
       }, {} as Record<string, { iconUrl: string; key: string; label: string; name: string }>);
     }
 
+    async function ensureDataDragonVersion(): Promise<string> {
+      if (/^\d+\.\d+\.\d+$/.test(String(dataDragonVersion || '').trim())) {
+        return dataDragonVersion;
+      }
+      if (dataDragonVersionPromise) {
+        return dataDragonVersionPromise;
+      }
+      if (!fetchImpl) {
+        return dataDragonVersion;
+      }
+      const versionPromise: Promise<string> = fetchImpl('https://ddragon.leagueoflegends.com/api/versions.json')
+        .then((response: Response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load Data Dragon versions: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((versions: unknown) => {
+          const nextVersion = Array.isArray(versions) ? String(versions[0] || '').trim() : '';
+          if (nextVersion) {
+            dataDragonVersion = nextVersion;
+          }
+          return dataDragonVersion;
+        })
+        .catch(() => dataDragonVersion)
+        .finally(() => {
+          dataDragonVersionPromise = null;
+        });
+      dataDragonVersionPromise = versionPromise;
+      return versionPromise;
+    }
+
     async function ensureRuneCatalog(): Promise<any | null> {
       if (runeCatalog) return runeCatalog;
       if (runeCatalogPromise) return runeCatalogPromise;
       if (!fetchImpl) return null;
-      const runesUrl = buildRunesDataUrl ? buildRunesDataUrl('latest', 'ja_JP') : 'https://ddragon.leagueoflegends.com/cdn/latest/data/ja_JP/runesReforged.json';
+      const version = await ensureDataDragonVersion();
+      const runesUrl = buildRunesDataUrl ? buildRunesDataUrl(version, 'ja_JP') : `https://ddragon.leagueoflegends.com/cdn/${version}/data/ja_JP/runesReforged.json`;
       runeCatalogPromise = fetchImpl(runesUrl)
         .then((response: Response) => {
           if (!response.ok) {
@@ -152,7 +218,8 @@
       if (!numericChampionId || !alias || !fetchImpl) {
         return null;
       }
-      const catalogUrl = `https://ddragon.leagueoflegends.com/cdn/latest/data/ja_JP/champion/${encodeURIComponent(alias)}.json`;
+      const version = await ensureDataDragonVersion();
+      const catalogUrl = buildChampionSpellDataUrl(version, alias, 'ja_JP');
       if (championSpellCatalogs.has(catalogUrl)) {
         return championSpellCatalogs.get(catalogUrl) || null;
       }
@@ -188,14 +255,18 @@
       const normalizedSkillLetter = String(skillLetter || '').trim().toUpperCase();
       const alias = getChampionAlias(championId);
       if (!normalizedSkillLetter || !alias) return null;
-      const catalogUrl = `https://ddragon.leagueoflegends.com/cdn/latest/data/ja_JP/champion/${encodeURIComponent(alias)}.json`;
+      const catalogUrl = buildChampionSpellDataUrl(dataDragonVersion, alias, 'ja_JP');
       const catalog = championSpellCatalogs.get(catalogUrl);
       return catalog?.[normalizedSkillLetter] || null;
     }
 
     function getItemIconUrl(itemId: unknown): string {
       const numericItemId = normalizePositiveId(itemId);
-      return numericItemId ? `https://ddragon.leagueoflegends.com/cdn/img/item/${numericItemId}.png` : '';
+      if (!numericItemId) return '';
+      const version = /^\d+\.\d+\.\d+$/.test(String(dataDragonVersion || '').trim())
+        ? String(dataDragonVersion).trim()
+        : '15.1.1';
+      return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${numericItemId}.png`;
     }
 
     function resetRecommendationSlotState(slotState: any): void {
@@ -212,6 +283,16 @@
         keystoneId,
         position,
         opponentChampionId
+      });
+    }
+
+    function createRecommendationContextKey(context: any): string {
+      if (!context) return '';
+      return JSON.stringify({
+        championId: normalizePositiveId(context?.championId),
+        keystoneId: normalizePositiveId(context?.keystoneId),
+        opponentChampionId: normalizePositiveId(context?.opponentChampionId),
+        position: String(context?.position || '').trim().toUpperCase()
       });
     }
 
@@ -661,6 +742,12 @@
       slotState.error = '';
       slotState.data = null;
       const requestId = ++slotState.requestId;
+      logDebug('In-game recommendation request started', {
+        slotKey,
+        requestId,
+        url,
+        context: lastRecommendationContext
+      });
       renderInGameRecommendations(lastRecommendationContext);
       renderInGameSkillOrder(lastRecommendationContext);
 
@@ -669,6 +756,17 @@
         if (requestId !== slotState.requestId || slotState.queryKey !== url) return;
         slotState.data = (response as any)?.data || null;
         slotState.status = 'ready';
+        const returnedKeystones = Array.isArray(slotState.data?.keystones)
+          ? slotState.data.keystones.map((entry: any) => normalizePositiveId(entry?.keystoneId)).filter(Boolean)
+          : [];
+        logDebug('In-game recommendation request completed', {
+          slotKey,
+          requestId,
+          url,
+          context: lastRecommendationContext,
+          returnedKeystones,
+          keystoneCount: returnedKeystones.length
+        });
         renderInGameRecommendations(lastRecommendationContext);
         renderInGameSkillOrder(lastRecommendationContext);
       } catch (error: any) {
@@ -676,6 +774,13 @@
         slotState.status = 'error';
         slotState.error = formatStatsApiErrorMessage(error);
         slotState.data = null;
+        logDebug('In-game recommendation request failed', {
+          slotKey,
+          requestId,
+          url,
+          context: lastRecommendationContext,
+          error: String(error?.message || error || '')
+        });
         renderInGameRecommendations(lastRecommendationContext);
         renderInGameSkillOrder(lastRecommendationContext);
       }
@@ -684,6 +789,10 @@
     function refreshInGameRecommendations(context: any): void {
       const recommendationContext = getRecommendationContext(context);
       lastRecommendationContext = recommendationContext;
+      logDebug('In-game recommendation context resolved', {
+        sourceContext: context,
+        recommendationContext
+      });
 
       if (!recommendationContext) {
         resetRecommendationSlotState(recommendationSlots.general);
@@ -728,18 +837,58 @@
       );
     }
 
+    async function refreshResolvedInGameOpponent(context: any): Promise<void> {
+      if (typeof deps.resolveInGameStatsOpponent !== 'function') return;
+
+      const baseContext = getRecommendationContext(context);
+      if (!baseContext) return;
+
+      const requestId = ++resolveStatsOpponentRequestId;
+      try {
+        const resolved = await deps.resolveInGameStatsOpponent();
+        if (requestId !== resolveStatsOpponentRequestId) return;
+
+        const resolvedOpponentChampionId = normalizePositiveId((resolved as any)?.opponentChampionId);
+        const nextContext = {
+          ...context,
+          opponentChampionId: resolvedOpponentChampionId || normalizePositiveId(context?.opponentChampionId)
+        };
+        const nextRecommendationContext = getRecommendationContext(nextContext);
+        if (!nextRecommendationContext) return;
+
+        if (createRecommendationContextKey(nextRecommendationContext) === createRecommendationContextKey(lastRecommendationContext)) {
+          return;
+        }
+
+        logDebug('In-game stats opponent resolved', {
+          resolved,
+          previousContext: baseContext,
+          nextContext: nextRecommendationContext
+        });
+        refreshInGameRecommendations(nextContext);
+      } catch (error: any) {
+        if (requestId !== resolveStatsOpponentRequestId) return;
+        logDebug('In-game stats opponent resolution failed', {
+          context: baseContext,
+          error: String(error?.message || error || '')
+        });
+      }
+    }
+
     function renderInGame(state: any): void {
       const context = deps.createInGameContext({
         champSelect: deps.getLastChampSelectSnapshot(),
+        perksCurrentPage: deps.getPerksCurrentPage?.(),
         summonerName: deps.getSummonerName(state.summoner),
         matchupStats: deps.getMatchHistorySelfVsLaneOpponentStats()
       });
 
       renderInGameSelfCard(context);
-      void ensureRuneCatalog().then(() => {
+      void ensureDataDragonVersion().then(() => ensureRuneCatalog()).then(() => {
         renderInGameSelfCard(context);
       });
       refreshInGameRecommendations(context);
+      void refreshResolvedInGameOpponent(context);
       renderInGameLaneMatchupAnalysis(state.laneMatchupAnalysis);
       renderInGameFinalCompositionAnalysis();
     }
@@ -828,17 +977,7 @@
 
       const header = doc.createElement('div');
       header.className = 'in-game-ai-analysis-header';
-
-      const badge = doc.createElement('span');
-      badge.className = `draft-ai-analysis-badge ${status}`;
-      badge.textContent = status === 'ready'
-        ? 'DONE'
-        : status === 'requesting'
-          ? 'ASKING'
-          : status === 'error'
-            ? 'ERROR'
-            : 'WAITING';
-      header.append(createInGameAiHeaderTitle('AI Analysis'), badge);
+      header.append(createInGameAiHeaderTitle('AI Analysis'));
       panel.append(header);
 
       if (status === 'requesting') {
@@ -888,22 +1027,9 @@
       const header = doc.createElement('div');
       header.className = 'in-game-ai-analysis-header';
 
-      const badge = doc.createElement('span');
       const status = analysis?.status || 'idle';
-      badge.className = `draft-ai-analysis-badge ${status}`;
-      badge.textContent = status === 'ready'
-        ? 'DONE'
-        : status === 'requesting'
-          ? 'ASKING'
-          : status === 'error'
-            ? 'ERROR'
-            : 'WAITING';
       const response = analysis?.response || {};
-      const headerMeta = doc.createElement('div');
-      headerMeta.className = 'in-game-ai-analysis-header-meta';
-      headerMeta.append(badge);
-
-      header.append(createInGameAiHeaderTitle('AI Matchup'), headerMeta);
+      header.append(createInGameAiHeaderTitle('AI Matchup'));
       panel.append(header);
 
       if (status === 'requesting') {

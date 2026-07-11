@@ -12,6 +12,7 @@ type LaneMatchupPayload = LcuAnyRecord & {
   enemyChampionId: number | string;
   lane?: string;
 };
+type LaneOpponentResolutionMode = 'analysis' | 'stats';
 
 function parseLockfile(raw: any) {
   const [processName, pid, port, password, protocol] = String(raw).trim().split(':');
@@ -55,16 +56,16 @@ function normalizeGameflowSelectedPosition(position: any): string {
   return '';
 }
 
-function createLaneMatchupAnalysisRequest({
+function resolveLaneOpponentContext({
   gameflowSession,
   localPuuid,
-  championsById = {},
-  champSelectSession = null
+  champSelectSession = null,
+  mode = 'analysis'
 }: {
   gameflowSession?: LcuAnyRecord | null;
   localPuuid?: string;
-  championsById?: Record<number, LcuAnyRecord>;
   champSelectSession?: LcuAnyRecord | null;
+  mode?: LaneOpponentResolutionMode;
 } = {}) {
   const phase = String(gameflowSession?.phase || '').trim();
   if (!['GameStart', 'InProgress'].includes(phase)) return null;
@@ -100,15 +101,68 @@ function createLaneMatchupAnalysisRequest({
   if (!localParticipant.championId || !localPosition) return null;
 
   const gameId = gameData?.gameId ?? gameflowSession?.gameId ?? null;
-  const championName = (championId: any) => getChampionName(championsById, championId);
 
-  if (localPosition === 'BOTTOM' || localPosition === 'UTILITY') {
+  if (mode === 'analysis' && (localPosition === 'BOTTOM' || localPosition === 'UTILITY')) {
     const localBottom = findTeamParticipantByPosition(localTeam, 'BOTTOM');
     const localSupport = findTeamParticipantByPosition(localTeam, 'UTILITY');
     const enemyBottom = findTeamParticipantByPosition(enemyTeam, 'BOTTOM');
     const enemySupport = findTeamParticipantByPosition(enemyTeam, 'UTILITY');
     if (!localBottom || !localSupport || !enemyBottom || !enemySupport) return null;
 
+    return {
+      gameId,
+      localParticipant,
+      localPosition,
+      localTeam,
+      enemyTeam,
+      localParticipants: [localBottom, localSupport],
+      enemyParticipants: [enemyBottom, enemySupport],
+      laneMatchupLane: 'BOTTOM/SUPPORT' as const,
+      opponentPosition: localPosition,
+      opponentChampionId: localPosition === 'BOTTOM' ? enemyBottom.championId : enemySupport.championId
+    };
+  }
+
+  const enemyParticipant = findTeamParticipantByPosition(enemyTeam, localPosition);
+  if (!enemyParticipant) return null;
+
+  return {
+    gameId,
+    localParticipant,
+    localPosition,
+    localTeam,
+    enemyTeam,
+    localParticipants: [localParticipant],
+    enemyParticipants: [enemyParticipant],
+    laneMatchupLane: getLaneMatchupLane(localPosition),
+    opponentPosition: localPosition,
+    opponentChampionId: enemyParticipant.championId
+  };
+}
+
+function createLaneMatchupAnalysisRequest({
+  gameflowSession,
+  localPuuid,
+  championsById = {},
+  champSelectSession = null
+}: {
+  gameflowSession?: LcuAnyRecord | null;
+  localPuuid?: string;
+  championsById?: Record<number, LcuAnyRecord>;
+  champSelectSession?: LcuAnyRecord | null;
+} = {}) {
+  const resolution = resolveLaneOpponentContext({
+    gameflowSession,
+    localPuuid,
+    champSelectSession,
+    mode: 'analysis'
+  });
+  if (!resolution) return null;
+
+  const championName = (championId: any) => getChampionName(championsById, championId);
+  if (resolution.laneMatchupLane === 'BOTTOM/SUPPORT') {
+    const [localBottom, localSupport] = resolution.localParticipants;
+    const [enemyBottom, enemySupport] = resolution.enemyParticipants;
     const payload: LaneMatchupPayload = {
       myChampionName: `${championName(localBottom.championId)}/${championName(localSupport.championId)}`,
       myChampionId: `${localBottom.championId}/${localSupport.championId}`,
@@ -118,19 +172,19 @@ function createLaneMatchupAnalysisRequest({
     };
 
     return {
-      gameId,
-      localPosition,
-      opponentPosition: localPosition,
+      gameId: resolution.gameId,
+      localPosition: resolution.localPosition,
+      opponentPosition: resolution.opponentPosition,
       laneMatchupLane: 'BOTTOM/SUPPORT',
       localChampionIds: [localBottom.championId, localSupport.championId],
       enemyChampionIds: [enemyBottom.championId, enemySupport.championId],
       payload,
-      requestKey: createLaneMatchupRequestKey({ gameId, payload })
+      requestKey: createLaneMatchupRequestKey({ gameId: resolution.gameId, payload })
     };
   }
 
-  const enemyParticipant = findTeamParticipantByPosition(enemyTeam, localPosition);
-  if (!enemyParticipant) return null;
+  const [localParticipant] = resolution.localParticipants;
+  const [enemyParticipant] = resolution.enemyParticipants;
 
   const payload: LaneMatchupPayload = {
     myChampionName: championName(localParticipant.championId),
@@ -138,19 +192,18 @@ function createLaneMatchupAnalysisRequest({
     enemyChampionName: championName(enemyParticipant.championId),
     enemyChampionId: enemyParticipant.championId
   };
-  const laneMatchupLane = getLaneMatchupLane(localPosition);
-  if (!laneMatchupLane) return null;
-  payload.lane = laneMatchupLane;
+  if (!resolution.laneMatchupLane) return null;
+  payload.lane = resolution.laneMatchupLane;
 
   return {
-    gameId,
-    localPosition,
-    opponentPosition: localPosition,
-    laneMatchupLane,
+    gameId: resolution.gameId,
+    localPosition: resolution.localPosition,
+    opponentPosition: resolution.opponentPosition,
+    laneMatchupLane: resolution.laneMatchupLane,
     localChampionIds: [localParticipant.championId],
     enemyChampionIds: [enemyParticipant.championId],
     payload,
-    requestKey: createLaneMatchupRequestKey({ gameId, payload })
+    requestKey: createLaneMatchupRequestKey({ gameId: resolution.gameId, payload })
   };
 }
 
@@ -529,6 +582,7 @@ module.exports = {
   createAuthHeader,
   createChampionsById,
   createLaneMatchupAnalysisRequest,
+  resolveLaneOpponentContext,
   describeLaneMatchupAnalysisReadiness,
   normalizeGameflowSelectedPosition
 };

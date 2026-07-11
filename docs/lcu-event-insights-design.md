@@ -447,7 +447,8 @@ Riot API Match-V5 の取得後に、今回の試合が `match-history/{localPuui
 StatsAPI 表示仕様:
 
 - ChampSelect で確定した自分の `championId` と `assignedPosition` を使って `/v1/stats/positions/{position}/champions/{championId}/details` を取得する
-- local player の rune/perk 情報から keystone が取れている場合は、その `keystoneId` も detail API に付けて、実際に使うキーストーンの構成だけでビルド・スキル集計する
+- local player のキーストーンは `/lol-perks/v1/currentpage` を優先して取得し、取れている場合はその `keystoneId` も detail API に付けて、実際に使うキーストーンの構成だけでビルド・スキル集計する
+- 自分のチャンピオンカード付近には、選択中キーストーンをアイコン付きで表示する
 - 通常おすすめは `opponentChampionId` なしで取得する
 - 対面おすすめは、相手チームの同じレーン担当チャンピオンを `opponentChampionId` として付けて取得する
 - 右側のおすすめ表示は `通常おすすめ / 対面おすすめ` をタブ切り替えにし、同時表示を避けて縦スクロール量を抑える

@@ -15,11 +15,11 @@
 .in-game-hero {
   align-items: start;
   background:
-    linear-gradient(100deg, rgba(97, 54, 255, 0.18), rgba(255, 255, 255, 0.88) 44%, rgba(37, 116, 255, 0.14)),
-    var(--panel);
+      linear-gradient(100deg, rgba(97, 54, 255, 0.18), rgba(255, 255, 255, 0.88) 44%, rgba(37, 116, 255, 0.14)),
+      var(--panel);
   display: grid;
-  gap: 8px 14px;
-  grid-template-columns: auto minmax(160px, 0.66fr) minmax(460px, 1.34fr);
+  gap: 6px 12px;
+  grid-template-columns: auto minmax(148px, 0.56fr) 106px minmax(472px, 1.34fr);
   grid-template-rows: auto auto;
   min-height: 0;
   overflow: hidden;
@@ -57,6 +57,13 @@
   min-width: 0;
 }
 
+.in-game-champion-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
 .in-game-keystone {
   min-height: 20px;
 }
@@ -84,18 +91,19 @@
   border: 1px solid rgba(97, 54, 255, 0.16);
   border-radius: 8px;
   display: grid;
-  gap: 4px;
-  grid-column: 1 / span 2;
+  gap: 3px;
+  grid-column: 1 / span 3;
   grid-row: 2;
   min-height: 110px;
   min-width: 0;
-  padding: 8px;
+  padding: 6px;
 }
 
 .in-game-main h2 {
   color: var(--text);
   font-size: 18px;
   line-height: 1.02;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
@@ -130,15 +138,15 @@
 
 .in-game-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr);
 }
 
 .in-game-card {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px 16px 16px;
+  padding: 10px 14px 12px;
 }
 
 .in-game-card-header {
@@ -172,15 +180,15 @@
 .in-game-ai-analysis {
   border-top: 1px solid rgba(97, 54, 255, 0.18);
   display: grid;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .in-game-ai-analysis-header {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   justify-content: space-between;
   min-width: 0;
 }
@@ -207,14 +215,14 @@
 
 .in-game-ai-analysis-notes {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 0;
 }
 
 .in-game-ai-analysis .draft-ai-analysis-note {
   box-shadow: none;
-  padding: 8px 10px;
+  padding: 7px 9px;
 }
 
 .in-game-ai-analysis .draft-ai-analysis-note p {
@@ -222,15 +230,7 @@
 }
 
 .in-game-recommendations {
-  align-content: start;
-  display: grid;
-  gap: 8px;
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  max-height: 320px;
-  min-width: 0;
-  overflow: auto;
-  padding-right: 4px;
+  display: contents;
 }
 
 .in-game-skill-panel {
@@ -245,9 +245,17 @@
 }
 
 .in-game-recommend-tab-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-content: start;
+  display: grid;
+  gap: 5px;
+  align-self: start;
+  grid-column: 3;
+  grid-row: 1;
+  grid-template-columns: 1fr;
+  justify-items: stretch;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .in-game-recommend-tab {
@@ -262,8 +270,11 @@
   font-weight: 900;
   gap: 1px;
   justify-items: start;
-  min-height: 36px;
-  padding: 5px 10px 4px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 9px 5px;
+  text-align: left;
+  width: 100%;
 }
 
 .in-game-recommend-tab-label {
@@ -296,8 +307,17 @@
 
 .in-game-recommend-card {
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  max-height: 320px;
   min-width: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.in-game-recommend-card[hidden] {
+  display: none;
 }
 
 .in-game-recommend-card.general {
@@ -399,8 +419,8 @@
 }
 
 .in-game-recommend-card .stats-api-detail-card-build .stats-api-item-icon {
-  height: 24px;
-  width: 24px;
+  height: 30px;
+  width: 30px;
 }
 
 .in-game-recommend-summary .stats-api-summary-chip {
@@ -447,15 +467,15 @@
   background: var(--stats-api-panel-bg);
   border: 1px solid var(--stats-api-panel-border-soft);
   border-radius: 8px;
-  gap: 3px;
-  padding: 6px;
+  gap: 2px;
+  padding: 4px;
 }
 
 .in-game-skill-order .stats-api-skill-order-row {
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 2px 3px;
+  padding: 1px 2px;
 }
 
 .in-game-skill-order .stats-api-option-meta {
@@ -465,17 +485,17 @@
 }
 
 .in-game-skill-order .stats-api-option-meta .stats-api-summary-chip {
-  min-width: 48px;
-  padding: 2px 4px;
+  min-width: 44px;
+  padding: 2px 3px;
 }
 
 .in-game-skill-order .stats-api-skill-opening-table {
-  grid-template-columns: repeat(6, minmax(22px, 1fr));
+  grid-template-columns: repeat(6, minmax(20px, 1fr));
 }
 
 .in-game-skill-order .stats-api-skill-opening-level,
 .in-game-skill-order .stats-api-skill-opening-skill {
-  padding: 3px 2px;
+  padding: 2px 1px;
 }
 
 .in-game-skill-order .stats-api-skill-opening-level {
@@ -484,6 +504,19 @@
 
 .in-game-skill-order .stats-api-skill-tag {
   min-height: 20px;
+}
+
+.in-game-skill-order .stats-api-skill-priority {
+  gap: 4px;
+}
+
+.in-game-skill-order .stats-api-skill-priority-separator {
+  font-size: 12px;
+}
+
+.in-game-skill-order .stats-api-skill-priority-tag {
+  min-width: 22px;
+  padding: 0 4px;
 }
 
 .in-game-recommend-card .stats-api-skill-priority-tag {
@@ -534,7 +567,7 @@
   display: flex;
   gap: 10px;
   justify-content: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   min-width: 0;
 }
 

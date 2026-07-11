@@ -40,13 +40,20 @@
   }
 
   .in-game-skill-order,
-  .in-game-recommendations {
+  .in-game-recommendations,
+  .in-game-recommend-tab-list,
+  .in-game-recommend-card {
     grid-column: auto;
     grid-row: auto;
     max-height: none;
     overflow: visible;
     padding-right: 0;
     width: 100%;
+  }
+
+  .in-game-recommend-tab-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: static;
   }
 
   .in-game-main h2 {

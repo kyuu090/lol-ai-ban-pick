@@ -88,6 +88,16 @@ export interface ChampSelectSession {
   [key: string]: unknown;
 }
 
+export interface PerksCurrentPage {
+  id?: number;
+  isActive?: boolean;
+  name?: string;
+  primaryStyleId?: number;
+  selectedPerkIds?: number[];
+  subStyleId?: number;
+  [key: string]: unknown;
+}
+
 export interface GameflowParticipant {
   championId?: number;
   selectedPosition?: string;

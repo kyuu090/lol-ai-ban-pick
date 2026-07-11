@@ -119,6 +119,7 @@ function createInitialState({
     summoner: null,
     lobby: null,
     champSelect: null,
+    perksCurrentPage: null,
     championsById: {},
     championPool,
     matchHistoryStatus,

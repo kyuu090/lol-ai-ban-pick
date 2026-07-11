@@ -430,6 +430,23 @@ test('createInGameContext includes local keystone id from champ-select perks', (
   assert.equal(createInGameContext({ champSelect }).keystoneId, 8112);
 });
 
+test('createInGameContext prefers current perks page keystone over champ-select member perks', () => {
+  const champSelect = {
+    localPlayerCellId: 2,
+    myTeam: [
+      { cellId: 2, championId: 254, assignedPosition: 'JUNGLE', perks: { perkIds: [9923, 8126, 8138] } }
+    ],
+    theirTeam: []
+  };
+
+  assert.equal(createInGameContext({
+    champSelect,
+    perksCurrentPage: {
+      selectedPerkIds: [8010, 9111, 9104]
+    }
+  }).keystoneId, 8010);
+});
+
 test('createPickPhaseDraftContext omits role fields from BFF analysis payload', () => {
   const champSelect = {
     localPlayerCellId: 2,

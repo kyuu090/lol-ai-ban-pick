@@ -6,7 +6,8 @@ const {
   createChampionsById,
   describeLaneMatchupAnalysisReadiness,
   normalizeGameflowSelectedPosition,
-  parseLockfile
+  parseLockfile,
+  resolveLaneOpponentContext
 } = require('../lcu-logic');
 
 test('parseLockfile extracts LCU connection fields', () => {
@@ -128,6 +129,35 @@ test('createLaneMatchupAnalysisRequest sends BOT and SUPPORT as a 2v2 request', 
   assert.equal(result.laneMatchupLane, 'BOTTOM/SUPPORT');
   assert.deepEqual(result.localChampionIds, [222, 412]);
   assert.deepEqual(result.enemyChampionIds, [200, 117]);
+});
+
+test('resolveLaneOpponentContext resolves same-role opponent for stats mode in jungle', () => {
+  const result = resolveLaneOpponentContext({
+    localPuuid: 'jg-puuid',
+    champSelectSession: {
+      myTeam: [
+        { championId: 254, assignedPosition: 'JUNGLE', puuid: 'jg-puuid' }
+      ]
+    },
+    gameflowSession: {
+      phase: 'InProgress',
+      gameData: {
+        gameId: 901,
+        teamOne: [
+          { championId: 20, selectedPosition: 'JUNGLE' }
+        ],
+        teamTwo: [
+          { championId: 254, selectedPosition: 'JUNGLE', puuid: 'jg-puuid' }
+        ]
+      }
+    },
+    mode: 'stats'
+  });
+
+  assert.equal(result.localPosition, 'JUNGLE');
+  assert.equal(result.opponentChampionId, 20);
+  assert.deepEqual(result.enemyParticipants.map((participant) => participant.championId), [20]);
+  assert.equal(result.laneMatchupLane, 'JG');
 });
 
 test('createLaneMatchupAnalysisRequest fills a missing ally from champ-select before champion selections', () => {
