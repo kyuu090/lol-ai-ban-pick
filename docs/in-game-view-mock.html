@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>In-Game View Mock</title>
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/titlebar.css" />
+  <link rel="stylesheet" href="../styles/forms.css" />
+  <link rel="stylesheet" href="../styles/app-shell.css" />
+  <link rel="stylesheet" href="../styles/navigation.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/stats.css" />
+  <link rel="stylesheet" href="../styles/in-game.css" />
+  <link rel="stylesheet" href="../styles/draft.css" />
+  <link rel="stylesheet" href="../styles/theme.css" />
+  <link rel="stylesheet" href="../styles/responsive.css" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .mock-shell {
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+    }
+
+    .mock-note {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      padding: 12px 14px;
+    }
+
+    .mock-note strong {
+      color: var(--accent);
+    }
+
+    .mock-stage {
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(97, 54, 255, 0.16);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .mock-theme-toggle {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .mock-theme-toggle button {
+      min-height: 30px;
+      padding: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="mock-shell">
+    <section class="mock-note">
+      <strong>Mock Preview</strong>
+      試合をしなくても、ゲーム中画面の見た目をブラウザで確認できます。
+      このページはアプリ本体の `styles/*.css` を直接読むので、デザイン調整の確認に使えます。
+      推奨ビルドは本体と同じくタブ切り替えで確認でき、チャンピオンカード横のキーストーン表示も合わせて確認できます。
+    </section>
+
+    <div class="mock-theme-toggle">
+      <button type="button" data-theme-toggle="light">Light</button>
+      <button type="button" data-theme-toggle="dark">Dark</button>
+    </div>
+
+    <section class="mock-stage">
+      <section class="in-game-view">
+        <section class="in-game-hero">
+          <div class="in-game-portrait">
+            <img alt="Lissandra" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/Lissandra.png" />
+          </div>
+
+          <div class="in-game-main">
+            <p class="eyebrow">Current Game</p>
+            <div class="in-game-champion-row">
+              <div class="in-game-keystone">
+                <div class="stats-api-rune-token in-game-keystone-chip">
+                  <img
+                    class="stats-api-rune-icon"
+                    alt=""
+                    src="https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Conqueror/Conqueror.png"
+                  />
+                  <span class="stats-api-rune-token-label">征服者</span>
+                </div>
+              </div>
+              <h2>リサンドラ</h2>
+            </div>
+            <p>MID / ぽせいどん</p>
+            <div class="in-game-self-stats">
+              <span class="pick-pool-stat-chip"><small>Games</small><b>15</b></span>
+              <span class="pick-pool-stat-chip"><small>W-L</small><b>11-4</b></span>
+              <span class="pick-pool-stat-chip"><small>WR</small><b>73%</b></span>
+              <span class="pick-pool-stat-chip"><small>KDA</small><b>4.8/3.5/10.1</b></span>
+            </div>
+          </div>
+
+          <div class="in-game-skill-order">
+            <section class="in-game-skill-panel general" data-skill-pane="general">
+              <div class="in-game-skill-content">
+                <section class="stats-api-detail-subsection stats-api-skill-section">
+                  <h4 class="stats-api-detail-subtitle">Lv1-6</h4>
+                  <div class="stats-api-skill-order-row">
+                    <div class="stats-api-skill-opening-table">
+                      <div class="stats-api-skill-opening-level">Lv1</div>
+                      <div class="stats-api-skill-opening-level">Lv2</div>
+                      <div class="stats-api-skill-opening-level">Lv3</div>
+                      <div class="stats-api-skill-opening-level">Lv4</div>
+                      <div class="stats-api-skill-opening-level">Lv5</div>
+                      <div class="stats-api-skill-opening-level">Lv6</div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraW.png" /><span class="stats-api-skill-letter skill-w">W</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraE.png" /><span class="stats-api-skill-letter skill-e">E</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraR.png" /><span class="stats-api-skill-letter skill-r">R</span></div>
+                    </div>
+                    <div class="stats-api-option-meta">
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">57%</strong></span>
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">916</strong></span>
+                    </div>
+                  </div>
+                </section>
+                <section class="stats-api-detail-subsection stats-api-skill-section">
+                  <h4 class="stats-api-detail-subtitle">優先スキル</h4>
+                  <div class="stats-api-skill-order-row">
+                    <div class="stats-api-skill-priority">
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-q"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" />Q</span>
+                      <span class="stats-api-skill-priority-separator">&gt;</span>
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-w"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraW.png" />W</span>
+                      <span class="stats-api-skill-priority-separator">&gt;</span>
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-e"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraE.png" />E</span>
+                    </div>
+                    <div class="stats-api-option-meta">
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">57%</strong></span>
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">1130</strong></span>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="in-game-skill-panel matchup" data-skill-pane="matchup" hidden>
+              <div class="in-game-skill-content">
+                <section class="stats-api-detail-subsection stats-api-skill-section">
+                  <h4 class="stats-api-detail-subtitle">Lv1-6</h4>
+                  <div class="stats-api-skill-order-row">
+                    <div class="stats-api-skill-opening-table">
+                      <div class="stats-api-skill-opening-level">Lv1</div>
+                      <div class="stats-api-skill-opening-level">Lv2</div>
+                      <div class="stats-api-skill-opening-level">Lv3</div>
+                      <div class="stats-api-skill-opening-level">Lv4</div>
+                      <div class="stats-api-skill-opening-level">Lv5</div>
+                      <div class="stats-api-skill-opening-level">Lv6</div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraE.png" /><span class="stats-api-skill-letter skill-e">E</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraW.png" /><span class="stats-api-skill-letter skill-w">W</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" /><span class="stats-api-skill-letter skill-q">Q</span></div>
+                      <div class="stats-api-skill-opening-skill"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraR.png" /><span class="stats-api-skill-letter skill-r">R</span></div>
+                    </div>
+                    <div class="stats-api-option-meta">
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">59%</strong></span>
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">204</strong></span>
+                    </div>
+                  </div>
+                </section>
+                <section class="stats-api-detail-subsection stats-api-skill-section">
+                  <h4 class="stats-api-detail-subtitle">優先スキル</h4>
+                  <div class="stats-api-skill-order-row">
+                    <div class="stats-api-skill-priority">
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-q"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraQ.png" />Q</span>
+                      <span class="stats-api-skill-priority-separator">&gt;</span>
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-w"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraW.png" />W</span>
+                      <span class="stats-api-skill-priority-separator">&gt;</span>
+                      <span class="stats-api-tag stats-api-skill-tag stats-api-skill-priority-tag skill-e"><img class="stats-api-skill-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/img/spell/LissandraE.png" />E</span>
+                    </div>
+                    <div class="stats-api-option-meta">
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">58%</strong></span>
+                      <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">247</strong></span>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
+
+          <div class="in-game-recommendations">
+            <div class="in-game-recommend-tab-list" role="tablist" aria-label="推奨表示の切り替え">
+              <button
+                type="button"
+                class="in-game-recommend-tab active"
+                role="tab"
+                aria-selected="true"
+                data-recommend-tab="general"
+              ><span class="in-game-recommend-tab-label">vs All</span><span class="in-game-recommend-tab-meta"><small class="in-game-recommend-tab-metric">WR 54%</small><small class="in-game-recommend-tab-metric">G 1885</small></span></button>
+              <button
+                type="button"
+                class="in-game-recommend-tab"
+                role="tab"
+                aria-selected="false"
+                data-recommend-tab="matchup"
+              ><span class="in-game-recommend-tab-label">vs ビクター</span><span class="in-game-recommend-tab-meta"><small class="in-game-recommend-tab-metric">WR 58%</small><small class="in-game-recommend-tab-metric">G 284</small></span></button>
+            </div>
+
+            <section class="in-game-recommend-card general" data-recommend-pane="general">
+              <section class="stats-api-detail-card stats-api-detail-card-build in-game-stats-api-card">
+                <div class="stats-api-detail-card-body">
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">Start</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Doran's Ring" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/1056.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Health Potion" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/2003.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">56%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">812</strong></span>
+                        </div>
+                      </article>
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Corrupting Potion" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/2033.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">53%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">401</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">Boots</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Sorcerer's Shoes" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3020.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">57%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">421</strong></span>
+                        </div>
+                      </article>
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Ionian Boots of Lucidity" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3158.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">55%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">298</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">1st+2nd</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Blackfire Torch" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/4630.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Shadowflame" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/4645.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">55%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">232</strong></span>
+                        </div>
+                      </article>
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Rod of Ages" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/6657.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Stormsurge" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/4646.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">52%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">184</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">3rd</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Zhonya's Hourglass" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3157.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">58%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">215</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">4th</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Void Staff" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3135.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">60%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">168</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">5th</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Rabadon's Deathcap" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3089.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">63%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">114</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+              </section>
+            </section>
+
+            <section class="in-game-recommend-card matchup" data-recommend-pane="matchup" hidden>
+              <section class="stats-api-detail-card stats-api-detail-card-build in-game-stats-api-card">
+                <div class="stats-api-detail-card-body">
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">Start</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Doran's Ring" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/1056.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Health Potion" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/2003.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">60%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">142</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">Boots</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Sorcerer's Shoes" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3020.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">62%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">88</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">1st+2nd</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Liandry's Torment" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/6653.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Cryptbloom" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3137.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">60%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">55</strong></span>
+                        </div>
+                      </article>
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Blackfire Torch" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/4630.png" /></div>
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Zhonya's Hourglass" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3157.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">57%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">41</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">3rd</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Zhonya's Hourglass" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3157.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">61%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">36</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">4th</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Void Staff" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3135.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">64%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">25</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="stats-api-detail-subsection stats-api-build-stage">
+                    <h4 class="stats-api-detail-subtitle">5th</h4>
+                    <div class="stats-api-item-set-list">
+                      <article class="stats-api-item-set-row">
+                        <div class="stats-api-item-set-body">
+                          <div class="stats-api-item-token-list">
+                            <div class="stats-api-item-token icon-only"><img class="stats-api-item-icon" alt="Banshee's Veil" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/3102.png" /></div>
+                          </div>
+                        </div>
+                        <div class="stats-api-option-meta">
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">WR</small><strong class="stats-api-summary-chip-value">66%</strong></span>
+                          <span class="stats-api-summary-chip"><small class="stats-api-summary-chip-label">Games</small><strong class="stats-api-summary-chip-value">17</strong></span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+
+        <section class="in-game-grid">
+          <article class="in-game-card in-game-analysis-card">
+            <div class="in-game-ai-analysis">
+              <div class="in-game-ai-analysis-header">
+                <p class="eyebrow">AI Matchup</p>
+              </div>
+              <div class="in-game-ai-analysis-notes">
+                <article class="draft-ai-analysis-note lane-matchup-goal">
+                  <div class="lane-matchup-card-header">
+                    <strong>Lane Plan</strong>
+                    <div class="lane-matchup-card-badges">
+                      <span class="lane-matchup-badge"><small>Lane</small><b>MID</b></span>
+                      <span class="lane-matchup-badge"><small>Win Rate</small><b>58%</b></span>
+                    </div>
+                  </div>
+                  <p class="lane-matchup-goal-text">
+                    <span class="lane-matchup-title-opponent" title="vs ビクター">
+                      <span>vs</span>
+                      <img
+                        class="lane-matchup-title-opponent-icon"
+                        alt=""
+                        src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/Viktor.png"
+                      />
+                      <span>ビクター</span>
+                    </span>
+                    レベル6までは無理に前へ出ず、ウェーブを整えながら視界確保とローム角度を優先します。
+                  </p>
+                </article>
+                <article class="draft-ai-analysis-note">
+                  <div class="lane-matchup-card-header">
+                    <strong>Detail</strong>
+                    <div class="lane-matchup-card-badges">
+                      <span class="lane-matchup-badge"><small>Focus</small><b>Wave</b></span>
+                    </div>
+                  </div>
+                  <ul class="lane-matchup-detail-list">
+                    <li>序盤は <span class="lane-matchup-inline-champion"><img class="lane-matchup-inline-champion-icon" alt="" src="https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/Viktor.png" />ビクター</span> のレーザーを受けすぎない位置で CS を取る。</li>
+                    <li>ジャングル位置が見えない時間帯は E で退路を確保してからトレードする。</li>
+                    <li>征服者前提なので、短すぎる当たり合いよりも Q 始動で継続して触れる形を狙う。</li>
+                  </ul>
+                </article>
+              </div>
+            </div>
+
+            <div class="in-game-ai-analysis">
+              <div class="in-game-ai-analysis-header">
+                <p class="eyebrow">AI Analysis</p>
+              </div>
+
+              <div class="in-game-ai-analysis-notes">
+                <article class="draft-ai-analysis-note">
+                  <strong>味方はCCが多い</strong>
+                  <p>シェン、アムム、リサンドラで拘束が重なりやすく、捕まえた相手を止めやすいです。</p>
+                </article>
+                <article class="draft-ai-analysis-note">
+                  <strong>味方はフロントが多い</strong>
+                  <p>シェンとアムムが前に出られるため、ケイトリンの後ろで形を作りやすいです。</p>
+                </article>
+                <article class="draft-ai-analysis-note">
+                  <strong>相手はエンゲージが得意</strong>
+                  <p>ブリッツクランクやノクターンが先手を取りやすく、こちらは位置取りに注意が要ります。</p>
+                </article>
+              </div>
+            </div>
+          </article>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        root.dataset.theme = String(button.getAttribute('data-theme-toggle') || 'light');
+      });
+    });
+
+    const recommendTabs = Array.from(document.querySelectorAll('[data-recommend-tab]'));
+    const recommendPanes = Array.from(document.querySelectorAll('[data-recommend-pane]'));
+    const skillPanes = Array.from(document.querySelectorAll('[data-skill-pane]'));
+    recommendTabs.forEach((button) => {
+      button.addEventListener('click', () => {
+        const nextTab = String(button.getAttribute('data-recommend-tab') || 'general');
+        recommendTabs.forEach((entry) => {
+          const isActive = entry.getAttribute('data-recommend-tab') === nextTab;
+          entry.classList.toggle('active', isActive);
+          entry.setAttribute('aria-selected', String(isActive));
+        });
+        recommendPanes.forEach((pane) => {
+          pane.hidden = pane.getAttribute('data-recommend-pane') !== nextTab;
+        });
+        skillPanes.forEach((pane) => {
+          pane.hidden = pane.getAttribute('data-skill-pane') !== nextTab;
+        });
+      });
+    });
+
+    root.dataset.theme = 'light';
+  </script>
+</body>
+</html>

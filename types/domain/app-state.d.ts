@@ -8,6 +8,7 @@ import type {
   LcuJsonApiEvent,
   LcuStatus,
   Lobby,
+  PerksCurrentPage,
   Summoner,
   WebSocketStatus
 } from './lcu';
@@ -29,6 +30,7 @@ export interface AppState {
   summoner: Summoner | LcuErrorPayload | null;
   lobby: Lobby | LcuErrorPayload | null;
   champSelect: ChampSelectSession | LcuErrorPayload | null;
+  perksCurrentPage: PerksCurrentPage | LcuErrorPayload | null;
   championsById: ChampionsById;
   championPool: ChampionPool;
   matchHistoryStatus: MatchHistoryStatus;

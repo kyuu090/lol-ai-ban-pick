@@ -119,10 +119,16 @@ declare global {
     [key: string]: any;
     document?: Document;
     elements: UiDomElements;
+    fetch?: typeof fetch;
     championLabel(championId: number): string;
     championTitle(championId: number): string;
+    createInlineChampionName?(championId: number, className?: string): HTMLElement;
+    getPerksCurrentPage?(): any;
+    getChampionsById?(): Record<string | number, ChampionSummaryItem>;
     loadChampionIcon(img: HTMLImageElement, championId: number): void;
     loadChampionIconEager(img: HTMLImageElement, championId: number): void;
+    resolveInGameStatsOpponent?(): Promise<unknown>;
+    requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
   }
 
   interface DraftViewDeps {
@@ -145,6 +151,7 @@ declare global {
     lcuApi?: {
       getChampionIcon?(championId: number): Promise<string | null>;
       getClientVersion?(): Promise<string>;
+      resolveInGameStatsOpponent?(): Promise<unknown>;
       requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     };
     UiDomElements?: UiDomElementsApi;

@@ -24,6 +24,7 @@ export interface LcuApi {
   minimizeWindow(): Promise<void>;
   toggleMaximizeWindow(): Promise<boolean>;
   closeWindow(): Promise<void>;
+  resolveInGameStatsOpponent(): Promise<unknown>;
   onWindowMaximized(callback: (isMaximized: boolean) => void): () => void;
   collectRiotMatchHistory(options: CollectRiotMatchHistoryOptions): Promise<CollectRiotMatchHistoryResult>;
   requestStatsApiJson(pathOrUrl: string): Promise<unknown>;

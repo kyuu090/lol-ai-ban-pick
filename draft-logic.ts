@@ -162,6 +162,44 @@ type SortableStats = DraftAnyRecord;
     return allyTeam.find((member) => member.cellId === localCellId) || null;
   }
 
+  function getMemberKeystoneId(member: ChampSelectMemberRecord | null | undefined): number {
+    const perkIdLists = [
+      member?.perks?.perkIds,
+      member?.selectedPerkIds,
+      member?.perkIds,
+      member?.playerPerks?.perkIds
+    ];
+    for (const perkIds of perkIdLists) {
+      if (!Array.isArray(perkIds) || perkIds.length === 0) continue;
+      const keystoneId = Number(perkIds[0]) || 0;
+      if (keystoneId > 0) return keystoneId;
+    }
+
+    const directCandidates = [
+      member?.selectedPerkId,
+      member?.keystoneId
+    ];
+    for (const candidate of directCandidates) {
+      const keystoneId = Number(candidate) || 0;
+      if (keystoneId > 0) return keystoneId;
+    }
+
+    return 0;
+  }
+
+  function getPerksCurrentPageKeystoneId(perksCurrentPage: DraftAnyRecord | null | undefined): number {
+    const perkIdLists = [
+      perksCurrentPage?.selectedPerkIds,
+      perksCurrentPage?.perkIds
+    ];
+    for (const perkIds of perkIdLists) {
+      if (!Array.isArray(perkIds) || perkIds.length === 0) continue;
+      const keystoneId = Number(perkIds[0]) || 0;
+      if (keystoneId > 0) return keystoneId;
+    }
+    return 0;
+  }
+
   function collectUnavailableChampionReasons(
     champSelect: ChampSelectSessionRecord | null | undefined,
     allyTeam: ChampSelectMemberRecord[] | undefined = champSelect?.myTeam,
@@ -411,10 +449,12 @@ type SortableStats = DraftAnyRecord;
 
   function createInGameContext({
     champSelect,
+    perksCurrentPage,
     summonerName = '',
     matchupStats = []
   }: {
     champSelect?: ChampSelectSessionRecord | null;
+    perksCurrentPage?: DraftAnyRecord | null;
     summonerName?: string;
     matchupStats?: SortableStats[];
   } = {}) {
@@ -422,6 +462,7 @@ type SortableStats = DraftAnyRecord;
     const enemyTeam = Array.isArray(champSelect?.theirTeam) ? champSelect.theirTeam : [];
     const localMember = getLocalChampSelectMember(champSelect);
     const championId = getMemberChampionId(localMember);
+    const keystoneId = getPerksCurrentPageKeystoneId(perksCurrentPage) || getMemberKeystoneId(localMember);
     const position = normalizePosition(localMember?.assignedPosition);
     const opponent = enemyTeam.find((member) => (
       normalizePosition(member?.assignedPosition) === position &&
@@ -438,6 +479,7 @@ type SortableStats = DraftAnyRecord;
 
     return {
       championId,
+      keystoneId,
       position,
       summonerName,
       opponentChampionId,
@@ -608,6 +650,7 @@ type SortableStats = DraftAnyRecord;
     getPlannedPickChampionId,
     getMemberChampionId,
     getLocalChampSelectMember,
+    getPerksCurrentPageKeystoneId,
     collectUnavailableChampionReasons,
     sortWorstWinRateStats,
     sortBestWinRateStats,

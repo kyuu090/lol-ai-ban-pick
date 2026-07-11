@@ -15,6 +15,7 @@ const {
   saveChampionPool: saveChampionPoolToStore
 } = require('./champion-pool-store');
 const { createDefaultChampionPool } = require('../draft-logic');
+const { resolveLaneOpponentContext } = require('../lcu-logic');
 const {
   getMatchHistoryPath: getMatchHistoryStorePath,
   getRiotMatchCachePath: getRiotMatchCacheStorePath,
@@ -58,6 +59,7 @@ import type { PublicSettings, RiotPlatformRegion, ThemeMode } from '../types/dom
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
   champSelect: '/lol-champ-select/v1/session',
+  perksCurrentPage: '/lol-perks/v1/currentpage',
   summoner: '/lol-summoner/v1/current-summoner',
   gameflowPhase: '/lol-gameflow/v1/gameflow-phase',
   gameflowSession: '/lol-gameflow/v1/session',
@@ -363,7 +365,65 @@ function bootstrap(): void {
   }
 
   async function requestStatsApiJson(_event: unknown, pathOrUrl: unknown): Promise<unknown> {
-    return requestStatsDbApiJson(pathOrUrl);
+    const requestTarget = String(pathOrUrl || '');
+    let requestDetails: Record<string, unknown> = { pathOrUrl: requestTarget };
+
+    try {
+      const parsedUrl = new URL(requestTarget, 'https://db.banpick-ai.lol');
+      requestDetails = {
+        pathOrUrl: requestTarget,
+        pathname: parsedUrl.pathname,
+        championId: parsedUrl.pathname.match(/\/champions\/(\d+)\/details$/)?.[1] || null,
+        position: parsedUrl.pathname.match(/\/positions\/([A-Z]+)\//)?.[1] || null,
+        opponentChampionId: parsedUrl.searchParams.get('opponentChampionId'),
+        keystoneId: parsedUrl.searchParams.get('keystoneId'),
+        patch: parsedUrl.searchParams.get('patch'),
+        ranks: parsedUrl.searchParams.get('ranks')
+      };
+    } catch {
+      // Keep the raw target only when URL parsing fails.
+    }
+
+    log.debug('StatsAPI request started', requestDetails);
+
+    try {
+      const response = await requestStatsDbApiJson(pathOrUrl);
+      const responseData = response && typeof response === 'object' ? (response as any).data : null;
+      const returnedKeystones = Array.isArray(responseData?.keystones)
+        ? responseData.keystones.map((entry: any) => Number(entry?.keystoneId) || 0).filter(Boolean)
+        : [];
+      log.debug('StatsAPI request completed', {
+        ...requestDetails,
+        returnedKeystones,
+        keystoneCount: returnedKeystones.length
+      });
+      return response;
+    } catch (error) {
+      log.warn('StatsAPI request failed', {
+        ...requestDetails,
+        error: serializeForLog(error)
+      });
+      throw error;
+    }
+  }
+
+  function resolveInGameStatsOpponent(): unknown {
+    const state = statePublisher.getState();
+    const resolution = resolveLaneOpponentContext({
+      gameflowSession: state.gameflowSession,
+      localPuuid: getPuuidFromSummoner(state.summoner),
+      champSelectSession: state.champSelect,
+      mode: 'stats'
+    });
+    if (!resolution) return null;
+
+    return {
+      enemyChampionIds: resolution.enemyParticipants.map((participant: any) => participant.championId).filter(Boolean),
+      laneMatchupLane: resolution.laneMatchupLane,
+      localPosition: resolution.localPosition,
+      opponentChampionId: resolution.opponentChampionId,
+      opponentPosition: resolution.opponentPosition
+    };
   }
 
   async function getClientVersion(): Promise<string> {
@@ -438,12 +498,13 @@ function bootstrap(): void {
           updateThemeMode,
           minimizeWindow,
           toggleMaximizeWindow,
-          closeWindow,
-          collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
-          requestStatsApiJson,
-          requestPickPhaseAnalysis,
-          requestFinalCompositionAnalysis
-        }
+            closeWindow,
+            collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
+            resolveInGameStatsOpponent,
+            requestStatsApiJson,
+            requestPickPhaseAnalysis,
+            requestFinalCompositionAnalysis
+          }
       });
 
       await setSplashStatus(splashWindow, 'ウィンドウを表示しています...');

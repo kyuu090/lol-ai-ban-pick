@@ -6,6 +6,7 @@ import type {
   LcuErrorPayload,
   LcuJsonApiEvent,
   Lobby,
+  PerksCurrentPage,
   Summoner
 } from '../types/domain/lcu';
 import type { PublicSettings } from '../types/domain/settings';
@@ -64,6 +65,7 @@ interface LcuControllerDeps {
   endpoints: {
     lobby: string;
     champSelect: string;
+    perksCurrentPage: string;
     summoner: string;
     gameflowPhase: string;
     gameflowSession: string;
@@ -149,9 +151,10 @@ function createLcuController({
       championIconUnavailableLogged = false;
       updateState({ lcuStatus: 'connecting', error: null });
 
-      const [lobby, champSelect, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
+      const [lobby, champSelect, perksCurrentPage, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
         lcuClient.fetchJson(endpoints.lobby).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.champSelect).catch((error: Error) => ({ error: error.message })),
+        lcuClient.fetchJson(endpoints.perksCurrentPage).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.summoner).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.gameflowPhase).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.gameflowSession).catch((error: Error) => ({ error: error.message })),
@@ -179,6 +182,7 @@ function createLcuController({
       updateState({
         lobby: lobby as Lobby | LcuErrorPayload | null,
         champSelect: champSelect as ChampSelectSession | LcuErrorPayload | null,
+        perksCurrentPage: perksCurrentPage as PerksCurrentPage | LcuErrorPayload | null,
         summoner: summoner as Summoner | LcuErrorPayload | null,
         gameflowPhase: gameflowPhase as GameflowPhase | null,
         gameflowSession: gameflowSession as GameflowSession | LcuErrorPayload | null,
@@ -207,6 +211,7 @@ function createLcuController({
         summoner: null,
         lobby: null,
         champSelect: null,
+        perksCurrentPage: null,
         championsById: fallbackChampionsById,
         laneMatchupAnalysis: createLaneMatchupAnalysisState(),
         error: normalizedError.message
@@ -225,6 +230,8 @@ function createLcuController({
       updateState({ lobby: data as Lobby | LcuErrorPayload | null });
     } else if (uri === endpoints.champSelect) {
       updateState({ champSelect: data as ChampSelectSession | LcuErrorPayload | null });
+    } else if (uri === endpoints.perksCurrentPage) {
+      updateState({ perksCurrentPage: data as PerksCurrentPage | LcuErrorPayload | null });
     } else if (uri === endpoints.summoner) {
       updateState({ summoner: data as Summoner | LcuErrorPayload | null });
       await getMatchHistoryController().syncForSummoner(data as Summoner | LcuErrorPayload | null, 'summoner-event');

@@ -13,32 +13,33 @@
 }
 
 .in-game-hero {
-  align-items: center;
+  align-items: start;
   background:
-    linear-gradient(100deg, rgba(97, 54, 255, 0.18), rgba(255, 255, 255, 0.88) 44%, rgba(37, 116, 255, 0.14)),
-    var(--panel);
+      linear-gradient(100deg, rgba(97, 54, 255, 0.18), rgba(255, 255, 255, 0.88) 44%, rgba(37, 116, 255, 0.14)),
+      var(--panel);
   display: grid;
-  gap: 18px;
-  grid-template-columns: auto minmax(0, 1fr);
-  min-height: 190px;
+  gap: 6px 12px;
+  grid-template-columns: auto minmax(148px, 0.56fr) 106px minmax(472px, 1.34fr);
+  grid-template-rows: auto auto;
+  min-height: 0;
   overflow: hidden;
-  padding: 22px;
+  padding: 12px 14px;
 }
 
 .in-game-portrait {
   align-items: center;
   background: rgba(255, 255, 255, 0.7);
   border: 2px solid rgba(97, 54, 255, 0.34);
-  border-radius: 8px;
-  box-shadow: 0 16px 38px rgba(97, 54, 255, 0.16);
+  border-radius: 7px;
+  box-shadow: 0 12px 28px rgba(97, 54, 255, 0.14);
   color: rgba(4, 16, 41, 0.38);
   display: flex;
-  font-size: 54px;
+  font-size: 34px;
   font-weight: 800;
-  height: 132px;
+  height: 76px;
   justify-content: center;
   overflow: hidden;
-  width: 132px;
+  width: 76px;
 }
 
 .in-game-portrait img {
@@ -49,56 +50,113 @@
 
 .in-game-main {
   display: grid;
+  align-content: center;
+  gap: 2px;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.in-game-champion-row {
+  align-items: center;
+  display: flex;
   gap: 8px;
   min-width: 0;
 }
 
+.in-game-keystone {
+  min-height: 20px;
+}
+
+.in-game-keystone-chip {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(97, 54, 255, 0.22);
+  justify-self: start;
+  min-height: 20px;
+  padding: 1px 6px 1px 2px;
+}
+
+.in-game-keystone-chip .stats-api-rune-icon {
+  height: 18px;
+  width: 18px;
+}
+
+.in-game-keystone-chip .stats-api-rune-token-label {
+  font-size: 9px;
+}
+
+.in-game-skill-order {
+  align-content: start;
+  background: var(--stats-api-panel-bg);
+  border: 1px solid rgba(97, 54, 255, 0.16);
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  grid-column: 1 / span 3;
+  grid-row: 2;
+  min-height: 110px;
+  min-width: 0;
+  padding: 6px;
+}
+
 .in-game-main h2 {
   color: var(--text);
-  font-size: 34px;
-  line-height: 1.05;
+  font-size: 18px;
+  line-height: 1.02;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
 .in-game-main p:not(.eyebrow) {
   color: var(--muted);
+  font-size: 11px;
 }
 
 .in-game-stat-row,
 .in-game-self-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 3px;
   min-width: 0;
 }
 
 .in-game-self-stats .pick-pool-stat-chip {
   background: rgba(255, 255, 255, 0.58);
   border-color: rgba(97, 54, 255, 0.22);
-  min-height: 28px;
-  padding: 4px 7px;
+  min-height: 18px;
+  padding: 1px 4px;
+}
+
+.in-game-self-stats .pick-pool-stat-chip small {
+  font-size: 7px;
 }
 
 .in-game-self-stats .pick-pool-stat-chip b {
   color: var(--accent);
-  font-size: 12px;
+  font-size: 9px;
 }
 
 .in-game-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr);
 }
 
 .in-game-card {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px 16px 16px;
+  padding: 10px 14px 12px;
 }
 
 .in-game-card-header {
   display: grid;
+}
+
+.in-game-card-header h3 {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.2;
 }
 
 .in-game-empty-note {
@@ -122,15 +180,15 @@
 .in-game-ai-analysis {
   border-top: 1px solid rgba(97, 54, 255, 0.18);
   display: grid;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .in-game-ai-analysis-header {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   justify-content: space-between;
   min-width: 0;
 }
@@ -157,18 +215,347 @@
 
 .in-game-ai-analysis-notes {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 0;
 }
 
 .in-game-ai-analysis .draft-ai-analysis-note {
   box-shadow: none;
-  padding: 8px 10px;
+  padding: 7px 9px;
 }
 
 .in-game-ai-analysis .draft-ai-analysis-note p {
   max-height: 96px;
+}
+
+.in-game-recommendations {
+  display: contents;
+}
+
+.in-game-skill-panel {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.in-game-skill-content {
+  display: grid;
+  gap: 4px;
+}
+
+.in-game-recommend-tab-list {
+  align-content: start;
+  display: grid;
+  gap: 5px;
+  align-self: start;
+  grid-column: 3;
+  grid-row: 1;
+  grid-template-columns: 1fr;
+  justify-items: stretch;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.in-game-recommend-tab {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(97, 54, 255, 0.18);
+  border-radius: 999px;
+  color: var(--muted);
+  display: grid;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 1px;
+  justify-items: start;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 9px 5px;
+  text-align: left;
+  width: 100%;
+}
+
+.in-game-recommend-tab-label {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.in-game-recommend-tab-meta {
+  display: flex;
+  gap: 6px;
+}
+
+.in-game-recommend-tab-metric {
+  color: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.in-game-recommend-tab.active {
+  background: rgba(97, 54, 255, 0.12);
+  border-color: rgba(97, 54, 255, 0.3);
+  color: var(--accent);
+}
+
+.in-game-recommend-tab:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.in-game-recommend-card {
+  display: grid;
+  gap: 5px;
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  max-height: 320px;
+  min-width: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.in-game-recommend-card[hidden] {
+  display: none;
+}
+
+.in-game-recommend-card.general {
+  margin-top: 2px;
+}
+
+.in-game-recommend-card-header,
+.in-game-recommend-card-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.in-game-recommend-card-title {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.in-game-recommend-card-subtitle {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.in-game-recommend-card-subtitle .inline-champion-name {
+  font-size: 12px;
+}
+
+.in-game-recommend-card-subtitle .inline-champion-icon {
+  height: 18px;
+  width: 18px;
+}
+
+.in-game-recommend-summary {
+  gap: 4px;
+}
+
+.in-game-stats-api-card {
+  overflow: hidden;
+}
+
+.in-game-recommend-card .stats-api-detail-card {
+  padding: 6px;
+}
+
+.in-game-recommend-card .stats-api-detail-card-header {
+  gap: 0;
+}
+
+.in-game-recommend-card .stats-api-detail-card-title {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.in-game-recommend-card .stats-api-detail-card-body {
+  gap: 5px;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-detail-card-body {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.in-game-recommend-card .stats-api-detail-card-skill {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.in-game-recommend-card .stats-api-detail-card-skill .stats-api-detail-card-body {
+  grid-template-columns: 1fr;
+}
+
+.in-game-recommend-card .stats-api-detail-card-skill .stats-api-skill-section + .stats-api-skill-section {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-detail-subsection {
+  gap: 3px;
+  padding: 6px;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-item-set-row,
+.in-game-recommend-card .stats-api-skill-order-row {
+  padding: 3px 4px;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-item-set-row {
+  align-items: center;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-item-icon {
+  height: 34px;
+  width: 34px;
+}
+
+.in-game-recommend-summary .stats-api-summary-chip {
+  min-width: 46px;
+  padding: 3px 5px;
+}
+
+.in-game-recommend-card .stats-api-summary-chip-label {
+  font-size: 8px;
+}
+
+.in-game-recommend-card .stats-api-summary-chip-value {
+  font-size: 10px;
+}
+
+.in-game-recommend-card .stats-api-item-token-list {
+  gap: 4px;
+  justify-content: center;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-option-meta,
+.in-game-skill-order .stats-api-option-meta {
+  gap: 4px;
+}
+
+.in-game-recommend-card .stats-api-skill-opening-table {
+  grid-template-columns: repeat(6, minmax(24px, 1fr));
+}
+
+.in-game-recommend-card .stats-api-skill-opening-level,
+.in-game-recommend-card .stats-api-skill-opening-skill {
+  padding: 4px 2px;
+}
+
+.in-game-recommend-card .stats-api-skill-opening-level {
+  font-size: 9px;
+}
+
+.in-game-recommend-card .stats-api-skill-tag {
+  min-height: 22px;
+}
+
+.in-game-skill-order .stats-api-detail-subsection {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
+  border-radius: 8px;
+  gap: 2px;
+  padding: 4px;
+}
+
+.in-game-skill-order .stats-api-skill-order-row {
+  align-items: center;
+  gap: 3px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1px 2px;
+}
+
+.in-game-skill-order .stats-api-option-meta {
+  align-content: start;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.in-game-skill-order .stats-api-option-meta .stats-api-summary-chip {
+  min-width: 44px;
+  padding: 2px 3px;
+}
+
+.in-game-skill-order .stats-api-skill-opening-table {
+  grid-template-columns: repeat(6, minmax(20px, 1fr));
+}
+
+.in-game-skill-order .stats-api-skill-opening-level,
+.in-game-skill-order .stats-api-skill-opening-skill {
+  padding: 2px 1px;
+}
+
+.in-game-skill-order .stats-api-skill-opening-level {
+  font-size: 8px;
+}
+
+.in-game-skill-order .stats-api-skill-tag {
+  min-height: 20px;
+}
+
+.in-game-skill-order .stats-api-skill-priority {
+  gap: 4px;
+}
+
+.in-game-skill-order .stats-api-skill-priority-separator {
+  font-size: 12px;
+}
+
+.in-game-skill-order .stats-api-skill-priority-tag {
+  min-width: 22px;
+  padding: 0 4px;
+}
+
+.in-game-skill-order .stats-api-skill-icon {
+  height: 38px;
+  width: 38px;
+}
+
+.in-game-recommend-card .stats-api-skill-priority-tag {
+  min-width: 24px;
+  padding: 0 5px;
+}
+
+.in-game-recommend-card .stats-api-detail-card-build .stats-api-detail-subtitle {
+  align-self: center;
+  font-size: 9.5px;
+  justify-self: center;
+  min-height: 18px;
+  padding: 0 6px;
+}
+
+.in-game-recommend-card .stats-api-item-set-title {
+  display: none;
+}
+
+.in-game-recommend-card .stats-api-item-set-row .stats-api-item-set-body {
+  gap: 0;
+}
+
+.in-game-recommend-card .stats-api-skill-order-row {
+  justify-content: flex-start;
+}
+
+.in-game-recommend-card .stats-api-skill-order-row .stats-api-skill-opening-table,
+.in-game-recommend-card .stats-api-skill-order-row .stats-api-skill-priority {
+  flex: 1 1 auto;
+}
+
+.in-game-recommend-card .stats-api-detail-empty {
+  font-size: 11px;
 }
 
 .lane-matchup-goal-text {
@@ -185,7 +572,7 @@
   display: flex;
   gap: 10px;
   justify-content: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   min-width: 0;
 }
 

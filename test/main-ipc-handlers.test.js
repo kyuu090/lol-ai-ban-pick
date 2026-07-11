@@ -21,6 +21,7 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
     toggleMaximizeWindow: () => {},
     closeWindow: () => {},
     collectRiotMatchHistory: () => {},
+    resolveInGameStatsOpponent: () => {},
     requestStatsApiJson: () => {},
     requestPickPhaseAnalysis: () => {},
     requestFinalCompositionAnalysis: () => {}
@@ -52,6 +53,7 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
     'window:toggle-maximize',
     'window:close',
     'riot-match-history:collect',
+    'lcu:resolve-in-game-stats-opponent',
     'stats-api:request',
     'openai:pick-phase',
     'openai:final-composition'

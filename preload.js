@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggle-maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  resolveInGameStatsOpponent: () => ipcRenderer.invoke('lcu:resolve-in-game-stats-opponent'),
   onWindowMaximized: (callback) => {
     const listener = (_event, isMaximized) => callback(Boolean(isMaximized));
     ipcRenderer.on('window:maximized', listener);

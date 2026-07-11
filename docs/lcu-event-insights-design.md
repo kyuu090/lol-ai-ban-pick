@@ -438,6 +438,29 @@ Riot API Match-V5 の取得後に、今回の試合が `match-history/{localPuui
 - Live Client Data API に踏み込まずに済む
 - 自動操作に触れない
 
+現在の実装では、この InProgress 画面を次の 3 ブロックで構成する。
+
+- 自分のチャンピオンカード
+- AI Matchup / AI Analysis
+- 自分のチャンピオンカード右側に出す StatsAPI の通常おすすめ / 対面おすすめと、カード下に出すスキルオーダー
+
+StatsAPI 表示仕様:
+
+- ChampSelect で確定した自分の `championId` と `assignedPosition` を使って `/v1/stats/positions/{position}/champions/{championId}/details` を取得する
+- local player のキーストーンは `/lol-perks/v1/currentpage` を優先して取得し、取れている場合はその `keystoneId` も detail API に付けて、実際に使うキーストーンの構成だけでビルド・スキル集計する
+- 自分のチャンピオンカード付近には、選択中キーストーンをアイコン付きで表示する
+- 通常おすすめは `opponentChampionId` なしで取得する
+- 対面おすすめは、相手チームの同じレーン担当チャンピオンを `opponentChampionId` として付けて取得する
+- 右側のおすすめ表示は `通常おすすめ / 対面おすすめ` をタブ切り替えにし、同時表示を避けて縦スクロール量を抑える
+- 各枠では詳細レスポンスの先頭 keystone を採用し、主要メトリクスはカード上部に集約する
+- アイテム欄は右側の広い領域を専有し、タブ以外の説明見出しや集計サマリーは置かず、`Start / Boots / 1st+2nd / 3rd / 4th / 5th` の画像ブロックに集中させる
+- アイテム欄は `Start / Boots / 1st+2nd` と `3rd / 4th / 5th` の 2 段 3 列で見せ、タブ自体は `vs All / vs <対面チャンピオン名>` の文言と `WR / Games` を添えて比較しやすくする
+- スキルはチャンピオン画像の下に独立配置し、選択中タブに連動した `Lv1-6` と `Max` を、チャンピオン詳細と同じスキル画像付きで表示する
+- スキル欄の `WR / Games` は横並びではなく縦積みにして、左側の横幅を食いすぎないようにする
+- プレイヤーカード側は画像・チャンピオン名・自己戦績チップを小さめに保ち、右側のおすすめ表示にできるだけ横幅を渡す
+- 高さが足りない場合はゲーム中画面側でスクロール可能にし、表示を詰めすぎて可読性を落とさない
+- 対面チャンピオンがまだ確定していない間は、対面おすすめ枠は待機表示にする
+
 ### Live Client Data API は別設計
 
 リアルタイムの KDA / CS / level / items を出すなら、LCU ではなく次の Live Client Data API が候補になる。
