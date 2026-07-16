@@ -21,6 +21,7 @@ const {
   normalizeStatsApiSelectedShardIds,
   parseStatsApiErrorInfo,
   parseStatsApiRetryAfterSeconds,
+  sortStatsApiMatchupRows,
   sortStatsApiChampionRows
 } = require('../ui/champions-view');
 
@@ -304,4 +305,18 @@ test('champions view sort helper defaults cleanly across numeric and text column
     sortStatsApiChampionRows(stats, 'champion', 'asc', championLabel).map((entry) => entry.championId),
     [1, 3, 2]
   );
+});
+
+test('matchup rows sort by opponent, games, win rate, and baseline difference', () => {
+  const matchups = [
+    { opponentChampionId: 1, games: 120, wins: 60, winRateVsOpponent: 0.5 },
+    { opponentChampionId: 2, games: 80, wins: 48, winRateVsOpponent: 0.6 },
+    { opponentChampionId: 3, games: 200, wins: 90, winRateVsOpponent: 0.45 }
+  ];
+  const championLabel = (championId) => ({ 1: 'Ahri', 2: 'Zed', 3: 'Akali' }[championId]);
+
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'opponent', 'asc', championLabel).map((entry) => entry.opponentChampionId), [1, 3, 2]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'games', 'desc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'winRate', 'desc', championLabel).map((entry) => entry.opponentChampionId), [2, 1, 3]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'difference', 'asc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
 });

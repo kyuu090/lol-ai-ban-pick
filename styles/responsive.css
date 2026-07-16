@@ -103,6 +103,11 @@
     grid-template-columns: 1fr;
   }
 
+  .stats-api-champion-hero.has-opponent {
+    align-items: center;
+    grid-template-columns: 56px minmax(160px, 1fr) 32px 56px minmax(120px, 0.8fr);
+  }
+
   .stats-api-keystone-list,
   .stats-api-rune-page {
     grid-template-columns: 1fr;
@@ -143,6 +148,10 @@
 
   .stats-api-analysis-tab-description {
     display: none;
+  }
+
+  .stats-api-timeline-dashboard {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
 
   .stats-api-opponent-filter {

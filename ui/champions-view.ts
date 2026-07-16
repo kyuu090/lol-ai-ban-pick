@@ -87,6 +87,7 @@
   };
   type StatsApiLaneOption = (typeof STATS_API_LANES)[number];
   type StatsApiSortKey = 'champion' | 'lane' | 'games' | 'winRate' | 'pickRate' | 'banRate' | 'tierScore';
+  type StatsApiMatchupSortKey = 'opponent' | 'games' | 'winRate' | 'difference';
 
   interface StatsApiMetaData {
     latestPatch?: string | null;
@@ -541,6 +542,34 @@
     });
   }
 
+  function sortStatsApiMatchupRows(
+    matchups: StatsApiMatchupSummary[],
+    baselineWinRate: number,
+    sortKey: StatsApiMatchupSortKey,
+    sortDirection: UiSortDirection = 'desc',
+    championLabel: (championId: number) => string = (championId) => `Champion ${championId}`
+  ): StatsApiMatchupSummary[] {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...matchups].sort((a, b) => {
+      let primary = 0;
+      if (sortKey === 'opponent') {
+        primary = championLabel(a.opponentChampionId).localeCompare(championLabel(b.opponentChampionId), 'ja');
+      } else if (sortKey === 'games') {
+        primary = Number(a.games || 0) - Number(b.games || 0);
+      } else if (sortKey === 'difference') {
+        primary = (Number(a.winRateVsOpponent || 0) - Number(baselineWinRate || 0))
+          - (Number(b.winRateVsOpponent || 0) - Number(baselineWinRate || 0));
+      } else {
+        primary = Number(a.winRateVsOpponent || 0) - Number(b.winRateVsOpponent || 0);
+      }
+      if (primary !== 0) return primary * direction;
+
+      const gamesFallback = Number(b.games || 0) - Number(a.games || 0);
+      if (gamesFallback !== 0 && sortKey !== 'games') return gamesFallback;
+      return championLabel(a.opponentChampionId).localeCompare(championLabel(b.opponentChampionId), 'ja');
+    });
+  }
+
   function buildStatsApiChampionsUrl(filters: StatsApiFilters, baseUrl = STATS_API_BASE_URL): string {
     const position = normalizeStatsApiPosition(filters.position);
     if (!position) {
@@ -833,8 +862,9 @@
     let activeDetailsSection: StatsApiDetailsSection = 'build';
     let statsApiAnalysisRequestId = 0;
     let statsApiMatchupsMinGames = 20;
+    let statsApiMatchupsSortKey: StatsApiMatchupSortKey = 'games';
+    let statsApiMatchupsSortDirection: UiSortDirection = 'desc';
     let selectedMatchupOpponentChampionId = 0;
-    let selectedTimelineMetric: StatsApiTimelineMetric = 'gold';
     let lastMatchupsData: StatsApiMatchupsData | null = null;
     let lastMatchupTimelineData: StatsApiTimelineData | null = null;
     let lastChampionTimelineData: StatsApiTimelineData | null = null;
@@ -2374,9 +2404,12 @@
       baselineWinRate?: number
     ): void {
       if (!detailsContent) return;
+      const opponentChampionId = activeDetailsSection === 'matchups'
+        ? normalizeChampionId(timelineData?.opponentChampionId || selectedMatchupOpponentChampionId)
+        : 0;
       detailsContent.replaceChildren(
         createStatsApiDetailsNavigation(),
-        createStatsApiChampionHero(getSelectedChampionSummary(timelineData, baselineWinRate)),
+        createStatsApiChampionHero(getSelectedChampionSummary(timelineData, baselineWinRate), opponentChampionId),
         content
       );
     }
@@ -2526,6 +2559,13 @@
       }
 
       const matchups = Array.isArray(matchupsData.matchups) ? matchupsData.matchups : [];
+      const sortedMatchups = sortStatsApiMatchupRows(
+        matchups,
+        matchupsData.baselineWinRate,
+        statsApiMatchupsSortKey,
+        statsApiMatchupsSortDirection,
+        (championId) => deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`
+      );
       const summary = doc.createElement('div');
       summary.className = 'stats-api-analysis-summary';
       summary.append(
@@ -2546,15 +2586,44 @@
       table.className = 'stats-table stats-api-matchups-table';
       const thead = doc.createElement('thead');
       const headerRow = doc.createElement('tr');
-      ['対面チャンピオン', '試合数', '勝率', '基準との差', '時間推移'].forEach((label) => {
+      const sortableColumns: Array<{ key?: StatsApiMatchupSortKey; label: string }> = [
+        { key: 'opponent', label: '対面チャンピオン' },
+        { key: 'games', label: '試合数' },
+        { key: 'winRate', label: '勝率' },
+        { key: 'difference', label: '基準との差' },
+        { label: '時間推移' }
+      ];
+      sortableColumns.forEach(({ key, label }) => {
         const th = doc.createElement('th');
         th.scope = 'col';
-        th.textContent = label;
+        if (!key) {
+          th.textContent = label;
+          headerRow.append(th);
+          return;
+        }
+        const active = key === statsApiMatchupsSortKey;
+        const button = doc.createElement('button');
+        button.type = 'button';
+        button.className = `stats-sort-button stats-api-matchups-sort-button${active ? ' active' : ''}`;
+        button.dataset.sortDirection = active ? statsApiMatchupsSortDirection : '';
+        button.textContent = label;
+        button.setAttribute('aria-label', `${label}で並べ替え`);
+        th.setAttribute('aria-sort', active
+          ? (statsApiMatchupsSortDirection === 'asc' ? 'ascending' : 'descending')
+          : 'none');
+        button.addEventListener('click', () => {
+          statsApiMatchupsSortDirection = statsApiMatchupsSortKey === key
+            ? (statsApiMatchupsSortDirection === 'desc' ? 'asc' : 'desc')
+            : (key === 'opponent' ? 'asc' : 'desc');
+          statsApiMatchupsSortKey = key;
+          renderStatsApiMatchups(matchupsData);
+        });
+        th.append(button);
         headerRow.append(th);
       });
       thead.append(headerRow);
       const tbody = doc.createElement('tbody');
-      tbody.append(...matchups.map((matchup) => {
+      tbody.append(...sortedMatchups.map((matchup) => {
         const row = doc.createElement('tr');
         row.className = 'stats-table-clickable-row';
         row.tabIndex = 0;
@@ -2608,74 +2677,157 @@
       return `${numericValue >= 0 ? '+' : ''}${numericValue.toFixed(digits)}${getStatsApiTimelineMetricConfig(metric).unit}`;
     }
 
-    function createStatsApiTimelineChart(timeline: StatsApiTimelinePoint[]): HTMLElement {
-      const card = doc.createElement('section');
-      card.className = 'stats-api-timeline-chart-card';
-      const controls = doc.createElement('div');
-      controls.className = 'stats-api-timeline-metric-tabs';
-      (['gold', 'xp', 'cs'] as StatsApiTimelineMetric[]).forEach((metric) => {
-        const button = doc.createElement('button');
-        const active = metric === selectedTimelineMetric;
-        button.type = 'button';
-        button.className = `stats-api-timeline-metric-tab${active ? ' active' : ''}`;
-        button.setAttribute('aria-pressed', String(active));
-        button.textContent = getStatsApiTimelineMetricConfig(metric).label;
-        button.addEventListener('click', () => {
-          selectedTimelineMetric = metric;
-          if (activeDetailsSection === 'timeline') {
-            renderStatsApiTimeline(lastChampionTimelineData);
-          } else {
-            renderStatsApiTimeline(lastMatchupTimelineData, selectedMatchupOpponentChampionId);
-          }
-        });
-        controls.append(button);
-      });
-      card.append(controls);
+    function appendStatsApiTimelinePolyline(
+      svg: SVGSVGElement,
+      points: string,
+      className: string
+    ): void {
+      const polyline = doc.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('class', className);
+      polyline.setAttribute('points', points);
+      svg.append(polyline);
+    }
 
-      const config = getStatsApiTimelineMetricConfig(selectedTimelineMetric);
-      const values = timeline.map((point) => Number(point.difference?.[config.differenceKey] || 0));
-      const maxAbs = Math.max(1, ...values.map((value) => Math.abs(value)));
-      const width = 800;
-      const height = 220;
-      const padding = { top: 20, right: 22, bottom: 36, left: 22 };
+    function appendStatsApiTimelineGuideLine(
+      svg: SVGSVGElement,
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      className: string
+    ): void {
+      const line = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('class', className);
+      line.setAttribute('x1', String(x1));
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', String(x2));
+      line.setAttribute('y2', String(y2));
+      svg.append(line);
+    }
+
+    function appendStatsApiTimelineYAxisLabel(
+      svg: SVGSVGElement,
+      label: string,
+      x: number,
+      y: number,
+      anchor: 'start' | 'end'
+    ): void {
+      const text = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('class', 'stats-api-timeline-y-axis-label');
+      text.setAttribute('x', String(x));
+      text.setAttribute('y', String(y));
+      text.setAttribute('text-anchor', anchor);
+      text.setAttribute('dominant-baseline', 'middle');
+      text.textContent = label;
+      svg.append(text);
+    }
+
+    function createStatsApiTimelineMetricCard(
+      timeline: StatsApiTimelinePoint[],
+      metric: StatsApiTimelineMetric
+    ): HTMLElement {
+      const config = getStatsApiTimelineMetricConfig(metric);
+      const differences = timeline.map((point) => Number(point.difference?.[config.differenceKey] || 0));
+      const leadRates = timeline.map((point) => Number(point.difference?.[config.leadRateKey] || 0));
+      const latestPoint = timeline[timeline.length - 1];
+      const latestDifference = differences[differences.length - 1] || 0;
+      const latestLeadRate = leadRates[leadRates.length - 1] || 0;
+      const card = doc.createElement('section');
+      card.className = `stats-api-timeline-chart-card metric-${metric}`;
+
+      const heading = doc.createElement('header');
+      heading.className = 'stats-api-timeline-card-heading';
+      const title = createText('stats-api-timeline-card-title', config.label, 'h4');
+      const latest = createText(
+        `stats-api-timeline-card-value${latestDifference < 0 ? ' negative' : ''}`,
+        formatStatsApiTimelineDifference(latestDifference, metric),
+        'strong'
+      );
+      heading.append(title, latest);
+      const meta = doc.createElement('div');
+      meta.className = 'stats-api-timeline-card-meta';
+      meta.append(
+        createText('stats-api-timeline-legend difference', '差分'),
+        createText('stats-api-timeline-legend lead-rate', `リード率 ${formatStatsApiRate(latestLeadRate)}`),
+        createText('stats-api-timeline-card-samples', `${formatStatsApiGames(latestPoint?.games)}試合`)
+      );
+      card.append(heading, meta);
+
+      const maxAbs = Math.max(1, ...differences.map((value) => Math.abs(value)));
+      const width = 640;
+      const height = 196;
+      const padding = { top: 15, right: 50, bottom: 28, left: 64 };
       const plotWidth = width - padding.left - padding.right;
       const plotHeight = height - padding.top - padding.bottom;
       const x = (index: number) => padding.left + (timeline.length <= 1 ? plotWidth / 2 : index * plotWidth / (timeline.length - 1));
-      const y = (value: number) => padding.top + plotHeight / 2 - (value / maxAbs) * (plotHeight / 2 - 10);
+      const differenceY = (value: number) => padding.top + plotHeight / 2 - (value / maxAbs) * (plotHeight / 2);
+      const leadRateY = (value: number) => padding.top + (1 - Math.max(0, Math.min(1, value))) * plotHeight;
       const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'stats-api-timeline-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', `${config.label}の時間推移`);
+      svg.setAttribute('aria-label', `${config.label}とリード率の時間推移`);
 
-      const zeroLine = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
-      zeroLine.setAttribute('class', 'stats-api-timeline-zero-line');
-      zeroLine.setAttribute('x1', String(padding.left));
-      zeroLine.setAttribute('x2', String(width - padding.right));
-      zeroLine.setAttribute('y1', String(y(0)));
-      zeroLine.setAttribute('y2', String(y(0)));
-      svg.append(zeroLine);
+      [0, 0.5, 1].forEach((rate) => appendStatsApiTimelineGuideLine(
+        svg,
+        padding.left,
+        leadRateY(rate),
+        width - padding.right,
+        leadRateY(rate),
+        rate === 0.5 ? 'stats-api-timeline-zero-line' : 'stats-api-timeline-grid-line'
+      ));
+      appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
+      appendStatsApiTimelineGuideLine(svg, width - padding.right, padding.top, width - padding.right, height - padding.bottom, 'stats-api-timeline-axis-line secondary');
+      [maxAbs, 0, -maxAbs].forEach((value) => appendStatsApiTimelineYAxisLabel(
+        svg,
+        value === 0 ? `0${config.unit}` : formatStatsApiTimelineDifference(value, metric),
+        padding.left - 7,
+        differenceY(value),
+        'end'
+      ));
+      [1, 0.5, 0].forEach((rate) => appendStatsApiTimelineYAxisLabel(
+        svg,
+        formatStatsApiRate(rate),
+        width - padding.right + 7,
+        leadRateY(rate),
+        'start'
+      ));
 
-      const polyline = doc.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-      polyline.setAttribute('class', 'stats-api-timeline-line');
-      polyline.setAttribute('points', values.map((value, index) => `${x(index)},${y(value)}`).join(' '));
-      svg.append(polyline);
+      appendStatsApiTimelinePolyline(
+        svg,
+        differences.map((value, index) => `${x(index)},${differenceY(value)}`).join(' '),
+        'stats-api-timeline-line'
+      );
+      appendStatsApiTimelinePolyline(
+        svg,
+        leadRates.map((value, index) => `${x(index)},${leadRateY(value)}`).join(' '),
+        'stats-api-timeline-lead-line'
+      );
       timeline.forEach((point, index) => {
         const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('class', `stats-api-timeline-point${values[index] < 0 ? ' negative' : ''}`);
+        circle.setAttribute('class', `stats-api-timeline-point${differences[index] < 0 ? ' negative' : ''}`);
         circle.setAttribute('cx', String(x(index)));
-        circle.setAttribute('cy', String(y(values[index])));
-        circle.setAttribute('r', '5');
-        const title = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
-        title.textContent = `${point.minute}分: ${formatStatsApiTimelineDifference(values[index], selectedTimelineMetric)}`;
-        circle.append(title);
+        circle.setAttribute('cy', String(differenceY(differences[index])));
+        circle.setAttribute('r', '3');
+        const pointTitle = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
+        pointTitle.textContent = `${point.minute}分: ${formatStatsApiTimelineDifference(differences[index], metric)} / リード率 ${formatStatsApiRate(leadRates[index])}`;
+        circle.append(pointTitle);
         svg.append(circle);
+        const hoverTarget = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hoverTarget.setAttribute('class', 'stats-api-timeline-hover-target');
+        hoverTarget.setAttribute('cx', String(x(index)));
+        hoverTarget.setAttribute('cy', String(differenceY(differences[index])));
+        hoverTarget.setAttribute('r', '10');
+        const hoverTitle = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
+        hoverTitle.textContent = pointTitle.textContent;
+        hoverTarget.append(hoverTitle);
+        svg.append(hoverTarget);
         const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('class', 'stats-api-timeline-axis-label');
         label.setAttribute('x', String(x(index)));
         label.setAttribute('y', String(height - 12));
         label.setAttribute('text-anchor', 'middle');
-        label.textContent = `${point.minute}分`;
+        label.textContent = String(point.minute);
         svg.append(label);
       });
       const chartWrap = doc.createElement('div');
@@ -2685,14 +2837,111 @@
       return card;
     }
 
-    function createStatsApiTimelineTable(timeline: StatsApiTimelinePoint[]): HTMLElement {
+    function createStatsApiLaneFightChartCard(timeline: StatsApiTimelinePoint[]): HTMLElement {
+      const laneFightTimeline = timeline.filter((point) => Number(point.minute) <= 20);
+      const latestPoint = laneFightTimeline[laneFightTimeline.length - 1];
+      const fightRates = laneFightTimeline.map((point) => Number(point.laneFights?.fight_occurred_rate || 0));
+      const killRates = laneFightTimeline.map((point) => Number(point.laneFights?.isolated_kills_vs_lane_occurred_rate || 0));
+      const deathRates = laneFightTimeline.map((point) => Number(point.laneFights?.isolated_deaths_vs_lane_occurred_rate || 0));
+      const assistRates = laneFightTimeline.map((point) => Number(point.laneFights?.isolated_assists_vs_lane_occurred_rate || 0));
+      const card = doc.createElement('section');
+      card.className = 'stats-api-timeline-chart-card lane-fights';
+      const heading = doc.createElement('header');
+      heading.className = 'stats-api-timeline-card-heading';
+      heading.append(
+        createText('stats-api-timeline-card-title', 'レーン戦発生率（20分まで）', 'h4'),
+        createText('stats-api-timeline-card-value', formatStatsApiRate(latestPoint?.laneFights?.fight_occurred_rate), 'strong')
+      );
+      const meta = doc.createElement('div');
+      meta.className = 'stats-api-timeline-card-meta fight-legend';
+      meta.append(
+        createText('stats-api-timeline-legend fight', '戦闘'),
+        createText('stats-api-timeline-legend kills', 'Kill'),
+        createText('stats-api-timeline-legend deaths', 'Death'),
+        createText('stats-api-timeline-legend assists', 'Assist')
+      );
+      card.append(heading, meta);
+
+      const width = 640;
+      const height = 196;
+      const padding = { top: 15, right: 18, bottom: 28, left: 54 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const x = (index: number) => padding.left + (laneFightTimeline.length <= 1 ? plotWidth / 2 : index * plotWidth / (laneFightTimeline.length - 1));
+      const y = (value: number) => padding.top + (1 - Math.max(0, Math.min(1, value))) * plotHeight;
+      const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'stats-api-timeline-chart');
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', '20分までのレーン戦とKill、Death、Assist発生率の時間推移');
+      [0, 0.5, 1].forEach((rate) => {
+        appendStatsApiTimelineGuideLine(
+          svg,
+          padding.left,
+          y(rate),
+          width - padding.right,
+          y(rate),
+          rate === 0.5 ? 'stats-api-timeline-zero-line' : 'stats-api-timeline-grid-line'
+        );
+        appendStatsApiTimelineYAxisLabel(svg, formatStatsApiRate(rate), padding.left - 7, y(rate), 'end');
+      });
+      appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
+      const rateSeries: Array<{ className: string; values: number[] }> = [
+        { values: fightRates, className: 'stats-api-timeline-fight-line' },
+        { values: killRates, className: 'stats-api-timeline-kill-line' },
+        { values: deathRates, className: 'stats-api-timeline-death-line' },
+        { values: assistRates, className: 'stats-api-timeline-assist-line' }
+      ];
+      rateSeries.forEach(({ values, className }) => appendStatsApiTimelinePolyline(
+        svg,
+        values.map((value, index) => `${x(index)},${y(value)}`).join(' '),
+        className
+      ));
+      laneFightTimeline.forEach((point, index) => {
+        const hoverTarget = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hoverTarget.setAttribute('class', 'stats-api-timeline-hover-target');
+        hoverTarget.setAttribute('cx', String(x(index)));
+        hoverTarget.setAttribute('cy', String(y(fightRates[index])));
+        hoverTarget.setAttribute('r', '10');
+        const pointTitle = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
+        pointTitle.textContent = `${point.minute}分: 戦闘 ${formatStatsApiRate(fightRates[index])} / Kill ${formatStatsApiRate(killRates[index])} / Death ${formatStatsApiRate(deathRates[index])} / Assist ${formatStatsApiRate(assistRates[index])}`;
+        hoverTarget.append(pointTitle);
+        svg.append(hoverTarget);
+        const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('class', 'stats-api-timeline-axis-label');
+        label.setAttribute('x', String(x(index)));
+        label.setAttribute('y', String(height - 10));
+        label.setAttribute('text-anchor', 'middle');
+        label.textContent = String(point.minute);
+        svg.append(label);
+      });
+      const chartWrap = doc.createElement('div');
+      chartWrap.className = 'stats-api-timeline-chart-wrap';
+      chartWrap.append(svg);
+      card.append(chartWrap);
+      return card;
+    }
+
+    function createStatsApiTimelineDashboard(timeline: StatsApiTimelinePoint[]): HTMLElement {
+      const dashboard = doc.createElement('div');
+      dashboard.className = 'stats-api-timeline-dashboard';
+      dashboard.append(
+        createStatsApiTimelineMetricCard(timeline, 'gold'),
+        createStatsApiTimelineMetricCard(timeline, 'xp'),
+        createStatsApiTimelineMetricCard(timeline, 'cs'),
+        createStatsApiLaneFightChartCard(timeline)
+      );
+      return dashboard;
+    }
+
+    function createStatsApiTimelineMatrix(timeline: StatsApiTimelinePoint[]): HTMLElement {
       const wrap = doc.createElement('div');
-      wrap.className = 'stats-table-wrap stats-api-timeline-table-wrap';
+      wrap.className = 'stats-table-wrap stats-api-timeline-matrix-wrap';
       const table = doc.createElement('table');
-      table.className = 'stats-table stats-api-timeline-table';
+      table.className = 'stats-table stats-api-timeline-matrix';
       const thead = doc.createElement('thead');
       const headerRow = doc.createElement('tr');
-      ['時間', '試合数', 'Gold差 / リード率', 'XP差 / リード率', 'CS差 / リード率', 'レーン戦発生率', '平均レーン K / D / A'].forEach((label) => {
+      ['指標', ...timeline.map((point) => `${point.minute}分`)].forEach((label) => {
         const th = doc.createElement('th');
         th.scope = 'col';
         th.textContent = label;
@@ -2700,21 +2949,30 @@
       });
       thead.append(headerRow);
       const tbody = doc.createElement('tbody');
-      tbody.append(...timeline.map((point) => {
+      const rows: Array<{ differenceValues?: number[]; label: string; values: string[] }> = [
+        { label: 'Gold差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgGold, 'gold')), differenceValues: timeline.map((point) => Number(point.difference?.avgGold || 0)) },
+        { label: 'Goldリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.goldLeadRate)) },
+        { label: 'XP差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgXp, 'xp')), differenceValues: timeline.map((point) => Number(point.difference?.avgXp || 0)) },
+        { label: 'XPリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.xpLeadRate)) },
+        { label: 'CS差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgCs, 'cs')), differenceValues: timeline.map((point) => Number(point.difference?.avgCs || 0)) },
+        { label: 'CSリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.csLeadRate)) },
+        { label: 'レーン戦', values: timeline.map((point) => formatStatsApiRate(point.laneFights?.fight_occurred_rate)) },
+        { label: '平均 K / D / A', values: timeline.map((point) => `${Number(point.laneFights?.isolated_kills_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_deaths_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_assists_vs_lane || 0).toFixed(2)}`) },
+        { label: '試合数', values: timeline.map((point) => formatStatsApiGames(point.games)) }
+      ];
+      tbody.append(...rows.map((matrixRow) => {
         const row = doc.createElement('tr');
-        const values = [
-          `${point.minute}分`,
-          formatStatsApiGames(point.games),
-          `${formatStatsApiTimelineDifference(point.difference?.avgGold, 'gold')} / ${formatStatsApiRate(point.difference?.goldLeadRate)}`,
-          `${formatStatsApiTimelineDifference(point.difference?.avgXp, 'xp')} / ${formatStatsApiRate(point.difference?.xpLeadRate)}`,
-          `${formatStatsApiTimelineDifference(point.difference?.avgCs, 'cs')} / ${formatStatsApiRate(point.difference?.csLeadRate)}`,
-          formatStatsApiRate(point.laneFights?.fight_occurred_rate),
-          `${Number(point.laneFights?.isolated_kills_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_deaths_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_assists_vs_lane || 0).toFixed(2)}`
-        ];
-        values.forEach((value, index) => {
-          const cell = index === 0 ? doc.createElement('th') : doc.createElement('td');
-          if (index === 0) (cell as HTMLTableCellElement).scope = 'row';
+        const labelCell = doc.createElement('th');
+        labelCell.scope = 'row';
+        labelCell.textContent = matrixRow.label;
+        row.append(labelCell);
+        matrixRow.values.forEach((value, index) => {
+          const cell = doc.createElement('td');
           cell.textContent = value;
+          if (matrixRow.differenceValues) {
+            const numericValue = matrixRow.differenceValues[index] || 0;
+            cell.className = numericValue >= 0 ? 'stats-api-positive' : 'stats-api-negative';
+          }
           row.append(cell);
         });
         return row;
@@ -2722,6 +2980,27 @@
       table.append(thead, tbody);
       wrap.append(table);
       return wrap;
+    }
+
+    function createStatsApiTimelineDetails(timeline: StatsApiTimelinePoint[]): HTMLElement {
+      const details = doc.createElement('details');
+      details.className = 'stats-api-timeline-details';
+      const summary = doc.createElement('summary');
+      summary.className = 'stats-api-timeline-details-summary';
+      summary.append(
+        createText('stats-api-timeline-details-label', '詳細データ（表）'),
+        createText('stats-api-timeline-details-hint', 'クリックで表示')
+      );
+      details.addEventListener('toggle', () => {
+        const hint = summary.querySelector<HTMLElement>('.stats-api-timeline-details-hint');
+        if (hint) hint.textContent = details.open ? 'クリックで閉じる' : 'クリックで表示';
+      });
+      details.append(
+        summary,
+        createText('stats-api-timeline-note', 'リード率は、その時点で対象チャンピオンの値が対面を上回った試合の割合です。試合数はその時点まで継続した試合のみを数えます。', 'p'),
+        createStatsApiTimelineMatrix(timeline)
+      );
+      return details;
     }
 
     function renderStatsApiTimeline(
@@ -2743,38 +3022,18 @@
         });
         panel.append(breadcrumb);
       }
-      const championName = deps.championLabel ? deps.championLabel(selectedChampionId) : `Champion ${selectedChampionId}`;
-      const opponentName = normalizedOpponentId
-        ? (deps.championLabel ? deps.championLabel(normalizedOpponentId) : `Champion ${normalizedOpponentId}`)
-        : '';
-      panel.append(createStatsApiAnalysisHeading(
-        opponentName ? `${championName} vs ${opponentName}` : `${championName}の全体推移`,
-        opponentName
-          ? '同じレーンで直接対面した試合のみを集計。差分は選択チャンピオン側から見た値です。'
-          : '全対面を含む平均値です。特定の相手に偏らない、レーン全体での傾向を確認できます。'
-      ));
       if (!timelineData) {
         panel.append(createStatsApiEmptyState('この条件では時間推移データがありません。'));
         renderStatsApiAnalysisShell(panel);
         return;
       }
       const timeline = Array.isArray(timelineData.timeline) ? timelineData.timeline : [];
-      const winRate = Number(timelineData.winRate ?? timelineData.winRateVsOpponent ?? 0);
-      const summary = doc.createElement('div');
-      summary.className = 'stats-api-analysis-summary';
-      summary.append(
-        createStatsApiSummaryChip('勝率', formatStatsApiRate(winRate), getStatsApiWinRateAccent(winRate)),
-        createStatsApiSummaryChip('試合数', formatStatsApiGames(timelineData.games)),
-        createStatsApiSummaryChip('記録時点', `${timeline.length}点`)
-      );
-      panel.append(summary);
       if (!timeline.length) {
         panel.append(createStatsApiEmptyState('通常スナップショットがある試合がありません。'));
       } else {
         panel.append(
-          createStatsApiTimelineChart(timeline),
-          createText('stats-api-timeline-note', 'リード率は、その時点で対象チャンピオンの値が対面を上回った試合の割合です。試合数はその時点まで継続した試合のみを数えます。', 'p'),
-          createStatsApiTimelineTable(timeline)
+          createStatsApiTimelineDashboard(timeline),
+          createStatsApiTimelineDetails(timeline)
         );
       }
       renderStatsApiAnalysisShell(panel, timelineData);
@@ -2849,21 +3108,28 @@
       );
     }
 
-    function createStatsApiChampionHero(champion: StatsApiChampionSummary): HTMLElement {
-      const hero = doc.createElement('section');
-      hero.className = 'stats-api-champion-hero';
-
+    function createStatsApiChampionPortrait(championId: number): HTMLElement {
       const portraitWrap = doc.createElement('div');
       portraitWrap.className = 'stats-api-champion-portrait';
       if (deps.loadChampionIcon) {
         const portrait = doc.createElement('img');
-        portrait.alt = deps.championLabel ? deps.championLabel(champion.championId) : `Champion ${champion.championId}`;
+        portrait.alt = deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`;
         portrait.className = 'stats-api-champion-portrait-image';
-        deps.loadChampionIcon(portrait, champion.championId);
+        deps.loadChampionIcon(portrait, championId);
         portraitWrap.append(portrait);
       } else {
-        portraitWrap.textContent = String(champion.championId);
+        portraitWrap.textContent = String(championId);
       }
+      return portraitWrap;
+    }
+
+    function createStatsApiChampionHero(
+      champion: StatsApiChampionSummary,
+      opponentChampionId = 0
+    ): HTMLElement {
+      const hero = doc.createElement('section');
+      const normalizedOpponentId = normalizeChampionId(opponentChampionId);
+      hero.className = `stats-api-champion-hero${normalizedOpponentId ? ' has-opponent' : ''}`;
 
       const content = doc.createElement('div');
       content.className = 'stats-api-champion-hero-main';
@@ -2881,7 +3147,22 @@
         createStatsApiSummaryChip('Games', formatStatsApiGames(champion.games))
       );
       content.append(heading, metrics);
-      hero.append(portraitWrap, content);
+      hero.append(createStatsApiChampionPortrait(champion.championId), content);
+      if (normalizedOpponentId) {
+        const opponentName = deps.championLabel
+          ? deps.championLabel(normalizedOpponentId)
+          : `Champion ${normalizedOpponentId}`;
+        const versus = createText('stats-api-matchup-versus', 'VS', 'strong');
+        const opponent = doc.createElement('div');
+        opponent.className = 'stats-api-matchup-opponent-main';
+        opponent.append(
+          createText('stats-api-matchup-opponent-label', '分析対象', 'span'),
+          createText('stats-api-champion-name stats-api-matchup-opponent-name', opponentName, 'h2'),
+          createText('stats-api-champion-subtitle', '対面チャンピオン', 'p')
+        );
+        hero.setAttribute('aria-label', `${heading.textContent || ''} 対 ${opponentName}`);
+        hero.append(versus, createStatsApiChampionPortrait(normalizedOpponentId), opponent);
+      }
       return hero;
     }
 
@@ -3226,6 +3507,7 @@
     filterStatsApiChampionRows,
     getStatsApiOpponentChampionOptions,
     normalizeStatsApiSearchText,
+    sortStatsApiMatchupRows,
     sortStatsApiChampionRows
   };
 
