@@ -118,6 +118,12 @@
     opponentChampionId?: number;
   }
 
+  interface StatsApiMatchupsFilters extends StatsApiFilters {
+    championId?: number;
+    minGames?: number;
+    opponentChampionId?: number;
+  }
+
   interface StatsApiOpponentChampionOption {
     alias: string;
     championId: number;
@@ -200,6 +206,67 @@
     champion?: StatsApiChampionSummary | null;
     keystones?: StatsApiKeystoneDetails[];
   }
+
+  interface StatsApiMatchupSummary {
+    games: number;
+    opponentChampionId: number;
+    winRateVsOpponent: number;
+    wins: number;
+  }
+
+  interface StatsApiMatchupsData {
+    baselineWinRate: number;
+    championId: number;
+    matchups?: StatsApiMatchupSummary[];
+  }
+
+  interface StatsApiTimelineSide {
+    avgCs: number;
+    avgGold: number;
+    avgLevel: number;
+    avgXp: number;
+  }
+
+  interface StatsApiTimelineDifference {
+    avgCs: number;
+    avgGold: number;
+    avgXp: number;
+    csLeadRate: number;
+    goldLeadRate: number;
+    xpLeadRate: number;
+  }
+
+  interface StatsApiTimelineLaneFights {
+    fight_occurred_rate: number;
+    isolated_assists_vs_lane: number;
+    isolated_assists_vs_lane_occurred_rate: number;
+    isolated_deaths_vs_lane: number;
+    isolated_deaths_vs_lane_occurred_rate: number;
+    isolated_kills_vs_lane: number;
+    isolated_kills_vs_lane_occurred_rate: number;
+  }
+
+  interface StatsApiTimelinePoint {
+    champion: StatsApiTimelineSide;
+    difference: StatsApiTimelineDifference;
+    games: number;
+    laneFights: StatsApiTimelineLaneFights;
+    minute: number;
+    opponent: StatsApiTimelineSide;
+  }
+
+  interface StatsApiTimelineData {
+    championId: number;
+    games: number;
+    opponentChampionId?: number;
+    timeline?: StatsApiTimelinePoint[];
+    winRate?: number;
+    winRateVsOpponent?: number;
+    wins: number;
+  }
+
+  type StatsApiDetailsSection = 'build' | 'matchups' | 'timeline';
+  type StatsApiTimelineMetric = 'gold' | 'xp' | 'cs';
 
   interface DataDragonRunePerk {
     icon?: string;
@@ -524,6 +591,59 @@
     return url.toString();
   }
 
+  function appendStatsApiCommonFilters(url: URL, filters: StatsApiFilters): void {
+    if (filters.patch) {
+      url.searchParams.set('patch', filters.patch);
+    }
+    if (filters.ranks && filters.ranks.length > 0) {
+      url.searchParams.set('ranks', filters.ranks.join(','));
+    }
+  }
+
+  function buildStatsApiMatchupsUrl(filters: StatsApiMatchupsFilters, baseUrl = STATS_API_BASE_URL): string {
+    const position = normalizeStatsApiPosition(filters.position);
+    const championId = normalizeChampionId(filters.championId);
+    if (!position) throw new Error('StatsAPI position is required.');
+    if (!championId) throw new Error('StatsAPI championId is required.');
+    const url = new URL(
+      `/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/matchups`,
+      baseUrl
+    );
+    appendStatsApiCommonFilters(url, filters);
+    if (Number.isFinite(Number(filters.minGames)) && Number(filters.minGames) >= 0) {
+      url.searchParams.set('minGames', String(Math.floor(Number(filters.minGames))));
+    }
+    return url.toString();
+  }
+
+  function buildStatsApiMatchupTimelineUrl(filters: StatsApiMatchupsFilters, baseUrl = STATS_API_BASE_URL): string {
+    const position = normalizeStatsApiPosition(filters.position);
+    const championId = normalizeChampionId(filters.championId);
+    const opponentChampionId = normalizeChampionId(filters.opponentChampionId);
+    if (!position) throw new Error('StatsAPI position is required.');
+    if (!championId) throw new Error('StatsAPI championId is required.');
+    if (!opponentChampionId) throw new Error('StatsAPI opponentChampionId is required.');
+    const url = new URL(
+      `/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/matchups/${opponentChampionId}`,
+      baseUrl
+    );
+    appendStatsApiCommonFilters(url, filters);
+    return url.toString();
+  }
+
+  function buildStatsApiTimelineUrl(filters: StatsApiMatchupsFilters, baseUrl = STATS_API_BASE_URL): string {
+    const position = normalizeStatsApiPosition(filters.position);
+    const championId = normalizeChampionId(filters.championId);
+    if (!position) throw new Error('StatsAPI position is required.');
+    if (!championId) throw new Error('StatsAPI championId is required.');
+    const url = new URL(
+      `/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/timeline`,
+      baseUrl
+    );
+    appendStatsApiCommonFilters(url, filters);
+    return url.toString();
+  }
+
   function parseStatsApiRetryAfterSeconds(value: string | null | undefined, now = Date.now()): number | null {
     if (!value) return null;
 
@@ -670,6 +790,7 @@
     const championsPanel = doc.querySelector<HTMLElement>('.stats-api-champions-panel');
     const detailsView = doc.querySelector<HTMLElement>('#statsApiDetailsView');
     const detailsBackButton = doc.querySelector<HTMLButtonElement>('#statsApiDetailsBackButton');
+    const detailsToolbarBackButton = detailsView?.querySelector<HTMLButtonElement>('.stats-api-details-toolbar .stats-api-back-button') || null;
     const detailsTitle = doc.querySelector<HTMLElement>('#statsApiDetailsTitle');
     const detailsStatus = doc.querySelector<HTMLElement>('#statsApiDetailsStatus');
     const detailsContent = doc.querySelector<HTMLElement>('#statsApiDetailsContent');
@@ -709,6 +830,14 @@
     let statsApiLoadingCount = 0;
     let statsApiLoadingOverlay: HTMLElement | null = null;
     const statsApiResponseCache = new Map<string, StatsApiResponseCacheEntry>();
+    let activeDetailsSection: StatsApiDetailsSection = 'build';
+    let statsApiAnalysisRequestId = 0;
+    let statsApiMatchupsMinGames = 20;
+    let selectedMatchupOpponentChampionId = 0;
+    let selectedTimelineMetric: StatsApiTimelineMetric = 'gold';
+    let lastMatchupsData: StatsApiMatchupsData | null = null;
+    let lastMatchupTimelineData: StatsApiTimelineData | null = null;
+    let lastChampionTimelineData: StatsApiTimelineData | null = null;
 
     function formatStatsApiRate(value: unknown): string {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -769,9 +898,18 @@
       if (listView) listView.hidden = isVisible;
       if (detailsBackButton) detailsBackButton.hidden = !isVisible;
       if (statsApiOpponentDropdownField) {
-        statsApiOpponentDropdownField.hidden = !isVisible;
+        statsApiOpponentDropdownField.hidden = !isVisible || activeDetailsSection !== 'build';
       }
       if (!isVisible) {
+        setStatsApiOpponentDropdownOpen(false);
+      }
+    }
+
+    function updateStatsApiDetailsFilterVisibility(): void {
+      if (statsApiOpponentDropdownField) {
+        statsApiOpponentDropdownField.hidden = detailsView?.hidden !== false || activeDetailsSection !== 'build';
+      }
+      if (activeDetailsSection !== 'build') {
         setStatsApiOpponentDropdownOpen(false);
       }
     }
@@ -1823,14 +1961,22 @@
     }
 
     function initializeStatsApiDetailsActions(): void {
-      detailsBackButton?.addEventListener('click', () => {
+      const closeDetails = () => {
+        statsApiAnalysisRequestId += 1;
         selectedChampionId = 0;
         selectedChampionStats = null;
         selectedKeystoneId = 0;
+        selectedMatchupOpponentChampionId = 0;
+        activeDetailsSection = 'build';
         lastDetailsData = null;
+        lastMatchupsData = null;
+        lastMatchupTimelineData = null;
+        lastChampionTimelineData = null;
         setStatsApiDetailsVisible(false);
         setStatsApiDetailsStatus('');
-      });
+      };
+      detailsBackButton?.addEventListener('click', closeDetails);
+      detailsToolbarBackButton?.addEventListener('click', closeDetails);
     }
 
     function renderStatsApiSortButtons(): void {
@@ -2063,11 +2209,17 @@
         selectedChampionStats = stats;
         selectedOpponentChampionId = 0;
         selectedKeystoneId = 0;
+        selectedMatchupOpponentChampionId = 0;
+        activeDetailsSection = 'build';
         lastDetailsData = null;
+        lastMatchupsData = null;
+        lastMatchupTimelineData = null;
+        lastChampionTimelineData = null;
         updateStatsApiOpponentDropdownLabel();
         setStatsApiDetailsVisible(true);
+        updateStatsApiDetailsFilterVisibility();
         refreshStatsApiChampionTableSelection();
-        refreshSelectedChampionDetails();
+        refreshActiveStatsApiDetails();
       };
       row.addEventListener('click', openDetails);
       row.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -2145,7 +2297,7 @@
         renderStatsApiChampionTable(statsList);
         setStatsApiStatus('');
         if (selectedChampionId > 0 && !detailsView?.hidden) {
-          await refreshSelectedChampionDetails();
+          await refreshActiveStatsApiDetails();
         }
       } catch (error: any) {
         if (requestId !== statsApiRequestId) return;
@@ -2153,7 +2305,7 @@
         if (!scheduleStatsApiRetry('champions', error)) {
           setStatsApiStatus(`チャンピオン一覧を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
           if (selectedChampionId > 0 && !detailsView?.hidden) {
-            setStatsApiDetailsStatus(`詳細データを更新できませんでした: ${formatStatsApiErrorMessage(error)}`);
+            setStatsApiDetailsStatus(`分析データを更新できませんでした: ${formatStatsApiErrorMessage(error)}`);
           }
         }
       } finally {
@@ -2161,6 +2313,471 @@
           setStatsApiLoading(false);
         }
       }
+    }
+
+    function getSelectedChampionSummary(
+      timelineData: StatsApiTimelineData | null = null,
+      baselineWinRate?: number
+    ): StatsApiChampionSummary {
+      const games = Number(timelineData?.games ?? selectedChampionStats?.games ?? 0);
+      const winRate = Number(
+        timelineData?.winRate ??
+        timelineData?.winRateVsOpponent ??
+        baselineWinRate ??
+        selectedChampionStats?.winRate ??
+        0
+      );
+      return {
+        championId: selectedChampionId,
+        games,
+        wins: Number(timelineData?.wins ?? Math.round(games * winRate)),
+        pickRate: Number(selectedChampionStats?.pickRate || 0),
+        winRate
+      };
+    }
+
+    function createStatsApiDetailsNavigation(): HTMLElement {
+      const navigation = doc.createElement('nav');
+      navigation.className = 'stats-api-analysis-tabs';
+      navigation.setAttribute('aria-label', 'チャンピオン分析メニュー');
+      const sections: Array<{ id: StatsApiDetailsSection; label: string; description: string }> = [
+        { id: 'build', label: 'ビルド', description: 'ルーン・アイテム・スキル' },
+        { id: 'matchups', label: '対面分析', description: '相手別の勝率と推移' },
+        { id: 'timeline', label: '全体推移', description: '全対面を含む平均推移' }
+      ];
+      navigation.append(...sections.map((section) => {
+        const button = doc.createElement('button');
+        const active = section.id === activeDetailsSection;
+        button.type = 'button';
+        button.className = `stats-api-analysis-tab${active ? ' active' : ''}`;
+        button.setAttribute('aria-pressed', String(active));
+        button.append(
+          createText('stats-api-analysis-tab-label', section.label, 'strong'),
+          createText('stats-api-analysis-tab-description', section.description, 'small')
+        );
+        button.addEventListener('click', () => {
+          if (activeDetailsSection === section.id) return;
+          activeDetailsSection = section.id;
+          selectedMatchupOpponentChampionId = 0;
+          updateStatsApiDetailsFilterVisibility();
+          setStatsApiDetailsStatus('');
+          refreshActiveStatsApiDetails();
+        });
+        return button;
+      }));
+      return navigation;
+    }
+
+    function renderStatsApiAnalysisShell(
+      content: HTMLElement,
+      timelineData: StatsApiTimelineData | null = null,
+      baselineWinRate?: number
+    ): void {
+      if (!detailsContent) return;
+      detailsContent.replaceChildren(
+        createStatsApiDetailsNavigation(),
+        createStatsApiChampionHero(getSelectedChampionSummary(timelineData, baselineWinRate)),
+        content
+      );
+    }
+
+    async function refreshActiveStatsApiDetails(): Promise<void> {
+      if (activeDetailsSection === 'matchups') {
+        if (selectedMatchupOpponentChampionId) {
+          await refreshStatsApiMatchupTimeline(selectedMatchupOpponentChampionId);
+        } else {
+          await refreshStatsApiMatchups();
+        }
+        return;
+      }
+      if (activeDetailsSection === 'timeline') {
+        await refreshStatsApiChampionTimeline();
+        return;
+      }
+      await refreshSelectedChampionDetails();
+    }
+
+    async function refreshStatsApiMatchups(): Promise<void> {
+      const championId = normalizeChampionId(selectedChampionId);
+      const filters = getStatsApiSelectedFilters();
+      if (!championId || !filters.position) return;
+      const requestId = ++statsApiAnalysisRequestId;
+      const url = buildStatsApiMatchupsUrl({
+        ...filters,
+        championId,
+        minGames: statsApiMatchupsMinGames
+      });
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(url));
+      if (!hasCachedResponse) setStatsApiLoading(true);
+      setStatsApiDetailsStatus('');
+      try {
+        const response = await fetchStatsApiJson(url);
+        if (requestId !== statsApiAnalysisRequestId || activeDetailsSection !== 'matchups') return;
+        lastMatchupsData = response?.data || null;
+        lastMatchupTimelineData = null;
+        renderStatsApiMatchups(lastMatchupsData);
+      } catch (error: any) {
+        if (requestId !== statsApiAnalysisRequestId) return;
+        lastMatchupsData = null;
+        renderStatsApiMatchups(null);
+        setStatsApiDetailsStatus(`対面データを取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+      } finally {
+        if (!hasCachedResponse) setStatsApiLoading(false);
+      }
+    }
+
+    async function refreshStatsApiMatchupTimeline(opponentChampionId: number): Promise<void> {
+      const championId = normalizeChampionId(selectedChampionId);
+      const normalizedOpponentId = normalizeChampionId(opponentChampionId);
+      const filters = getStatsApiSelectedFilters();
+      if (!championId || !normalizedOpponentId || !filters.position) return;
+      selectedMatchupOpponentChampionId = normalizedOpponentId;
+      const requestId = ++statsApiAnalysisRequestId;
+      const url = buildStatsApiMatchupTimelineUrl({
+        ...filters,
+        championId,
+        opponentChampionId: normalizedOpponentId
+      });
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(url));
+      if (!hasCachedResponse) setStatsApiLoading(true);
+      setStatsApiDetailsStatus('');
+      try {
+        const response = await fetchStatsApiJson(url);
+        if (requestId !== statsApiAnalysisRequestId || activeDetailsSection !== 'matchups') return;
+        lastMatchupTimelineData = response?.data || null;
+        renderStatsApiTimeline(lastMatchupTimelineData, normalizedOpponentId);
+      } catch (error: any) {
+        if (requestId !== statsApiAnalysisRequestId) return;
+        lastMatchupTimelineData = null;
+        renderStatsApiTimeline(null, normalizedOpponentId);
+        setStatsApiDetailsStatus(`対面推移を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+      } finally {
+        if (!hasCachedResponse) setStatsApiLoading(false);
+      }
+    }
+
+    async function refreshStatsApiChampionTimeline(): Promise<void> {
+      const championId = normalizeChampionId(selectedChampionId);
+      const filters = getStatsApiSelectedFilters();
+      if (!championId || !filters.position) return;
+      const requestId = ++statsApiAnalysisRequestId;
+      const url = buildStatsApiTimelineUrl({ ...filters, championId });
+      const hasCachedResponse = Boolean(getCachedStatsApiResponse(url));
+      if (!hasCachedResponse) setStatsApiLoading(true);
+      setStatsApiDetailsStatus('');
+      try {
+        const response = await fetchStatsApiJson(url);
+        if (requestId !== statsApiAnalysisRequestId || activeDetailsSection !== 'timeline') return;
+        lastChampionTimelineData = response?.data || null;
+        renderStatsApiTimeline(lastChampionTimelineData);
+      } catch (error: any) {
+        if (requestId !== statsApiAnalysisRequestId) return;
+        lastChampionTimelineData = null;
+        renderStatsApiTimeline(null);
+        setStatsApiDetailsStatus(`全体推移を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+      } finally {
+        if (!hasCachedResponse) setStatsApiLoading(false);
+      }
+    }
+
+    function createStatsApiAnalysisHeading(title: string, description: string): HTMLElement {
+      const heading = doc.createElement('header');
+      heading.className = 'stats-api-analysis-heading';
+      heading.append(
+        createText('stats-api-analysis-title', title, 'h3'),
+        createText('stats-api-analysis-description', description, 'p')
+      );
+      return heading;
+    }
+
+    function renderStatsApiMatchups(matchupsData: StatsApiMatchupsData | null): void {
+      const panel = doc.createElement('section');
+      panel.className = 'stats-api-analysis-panel stats-api-matchups-panel';
+      const header = doc.createElement('div');
+      header.className = 'stats-api-analysis-header-row';
+      header.append(createStatsApiAnalysisHeading(
+        '対面チャンピオン別の成績',
+        '勝率差は、このレーンでのチャンピオン自身の基準勝率と比較しています。'
+      ));
+
+      const sampleField = doc.createElement('label');
+      sampleField.className = 'stats-api-analysis-select';
+      sampleField.append(createText('', '最小試合数'));
+      const sampleSelect = doc.createElement('select');
+      [0, 20, 50, 100].forEach((value) => {
+        const option = doc.createElement('option');
+        option.value = String(value);
+        option.textContent = value === 0 ? '制限なし' : `${value}試合`;
+        option.selected = value === statsApiMatchupsMinGames;
+        sampleSelect.append(option);
+      });
+      sampleSelect.addEventListener('change', () => {
+        statsApiMatchupsMinGames = Math.max(0, Number(sampleSelect.value || 0));
+        refreshStatsApiMatchups();
+      });
+      sampleField.append(sampleSelect);
+      header.append(sampleField);
+      panel.append(header);
+
+      if (!matchupsData) {
+        panel.append(createStatsApiEmptyState('この条件では対面データがありません。'));
+        renderStatsApiAnalysisShell(panel);
+        return;
+      }
+
+      const matchups = Array.isArray(matchupsData.matchups) ? matchupsData.matchups : [];
+      const summary = doc.createElement('div');
+      summary.className = 'stats-api-analysis-summary';
+      summary.append(
+        createStatsApiSummaryChip('基準勝率', formatStatsApiRate(matchupsData.baselineWinRate), getStatsApiWinRateAccent(matchupsData.baselineWinRate)),
+        createStatsApiSummaryChip('対面数', formatStatsApiGames(matchups.length))
+      );
+      panel.append(summary);
+
+      if (!matchups.length) {
+        panel.append(createStatsApiEmptyState('最小試合数を満たす対面がありません。'));
+        renderStatsApiAnalysisShell(panel, null, matchupsData.baselineWinRate);
+        return;
+      }
+
+      const wrap = doc.createElement('div');
+      wrap.className = 'stats-table-wrap stats-api-matchups-table-wrap';
+      const table = doc.createElement('table');
+      table.className = 'stats-table stats-api-matchups-table';
+      const thead = doc.createElement('thead');
+      const headerRow = doc.createElement('tr');
+      ['対面チャンピオン', '試合数', '勝率', '基準との差', '時間推移'].forEach((label) => {
+        const th = doc.createElement('th');
+        th.scope = 'col';
+        th.textContent = label;
+        headerRow.append(th);
+      });
+      thead.append(headerRow);
+      const tbody = doc.createElement('tbody');
+      tbody.append(...matchups.map((matchup) => {
+        const row = doc.createElement('tr');
+        row.className = 'stats-table-clickable-row';
+        row.tabIndex = 0;
+        const opponentCell = doc.createElement('th');
+        opponentCell.scope = 'row';
+        opponentCell.append(deps.createInlineChampionName(
+          matchup.opponentChampionId,
+          'inline-champion-name stats-table-champion'
+        ));
+        const gamesCell = doc.createElement('td');
+        gamesCell.textContent = formatStatsApiGames(matchup.games);
+        const winRateCell = doc.createElement('td');
+        winRateCell.textContent = formatStatsApiRate(matchup.winRateVsOpponent);
+        const difference = Number(matchup.winRateVsOpponent || 0) - Number(matchupsData.baselineWinRate || 0);
+        const differenceCell = doc.createElement('td');
+        differenceCell.textContent = `${difference >= 0 ? '+' : ''}${(difference * 100).toFixed(1)}pt`;
+        differenceCell.className = difference >= 0 ? 'stats-api-positive' : 'stats-api-negative';
+        const actionCell = doc.createElement('td');
+        actionCell.className = 'stats-api-row-action';
+        actionCell.textContent = '見る →';
+        const openTimeline = () => refreshStatsApiMatchupTimeline(matchup.opponentChampionId);
+        row.addEventListener('click', openTimeline);
+        row.addEventListener('keydown', (event: KeyboardEvent) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          openTimeline();
+        });
+        row.append(opponentCell, gamesCell, winRateCell, differenceCell, actionCell);
+        return row;
+      }));
+      table.append(thead, tbody);
+      wrap.append(table);
+      panel.append(wrap);
+      renderStatsApiAnalysisShell(panel, null, matchupsData.baselineWinRate);
+    }
+
+    function getStatsApiTimelineMetricConfig(metric: StatsApiTimelineMetric): {
+      differenceKey: keyof StatsApiTimelineDifference;
+      label: string;
+      leadRateKey: keyof StatsApiTimelineDifference;
+      unit: string;
+    } {
+      if (metric === 'xp') return { differenceKey: 'avgXp', label: '経験値差', leadRateKey: 'xpLeadRate', unit: ' XP' };
+      if (metric === 'cs') return { differenceKey: 'avgCs', label: 'CS差', leadRateKey: 'csLeadRate', unit: ' CS' };
+      return { differenceKey: 'avgGold', label: 'ゴールド差', leadRateKey: 'goldLeadRate', unit: ' G' };
+    }
+
+    function formatStatsApiTimelineDifference(value: unknown, metric: StatsApiTimelineMetric): string {
+      const numericValue = Number(value || 0);
+      const digits = metric === 'cs' ? 1 : 0;
+      return `${numericValue >= 0 ? '+' : ''}${numericValue.toFixed(digits)}${getStatsApiTimelineMetricConfig(metric).unit}`;
+    }
+
+    function createStatsApiTimelineChart(timeline: StatsApiTimelinePoint[]): HTMLElement {
+      const card = doc.createElement('section');
+      card.className = 'stats-api-timeline-chart-card';
+      const controls = doc.createElement('div');
+      controls.className = 'stats-api-timeline-metric-tabs';
+      (['gold', 'xp', 'cs'] as StatsApiTimelineMetric[]).forEach((metric) => {
+        const button = doc.createElement('button');
+        const active = metric === selectedTimelineMetric;
+        button.type = 'button';
+        button.className = `stats-api-timeline-metric-tab${active ? ' active' : ''}`;
+        button.setAttribute('aria-pressed', String(active));
+        button.textContent = getStatsApiTimelineMetricConfig(metric).label;
+        button.addEventListener('click', () => {
+          selectedTimelineMetric = metric;
+          if (activeDetailsSection === 'timeline') {
+            renderStatsApiTimeline(lastChampionTimelineData);
+          } else {
+            renderStatsApiTimeline(lastMatchupTimelineData, selectedMatchupOpponentChampionId);
+          }
+        });
+        controls.append(button);
+      });
+      card.append(controls);
+
+      const config = getStatsApiTimelineMetricConfig(selectedTimelineMetric);
+      const values = timeline.map((point) => Number(point.difference?.[config.differenceKey] || 0));
+      const maxAbs = Math.max(1, ...values.map((value) => Math.abs(value)));
+      const width = 800;
+      const height = 220;
+      const padding = { top: 20, right: 22, bottom: 36, left: 22 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const x = (index: number) => padding.left + (timeline.length <= 1 ? plotWidth / 2 : index * plotWidth / (timeline.length - 1));
+      const y = (value: number) => padding.top + plotHeight / 2 - (value / maxAbs) * (plotHeight / 2 - 10);
+      const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'stats-api-timeline-chart');
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', `${config.label}の時間推移`);
+
+      const zeroLine = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+      zeroLine.setAttribute('class', 'stats-api-timeline-zero-line');
+      zeroLine.setAttribute('x1', String(padding.left));
+      zeroLine.setAttribute('x2', String(width - padding.right));
+      zeroLine.setAttribute('y1', String(y(0)));
+      zeroLine.setAttribute('y2', String(y(0)));
+      svg.append(zeroLine);
+
+      const polyline = doc.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('class', 'stats-api-timeline-line');
+      polyline.setAttribute('points', values.map((value, index) => `${x(index)},${y(value)}`).join(' '));
+      svg.append(polyline);
+      timeline.forEach((point, index) => {
+        const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('class', `stats-api-timeline-point${values[index] < 0 ? ' negative' : ''}`);
+        circle.setAttribute('cx', String(x(index)));
+        circle.setAttribute('cy', String(y(values[index])));
+        circle.setAttribute('r', '5');
+        const title = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${point.minute}分: ${formatStatsApiTimelineDifference(values[index], selectedTimelineMetric)}`;
+        circle.append(title);
+        svg.append(circle);
+        const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('class', 'stats-api-timeline-axis-label');
+        label.setAttribute('x', String(x(index)));
+        label.setAttribute('y', String(height - 12));
+        label.setAttribute('text-anchor', 'middle');
+        label.textContent = `${point.minute}分`;
+        svg.append(label);
+      });
+      const chartWrap = doc.createElement('div');
+      chartWrap.className = 'stats-api-timeline-chart-wrap';
+      chartWrap.append(svg);
+      card.append(chartWrap);
+      return card;
+    }
+
+    function createStatsApiTimelineTable(timeline: StatsApiTimelinePoint[]): HTMLElement {
+      const wrap = doc.createElement('div');
+      wrap.className = 'stats-table-wrap stats-api-timeline-table-wrap';
+      const table = doc.createElement('table');
+      table.className = 'stats-table stats-api-timeline-table';
+      const thead = doc.createElement('thead');
+      const headerRow = doc.createElement('tr');
+      ['時間', '試合数', 'Gold差 / リード率', 'XP差 / リード率', 'CS差 / リード率', 'レーン戦発生率', '平均レーン K / D / A'].forEach((label) => {
+        const th = doc.createElement('th');
+        th.scope = 'col';
+        th.textContent = label;
+        headerRow.append(th);
+      });
+      thead.append(headerRow);
+      const tbody = doc.createElement('tbody');
+      tbody.append(...timeline.map((point) => {
+        const row = doc.createElement('tr');
+        const values = [
+          `${point.minute}分`,
+          formatStatsApiGames(point.games),
+          `${formatStatsApiTimelineDifference(point.difference?.avgGold, 'gold')} / ${formatStatsApiRate(point.difference?.goldLeadRate)}`,
+          `${formatStatsApiTimelineDifference(point.difference?.avgXp, 'xp')} / ${formatStatsApiRate(point.difference?.xpLeadRate)}`,
+          `${formatStatsApiTimelineDifference(point.difference?.avgCs, 'cs')} / ${formatStatsApiRate(point.difference?.csLeadRate)}`,
+          formatStatsApiRate(point.laneFights?.fight_occurred_rate),
+          `${Number(point.laneFights?.isolated_kills_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_deaths_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_assists_vs_lane || 0).toFixed(2)}`
+        ];
+        values.forEach((value, index) => {
+          const cell = index === 0 ? doc.createElement('th') : doc.createElement('td');
+          if (index === 0) (cell as HTMLTableCellElement).scope = 'row';
+          cell.textContent = value;
+          row.append(cell);
+        });
+        return row;
+      }));
+      table.append(thead, tbody);
+      wrap.append(table);
+      return wrap;
+    }
+
+    function renderStatsApiTimeline(
+      timelineData: StatsApiTimelineData | null,
+      opponentChampionId = 0
+    ): void {
+      const panel = doc.createElement('section');
+      panel.className = 'stats-api-analysis-panel stats-api-timeline-panel';
+      const normalizedOpponentId = normalizeChampionId(opponentChampionId || timelineData?.opponentChampionId);
+      if (normalizedOpponentId) {
+        const breadcrumb = doc.createElement('button');
+        breadcrumb.type = 'button';
+        breadcrumb.className = 'stats-api-analysis-back';
+        breadcrumb.textContent = '← 対面一覧に戻る';
+        breadcrumb.addEventListener('click', () => {
+          selectedMatchupOpponentChampionId = 0;
+          if (lastMatchupsData) renderStatsApiMatchups(lastMatchupsData);
+          else refreshStatsApiMatchups();
+        });
+        panel.append(breadcrumb);
+      }
+      const championName = deps.championLabel ? deps.championLabel(selectedChampionId) : `Champion ${selectedChampionId}`;
+      const opponentName = normalizedOpponentId
+        ? (deps.championLabel ? deps.championLabel(normalizedOpponentId) : `Champion ${normalizedOpponentId}`)
+        : '';
+      panel.append(createStatsApiAnalysisHeading(
+        opponentName ? `${championName} vs ${opponentName}` : `${championName}の全体推移`,
+        opponentName
+          ? '同じレーンで直接対面した試合のみを集計。差分は選択チャンピオン側から見た値です。'
+          : '全対面を含む平均値です。特定の相手に偏らない、レーン全体での傾向を確認できます。'
+      ));
+      if (!timelineData) {
+        panel.append(createStatsApiEmptyState('この条件では時間推移データがありません。'));
+        renderStatsApiAnalysisShell(panel);
+        return;
+      }
+      const timeline = Array.isArray(timelineData.timeline) ? timelineData.timeline : [];
+      const winRate = Number(timelineData.winRate ?? timelineData.winRateVsOpponent ?? 0);
+      const summary = doc.createElement('div');
+      summary.className = 'stats-api-analysis-summary';
+      summary.append(
+        createStatsApiSummaryChip('勝率', formatStatsApiRate(winRate), getStatsApiWinRateAccent(winRate)),
+        createStatsApiSummaryChip('試合数', formatStatsApiGames(timelineData.games)),
+        createStatsApiSummaryChip('記録時点', `${timeline.length}点`)
+      );
+      panel.append(summary);
+      if (!timeline.length) {
+        panel.append(createStatsApiEmptyState('通常スナップショットがある試合がありません。'));
+      } else {
+        panel.append(
+          createStatsApiTimelineChart(timeline),
+          createText('stats-api-timeline-note', 'リード率は、その時点で対象チャンピオンの値が対面を上回った試合の割合です。試合数はその時点まで継続した試合のみを数えます。', 'p'),
+          createStatsApiTimelineTable(timeline)
+        );
+      }
+      renderStatsApiAnalysisShell(panel, timelineData);
     }
 
     async function refreshSelectedChampionDetails(): Promise<void> {
@@ -2204,7 +2821,11 @@
       }
       if (!detailsContent) return;
       if (!detailsData?.champion) {
-        detailsContent.replaceChildren(createStatsApiEmptyState('この条件では詳細データがありません。'));
+        detailsContent.replaceChildren(
+          createStatsApiDetailsNavigation(),
+          createStatsApiChampionHero(getSelectedChampionSummary()),
+          createStatsApiEmptyState('この条件ではビルドデータがありません。')
+        );
         return;
       }
 
@@ -2222,6 +2843,7 @@
         createStatsApiKeystoneSelector(keystones)
       );
       detailsContent.replaceChildren(
+        createStatsApiDetailsNavigation(),
         top,
         createStatsApiDetailGridV2(activeKeystone)
       );
@@ -2575,6 +3197,9 @@
 
     return {
       buildStatsApiChampionDetailsUrl,
+      buildStatsApiMatchupTimelineUrl,
+      buildStatsApiMatchupsUrl,
+      buildStatsApiTimelineUrl,
       initializeStatsApiChampionList,
       refreshStatsApiChampionList
     };
@@ -2583,6 +3208,9 @@
   const api = {
     buildStatsApiChampionDetailsUrl,
     buildStatsApiChampionsUrl,
+    buildStatsApiMatchupTimelineUrl,
+    buildStatsApiMatchupsUrl,
+    buildStatsApiTimelineUrl,
     createChampionsView,
     formatStatsApiErrorMessage,
     getStatsApiLaneLabel,

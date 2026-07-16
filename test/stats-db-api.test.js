@@ -18,6 +18,18 @@ test('createStatsDbApiUrl allows only StatsAPI endpoints on the configured host'
     createStatsDbApiUrl('/v1/stats/positions/MIDDLE/champions/103/details?patch=16.13').toString(),
     'https://db.banpick-ai.lol/v1/stats/positions/MIDDLE/champions/103/details?patch=16.13'
   );
+  assert.equal(
+    createStatsDbApiUrl('/v1/stats/positions/MIDDLE/champions/103/matchups?patch=16.13').pathname,
+    '/v1/stats/positions/MIDDLE/champions/103/matchups'
+  );
+  assert.equal(
+    createStatsDbApiUrl('/v1/stats/positions/MIDDLE/champions/103/matchups/238').pathname,
+    '/v1/stats/positions/MIDDLE/champions/103/matchups/238'
+  );
+  assert.equal(
+    createStatsDbApiUrl('/v1/stats/positions/MIDDLE/champions/103/timeline').pathname,
+    '/v1/stats/positions/MIDDLE/champions/103/timeline'
+  );
   assert.throws(() => createStatsDbApiUrl('https://example.com/v1/stats/meta'), /not allowed/);
   assert.throws(() => createStatsDbApiUrl('/v1/stats/coverage'), /not allowed/);
 });

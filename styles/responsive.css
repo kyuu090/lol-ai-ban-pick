@@ -136,6 +136,15 @@
     display: grid;
   }
 
+  .stats-api-analysis-header-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stats-api-analysis-tab-description {
+    display: none;
+  }
+
   .stats-api-opponent-filter {
     min-width: 0;
   }

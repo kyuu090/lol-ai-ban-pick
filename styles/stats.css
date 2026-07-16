@@ -1929,3 +1929,224 @@
   line-height: 1;
 }
 
+.stats-api-analysis-tabs {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.stats-api-analysis-tab {
+  align-items: flex-start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--muted);
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.stats-api-analysis-tab.active {
+  background: var(--stats-api-tab-active-bg);
+  border-color: var(--stats-api-tab-active-border);
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-analysis-tab-label {
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.stats-api-analysis-tab-description {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.stats-api-analysis-panel {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.stats-api-analysis-header-row {
+  align-items: end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.stats-api-analysis-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.stats-api-analysis-title {
+  color: var(--text);
+  font-size: 16px;
+  margin: 0;
+}
+
+.stats-api-analysis-description,
+.stats-api-timeline-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.stats-api-analysis-select {
+  color: var(--muted);
+  display: grid;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 4px;
+}
+
+.stats-api-analysis-select select {
+  min-height: 32px;
+}
+
+.stats-api-analysis-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stats-api-matchups-table,
+.stats-api-timeline-table {
+  min-width: 720px;
+}
+
+.stats-api-matchups-table .stats-table-champion .inline-champion-icon {
+  height: 30px;
+  width: 30px;
+}
+
+.stats-api-matchups-table th,
+.stats-api-matchups-table td,
+.stats-api-timeline-table th,
+.stats-api-timeline-table td {
+  padding-bottom: 6px;
+  padding-top: 6px;
+  white-space: nowrap;
+}
+
+.stats-api-positive {
+  color: var(--stats-api-chip-accent);
+  font-weight: 900;
+}
+
+.stats-api-negative {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+.stats-api-row-action {
+  color: var(--stats-api-tab-active-text);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.stats-api-analysis-back {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--stats-api-tab-active-text);
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: start;
+  min-height: 28px;
+  padding: 0 4px;
+}
+
+.stats-api-timeline-chart-card {
+  background: var(--stats-api-panel-subtle-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.stats-api-timeline-metric-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.stats-api-timeline-metric-tab {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border-strong);
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+.stats-api-timeline-metric-tab.active {
+  background: var(--stats-api-tab-active-bg);
+  border-color: var(--stats-api-tab-active-border);
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-timeline-chart-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.stats-api-timeline-chart {
+  color: var(--accent-strong);
+  display: block;
+  height: 210px;
+  min-width: 620px;
+  width: 100%;
+}
+
+.stats-api-timeline-zero-line {
+  stroke: var(--border);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.stats-api-timeline-point {
+  fill: var(--stats-api-chip-accent);
+  stroke: var(--stats-api-panel-strong-bg);
+  stroke-width: 3;
+}
+
+.stats-api-timeline-point.negative {
+  fill: #dc2626;
+}
+
+.stats-api-timeline-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+

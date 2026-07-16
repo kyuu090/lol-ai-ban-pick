@@ -4,6 +4,9 @@ const assert = require('node:assert/strict');
 const {
   buildStatsApiChampionDetailsUrl,
   buildStatsApiChampionsUrl,
+  buildStatsApiMatchupTimelineUrl,
+  buildStatsApiMatchupsUrl,
+  buildStatsApiTimelineUrl,
   buildStatsApiRuneIconUrl,
   buildStatsApiChampionSearchText,
   filterStatsApiChampionRows,
@@ -53,6 +56,31 @@ test('champions view detail URL keeps current filters and selected champion id',
   assert.equal(url.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
   assert.equal(url.searchParams.get('keystoneId'), '8112');
   assert.equal(url.searchParams.get('opponentChampionId'), '238');
+});
+
+test('champions view analysis URLs keep the selected champion, opponent, and common filters', () => {
+  const filters = {
+    patch: '16.13',
+    position: 'MIDDLE',
+    championId: 103,
+    ranks: ['MASTER', 'GRANDMASTER']
+  };
+  const matchupsUrl = new URL(buildStatsApiMatchupsUrl({ ...filters, minGames: 50 }));
+  assert.equal(matchupsUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups');
+  assert.equal(matchupsUrl.searchParams.get('patch'), '16.13');
+  assert.equal(matchupsUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(matchupsUrl.searchParams.get('minGames'), '50');
+
+  const matchupTimelineUrl = new URL(buildStatsApiMatchupTimelineUrl({
+    ...filters,
+    opponentChampionId: 238
+  }));
+  assert.equal(matchupTimelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups/238');
+  assert.equal(matchupTimelineUrl.searchParams.get('patch'), '16.13');
+
+  const timelineUrl = new URL(buildStatsApiTimelineUrl(filters));
+  assert.equal(timelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/timeline');
+  assert.equal(timelineUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
 });
 
 test('champions view builds official Data Dragon rune data URLs', () => {
