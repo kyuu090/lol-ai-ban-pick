@@ -23,7 +23,7 @@ StatsAPI の対面・タイムライン統計を、ドラフト進行中では�
 
 `GET /v1/stats/positions/{position}/champions/{championId}/matchups`
 
-- APIの `baselineWinRate` を「基準勝率」として表示する。
+- APIの `baselineWinRate` は、一覧の「基準との差」を計算するために使用する。上部のサマリー表示は設けない。
 - 各対面は試合数、対面勝率、`winRateVsOpponent - baselineWinRate` のポイント差を表示する。
 - 対面チャンピオン、試合数、勝率、基準との差は列見出しをクリックして昇順・降順に並べ替えられる。
 - 最小試合数は、制限なし、20、50、100試合から選べる。初期値は20試合。

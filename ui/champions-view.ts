@@ -2610,10 +2610,6 @@
       panel.className = 'stats-api-analysis-panel stats-api-matchups-panel';
       const header = doc.createElement('div');
       header.className = 'stats-api-analysis-header-row';
-      header.append(createStatsApiAnalysisHeading(
-        '対面チャンピオン別の成績',
-        '勝率差は、このレーンでのチャンピオン自身の基準勝率と比較しています。'
-      ));
 
       const sampleField = doc.createElement('label');
       sampleField.className = 'stats-api-analysis-select';
@@ -2648,13 +2644,6 @@
         statsApiMatchupsSortDirection,
         (championId) => deps.championLabel ? deps.championLabel(championId) : `Champion ${championId}`
       );
-      const summary = doc.createElement('div');
-      summary.className = 'stats-api-analysis-summary';
-      summary.append(
-        createStatsApiSummaryChip('基準勝率', formatStatsApiRate(matchupsData.baselineWinRate), getStatsApiWinRateAccent(matchupsData.baselineWinRate)),
-        createStatsApiSummaryChip('対面数', formatStatsApiGames(matchups.length))
-      );
-      panel.append(summary);
 
       if (!matchups.length) {
         panel.append(createStatsApiEmptyState('最小試合数を満たす対面がありません。'));
