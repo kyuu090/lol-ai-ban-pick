@@ -110,6 +110,7 @@ declare global {
     championLabel?(championId: number): string;
     getChampionsById?(): Record<string | number, ChampionSummaryItem>;
     loadChampionIcon?(img: HTMLImageElement, championId: number): void;
+    getMatchHistoryLaneMatchupTimeline?(): any[];
     requestStatsApiJson?(pathOrUrl: string): Promise<unknown>;
     setTimeout?: typeof setTimeout;
     createInlineChampionName(championId: number, className?: string): HTMLElement;

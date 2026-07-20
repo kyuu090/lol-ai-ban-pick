@@ -82,6 +82,7 @@ const { initializeStatsApiChampionList, refreshStatsApiChampionList } = createCh
     createInlineChampionName,
     loadChampionIcon,
     requestStatsApiJson: window.lcuApi.requestStatsApiJson,
+    getMatchHistoryLaneMatchupTimeline: () => rendererState.matchHistoryLaneMatchupTimeline,
     fetch: window.fetch?.bind(window)
 });
 const { renderLaneOpponentStats, renderPlayedChampionStats, setStatsSort } = createStatsView({

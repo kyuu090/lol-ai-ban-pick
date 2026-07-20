@@ -4,6 +4,9 @@ const assert = require('node:assert/strict');
 const {
   buildStatsApiChampionDetailsUrl,
   buildStatsApiChampionsUrl,
+  buildStatsApiMatchupTimelineUrl,
+  buildStatsApiMatchupsUrl,
+  buildStatsApiTimelineUrl,
   buildStatsApiRuneIconUrl,
   buildStatsApiChampionSearchText,
   filterStatsApiChampionRows,
@@ -11,6 +14,8 @@ const {
   buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
   getStatsApiOpponentChampionOptions,
+  getStatsApiLaneFightIndicator,
+  getStatsApiLeadRateScale,
   getStatsApiLaneLabel,
   getStatsApiShardRowIndex,
   normalizeStatsApiSearchText,
@@ -18,6 +23,7 @@ const {
   normalizeStatsApiSelectedShardIds,
   parseStatsApiErrorInfo,
   parseStatsApiRetryAfterSeconds,
+  sortStatsApiMatchupRows,
   sortStatsApiChampionRows
 } = require('../ui/champions-view');
 
@@ -53,6 +59,31 @@ test('champions view detail URL keeps current filters and selected champion id',
   assert.equal(url.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
   assert.equal(url.searchParams.get('keystoneId'), '8112');
   assert.equal(url.searchParams.get('opponentChampionId'), '238');
+});
+
+test('champions view analysis URLs keep the selected champion, opponent, and common filters', () => {
+  const filters = {
+    patch: '16.13',
+    position: 'MIDDLE',
+    championId: 103,
+    ranks: ['MASTER', 'GRANDMASTER']
+  };
+  const matchupsUrl = new URL(buildStatsApiMatchupsUrl({ ...filters, minGames: 50 }));
+  assert.equal(matchupsUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups');
+  assert.equal(matchupsUrl.searchParams.get('patch'), '16.13');
+  assert.equal(matchupsUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(matchupsUrl.searchParams.get('minGames'), '50');
+
+  const matchupTimelineUrl = new URL(buildStatsApiMatchupTimelineUrl({
+    ...filters,
+    opponentChampionId: 238
+  }));
+  assert.equal(matchupTimelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups/238');
+  assert.equal(matchupTimelineUrl.searchParams.get('patch'), '16.13');
+
+  const timelineUrl = new URL(buildStatsApiTimelineUrl(filters));
+  assert.equal(timelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/timeline');
+  assert.equal(timelineUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
 });
 
 test('champions view builds official Data Dragon rune data URLs', () => {
@@ -275,5 +306,74 @@ test('champions view sort helper defaults cleanly across numeric and text column
   assert.deepEqual(
     sortStatsApiChampionRows(stats, 'champion', 'asc', championLabel).map((entry) => entry.championId),
     [1, 3, 2]
+  );
+});
+
+test('matchup rows sort by opponent, games, win rate, and baseline difference', () => {
+  const matchups = [
+    { opponentChampionId: 1, games: 120, wins: 60, winRateVsOpponent: 0.5 },
+    { opponentChampionId: 2, games: 80, wins: 48, winRateVsOpponent: 0.6 },
+    { opponentChampionId: 3, games: 200, wins: 90, winRateVsOpponent: 0.45 }
+  ];
+  const championLabel = (championId) => ({ 1: 'Ahri', 2: 'Zed', 3: 'Akali' }[championId]);
+
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'opponent', 'asc', championLabel).map((entry) => entry.opponentChampionId), [1, 3, 2]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'games', 'desc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'winRate', 'desc', championLabel).map((entry) => entry.opponentChampionId), [2, 1, 3]);
+  assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'difference', 'asc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
+});
+
+test('lead rate scale stays centered on 50 percent and zooms to small changes', () => {
+  assert.deepEqual(getStatsApiLeadRateScale([0.52, 0.55]), {
+    minimum: 0.44,
+    maximum: 0.56
+  });
+  assert.deepEqual(getStatsApiLeadRateScale([0.31, 0.53]), {
+    minimum: 0.3,
+    maximum: 0.7
+  });
+});
+
+test('lane fight indicator uses role-specific lane combat formulas', () => {
+  const laneFights = {
+    isolated_kills_vs_lane: 0.4,
+    isolated_deaths_vs_lane: 0.2,
+    isolated_assists_vs_lane: 0.3
+  };
+  assert.deepEqual(getStatsApiLaneFightIndicator(laneFights, 'TOP'), {
+    label: 'ソロキル収支',
+    description: 'ソロKill − ソロDeath',
+    detail: 'Kill 0.40 / Death 0.20',
+    value: 0.2
+  });
+  assert.deepEqual(getStatsApiLaneFightIndicator(
+    laneFights,
+    'JUNGLE',
+    { avgKills: 1.8, avgAssists: 2.4 },
+    { avgKills: 1.25, avgAssists: 1.6 }
+  ), {
+    label: 'JGキル関与数差',
+    description: '全Kill + Assist: 自JG − 相手JG',
+    detail: '自JG K+A 4.20 / 相手JG K+A 2.85',
+    value: 1.35
+  });
+  assert.deepEqual(getStatsApiLaneFightIndicator(laneFights, 'BOTTOM'), {
+    label: '2v2キル収支',
+    description: 'Kill − Death（2v2）',
+    detail: 'Kill 0.40 / Death 0.20',
+    value: 0.2
+  });
+  assert.throws(
+    () => getStatsApiLaneFightIndicator(laneFights, 'JUNGLE'),
+    /requires champion\/opponent avgKills and avgAssists/
+  );
+  assert.throws(
+    () => getStatsApiLaneFightIndicator(
+      laneFights,
+      'JUNGLE',
+      { avgKills: 1.8 },
+      { avgKills: 1.25, avgAssists: 1.6 }
+    ),
+    /requires champion\/opponent avgKills and avgAssists/
   );
 });

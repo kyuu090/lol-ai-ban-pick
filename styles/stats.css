@@ -670,6 +670,10 @@
   padding: 7px 9px;
 }
 
+.stats-api-champion-hero.has-opponent {
+  grid-template-columns: 56px minmax(220px, 1fr) 42px 56px minmax(150px, 0.8fr);
+}
+
 .stats-api-champion-portrait {
   align-items: center;
   background: var(--stats-api-portrait-bg);
@@ -1927,5 +1931,764 @@
   color: var(--text);
   font-size: 10px;
   line-height: 1;
+}
+
+.stats-api-matchup-versus {
+  color: var(--muted);
+  font-size: 16px;
+  font-style: italic;
+  justify-self: center;
+  letter-spacing: 0.06em;
+}
+
+.stats-api-matchup-opponent-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stats-api-matchup-opponent-label {
+  color: var(--stats-api-tab-active-text);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.stats-api-matchup-opponent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-api-analysis-tabs {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
+  border-radius: 10px;
+  align-items: stretch;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-start;
+  padding: 4px;
+}
+
+.stats-api-analysis-tab {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.stats-api-analysis-tab.active {
+  background: var(--stats-api-tab-active-bg);
+  border-color: var(--stats-api-tab-active-border);
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-analysis-tab:hover,
+.stats-api-analysis-tab:focus-visible {
+  background: var(--stats-api-tab-active-bg);
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-analysis-tab-label {
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.stats-api-analysis-tab-icon {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  width: 14px;
+}
+
+.stats-api-analysis-panel {
+  background: var(--stats-api-panel-bg);
+  border: 1px solid var(--stats-api-panel-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.stats-api-timeline-panel {
+  gap: 6px;
+  padding: 8px;
+}
+
+.stats-api-analysis-header-row {
+  align-items: end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.stats-api-analysis-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.stats-api-analysis-title {
+  color: var(--text);
+  font-size: 16px;
+  margin: 0;
+}
+
+.stats-api-analysis-description,
+.stats-api-timeline-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.stats-api-analysis-select {
+  color: var(--muted);
+  display: grid;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 4px;
+}
+
+.stats-api-analysis-select select {
+  min-height: 32px;
+}
+
+.stats-api-analysis-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stats-api-matchups-table {
+  min-width: 720px;
+}
+
+.stats-api-matchups-table .stats-table-champion .inline-champion-icon {
+  height: 30px;
+  width: 30px;
+}
+
+.stats-api-matchups-table th,
+.stats-api-matchups-table td {
+  padding-bottom: 6px;
+  padding-top: 6px;
+  white-space: nowrap;
+}
+
+.stats-api-matchups-sort-button {
+  cursor: pointer;
+  text-align: left;
+}
+
+.stats-api-matchups-sort-button:hover {
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-positive {
+  color: var(--stats-api-chip-accent);
+  font-weight: 900;
+}
+
+.stats-api-negative {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+.stats-api-row-action {
+  color: var(--stats-api-tab-active-text);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.stats-api-analysis-back {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--stats-api-tab-active-text);
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: start;
+  min-height: 28px;
+  padding: 0 4px;
+}
+
+.stats-api-timeline-chart-card {
+  background: var(--stats-api-panel-subtle-bg);
+  border: 1px solid var(--stats-api-panel-border-soft);
+  border-radius: 10px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px;
+}
+
+.stats-api-timeline-dashboard {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.stats-api-timeline-dashboard > .stats-api-timeline-chart-card {
+  grid-column: span 3;
+}
+
+.stats-api-timeline-dashboard > .stats-api-combat-impact-card {
+  grid-column: span 4;
+}
+
+.stats-api-timeline-dashboard > .stats-api-lane-objectives-card {
+  grid-column: span 2;
+}
+
+.stats-api-timeline-card-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.stats-api-timeline-card-title {
+  color: var(--text);
+  font-size: 11px;
+  margin: 0;
+}
+
+.stats-api-timeline-card-meta {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 8.5px;
+  font-weight: 800;
+  gap: 3px 8px;
+  min-height: 13px;
+}
+
+.stats-api-timeline-legend {
+  align-items: center;
+  display: inline-flex;
+  gap: 3px;
+}
+
+.stats-api-timeline-legend::before {
+  background: currentColor;
+  border-radius: 999px;
+  content: "";
+  display: inline-block;
+  height: 2px;
+  width: 10px;
+}
+
+.stats-api-timeline-legend.lead-rate {
+  color: var(--blue);
+}
+
+.stats-api-timeline-legend.lead-rate::before {
+  background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px);
+}
+
+.stats-api-timeline-legend.impact-self,
+.stats-api-timeline-legend.plate-taken,
+.stats-api-timeline-legend.tower-taken {
+  color: #16a34a;
+}
+
+.stats-api-timeline-legend.impact-opponent,
+.stats-api-timeline-legend.plate-lost,
+.stats-api-timeline-legend.tower-lost {
+  color: #dc2626;
+}
+
+.stats-api-timeline-legend.impact-opponent::before,
+.stats-api-timeline-legend.tower-taken::before,
+.stats-api-timeline-legend.tower-lost::before {
+  background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px);
+}
+
+.stats-api-timeline-legend.global-self { color: #16a34a; }
+.stats-api-timeline-legend.user-self { color: #f59e0b; }
+.stats-api-timeline-legend.dashed::before {
+  background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px);
+}
+
+.stats-api-timeline-chart-card.metric-gold {
+  color: #b7791f;
+}
+
+.stats-api-timeline-chart-card.metric-xp {
+  color: #7c3aed;
+}
+
+.stats-api-timeline-chart-card.metric-cs {
+  color: #2563eb;
+}
+
+.stats-api-timeline-chart-wrap,
+.stats-api-impact-chart-wrap {
+  min-width: 0;
+  position: relative;
+}
+
+.stats-api-timeline-tooltip {
+  background: var(--stats-api-panel-strong-bg);
+  border: 1px solid var(--stats-api-panel-border);
+  border-radius: 7px;
+  box-shadow: 0 8px 22px rgba(3, 7, 18, 0.28);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.45;
+  max-width: calc(100% - 10px);
+  padding: 5px 7px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  white-space: pre-line;
+  width: max-content;
+  z-index: 8;
+}
+
+.stats-api-timeline-tooltip[data-placement="below"] {
+  transform: translate(-50%, 8px);
+}
+
+.stats-api-timeline-chart {
+  aspect-ratio: 160 / 49;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.stats-api-timeline-zero-line {
+  stroke: var(--border);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-grid-line {
+  stroke: var(--border);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
+
+.stats-api-timeline-axis-line {
+  stroke: var(--muted);
+  stroke-opacity: 0.65;
+  stroke-width: 1;
+}
+
+.stats-api-timeline-axis-line.secondary {
+  stroke-dasharray: 3 3;
+  stroke-opacity: 0.45;
+}
+
+.stats-api-timeline-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
+.stats-api-timeline-lead-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-dasharray: 4 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.3;
+}
+
+.stats-api-timeline-user-line,
+.stats-api-timeline-user-lead-line {
+  fill: none;
+  stroke: var(--accent, #d57a00);
+  stroke-dasharray: 7 4;
+  stroke-width: 2.5;
+}
+
+.stats-api-timeline-user-lead-line {
+  opacity: 0.8;
+  stroke-width: 2;
+}
+
+.stats-api-timeline-legend.user::before {
+  background: #f59e0b;
+  border-radius: 0;
+  content: '';
+  display: inline-block;
+  height: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+  width: 14px;
+}
+
+.stats-api-timeline-lead-point {
+  fill: var(--blue);
+  stroke: var(--stats-api-panel-strong-bg);
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-point {
+  fill: currentColor;
+  stroke: var(--stats-api-panel-strong-bg);
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-point.negative {
+  fill: #dc2626;
+}
+
+.stats-api-timeline-tooltip-target {
+  cursor: crosshair;
+}
+
+.stats-api-timeline-hover-target {
+  fill: transparent;
+  pointer-events: all;
+  stroke: transparent;
+}
+
+.stats-api-timeline-tooltip-target:focus {
+  stroke: var(--stats-api-tab-active-border);
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-axis-label {
+  fill: var(--muted);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.stats-api-timeline-y-axis-label {
+  fill: var(--muted);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* The objectives card is narrower than the main timeline cards. */
+.stats-api-objectives-chart .stats-api-timeline-axis-label,
+.stats-api-objectives-chart .stats-api-timeline-y-axis-label {
+  font-size: 24px;
+}
+
+.stats-api-timeline-legend.fight-net {
+  color: #16a34a;
+}
+
+.stats-api-timeline-legend.fight-net::before {
+  height: 7px;
+  width: 7px;
+}
+
+.stats-api-timeline-net-direction {
+  color: var(--muted);
+}
+
+.stats-api-timeline-net-zero-line {
+  stroke: var(--text);
+  stroke-opacity: 0.58;
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-net-bar {
+  opacity: 0.82;
+}
+
+.stats-api-timeline-net-bar.positive {
+  fill: var(--stats-api-chip-accent);
+}
+
+.stats-api-timeline-net-bar.negative {
+  fill: var(--danger);
+}
+
+.stats-api-timeline-net-value {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.stats-api-timeline-net-value.positive {
+  fill: var(--stats-api-chip-accent);
+}
+
+.stats-api-timeline-net-value.negative {
+  fill: var(--danger);
+}
+
+.stats-api-impact-facets {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.stats-api-impact-facet {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stats-api-impact-facet + .stats-api-impact-facet {
+  border-left: 1px solid var(--stats-api-panel-border-soft);
+  padding-left: 6px;
+}
+
+.stats-api-impact-facet-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.stats-api-impact-facet-title {
+  color: var(--text);
+  font-size: 9px;
+  margin: 0;
+}
+
+.stats-api-impact-chart {
+  aspect-ratio: 210 / 132;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Impact facets use a near 1:1 viewBox scale, unlike the wide timeline charts. */
+.stats-api-impact-chart .stats-api-timeline-axis-label,
+.stats-api-impact-chart .stats-api-timeline-y-axis-label {
+  font-size: 14px;
+}
+
+.stats-api-impact-self-line,
+.stats-api-impact-opponent-line,
+.stats-api-objective-plate-taken-line,
+.stats-api-objective-plate-lost-line,
+.stats-api-objective-tower-taken-line,
+.stats-api-objective-tower-lost-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.stats-api-impact-user-self-line,
+.stats-api-impact-user-opponent-line,
+.stats-api-objective-plate-taken-line.user,
+.stats-api-objective-plate-lost-line.user,
+.stats-api-objective-tower-taken-line.user,
+.stats-api-objective-tower-lost-line.user {
+  fill: none;
+  stroke-dasharray: 5 3;
+  stroke-width: 2.5;
+}
+
+.stats-api-impact-user-self-line {
+  stroke: #f59e0b;
+}
+
+.stats-api-impact-user-opponent-line {
+  stroke: #38bdf8;
+  stroke-dasharray: 2 3;
+}
+
+.stats-api-comparison-bar.global,
+.stats-api-impact-bar.global-self,
+.stats-api-objective-bar.global-gain {
+  fill: #16a34a;
+}
+
+.stats-api-comparison-bar.global.negative,
+.stats-api-impact-bar.global-opponent,
+.stats-api-objective-bar.global-loss {
+  fill: #dc2626;
+}
+
+.stats-api-comparison-bar.user,
+.stats-api-impact-bar.user-self,
+.stats-api-objective-bar.user-gain {
+  fill: #f59e0b;
+}
+
+.stats-api-comparison-bar.user.negative,
+.stats-api-impact-bar.user-opponent,
+.stats-api-objective-bar.user-loss {
+  fill: #38bdf8;
+}
+
+/* 時系列は棒ではなく、色の意味を全カードで統一した線として比較する。 */
+.stats-api-comparison-bar,
+.stats-api-impact-bar,
+.stats-api-objective-bar {
+  opacity: 0;
+}
+
+.stats-api-series-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.stats-api-series-line.global-self { stroke: #16a34a; }
+.stats-api-series-line.global-opponent { stroke: #dc2626; }
+.stats-api-series-line.user-self { stroke: #f59e0b; }
+.stats-api-series-line.user-opponent { stroke: #38bdf8; }
+.stats-api-series-line.dashed { stroke-dasharray: 5 3; }
+
+.stats-api-timeline-hover-band {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.stats-api-impact-self-line,
+.stats-api-objective-plate-taken-line {
+  stroke: #16a34a;
+}
+
+.stats-api-impact-opponent-line,
+.stats-api-objective-plate-lost-line {
+  stroke: #dc2626;
+}
+
+.stats-api-impact-opponent-line {
+  stroke-dasharray: 4 3;
+}
+
+.stats-api-objective-tower-taken-line {
+  stroke: #16a34a;
+  stroke-dasharray: 5 4;
+}
+
+.stats-api-objective-tower-lost-line {
+  stroke: #dc2626;
+  stroke-dasharray: 5 4;
+}
+
+.stats-api-timeline-fight-line,
+.stats-api-timeline-kill-line,
+.stats-api-timeline-death-line,
+.stats-api-timeline-assist-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.stats-api-timeline-fight-line,
+.stats-api-timeline-legend.fight {
+  color: #7c3aed;
+  stroke: #7c3aed;
+}
+
+.stats-api-timeline-kill-line,
+.stats-api-timeline-legend.kills {
+  color: #16a34a;
+  stroke: #16a34a;
+}
+
+.stats-api-timeline-death-line,
+.stats-api-timeline-legend.deaths {
+  color: #dc2626;
+  stroke: #dc2626;
+}
+
+.stats-api-timeline-assist-line,
+.stats-api-timeline-legend.assists {
+  color: #2563eb;
+  stroke: #2563eb;
+}
+
+.stats-api-timeline-matrix {
+  font-size: 9px;
+  min-width: 760px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.stats-api-timeline-matrix-wrap {
+  flex: 0 0 auto;
+  overflow-y: visible;
+}
+
+.stats-api-timeline-details {
+  border-top: 1px solid var(--stats-api-panel-border-soft);
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.stats-api-timeline-details-summary {
+  align-items: center;
+  color: var(--stats-api-tab-active-text);
+  cursor: pointer;
+  display: flex;
+  font-size: 10px;
+  font-weight: 900;
+  gap: 8px;
+  list-style: none;
+  min-height: 24px;
+  user-select: none;
+}
+
+.stats-api-timeline-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.stats-api-timeline-details-summary::before {
+  content: "+";
+  font-size: 14px;
+  line-height: 1;
+}
+
+.stats-api-timeline-details[open] .stats-api-timeline-details-summary::before {
+  content: "−";
+}
+
+.stats-api-timeline-details-hint {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.stats-api-timeline-details .stats-api-timeline-matrix-wrap {
+  margin-top: 4px;
+}
+
+.stats-api-timeline-details > .stats-api-timeline-note {
+  margin: 2px 0 4px;
+}
+
+.stats-api-timeline-matrix th,
+.stats-api-timeline-matrix td {
+  padding: 3px 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stats-api-timeline-matrix th:first-child {
+  position: static;
+  text-align: left;
+  width: 92px;
+}
+
+.stats-api-timeline-matrix tbody th {
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 900;
 }
 

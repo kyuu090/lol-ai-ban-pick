@@ -26,6 +26,7 @@ const {
 const {
   createMatchHistorySummary
 } = require('./app-state');
+const { extractUserLaneMatchupTimeline } = require('../riot-match-timeline');
 
 type Timer = ReturnType<typeof setTimeout>;
 type RiotId = { gameName: string; tagLine: string };
@@ -40,6 +41,7 @@ interface PublishedMatchHistorySnapshot {
   enemyChampionStats: EnemyChampionStats[];
   laneOpponentStats: LaneOpponentStats[];
   selfVsLaneOpponentStats: SelfVsLaneOpponentStats[];
+  laneMatchupTimeline: any[];
   loggedInPuuid: string | null;
   updatedAt: string;
 }
@@ -55,6 +57,7 @@ interface MatchHistoryPaths {
 
 interface RiotMatchHistoryServiceLike {
   collectBffMatchDetailsBatch: (options: unknown) => Promise<{ fetchedMatches: number; failedMatchIds: MatchId[] }>;
+  collectBffMatchTimelines: (options: unknown) => Promise<{ fetchedTimelines: number; failedMatchIds: MatchId[] }>;
   collectMatchIdsByMode: (options: unknown) => Promise<MatchId[]>;
   requestBffAccountByRiotId: (options: unknown) => Promise<unknown>;
   requestBffHealth: (options?: unknown) => Promise<unknown>;
@@ -132,6 +135,7 @@ function createMatchHistoryController({
   let matchHistoryEnemyChampionStats: EnemyChampionStats[] = [];
   let matchHistoryLaneOpponentStats: LaneOpponentStats[] = [];
   let matchHistorySelfVsLaneOpponentStats: SelfVsLaneOpponentStats[] = [];
+  let matchHistoryLaneMatchupTimeline: any[] = [];
   let matchHistoryInProgress = false;
   let startupMatchHistoryScheduled = false;
   let autoMatchHistoryTimer: Timer | null = null;
@@ -154,11 +158,13 @@ function createMatchHistoryController({
     matchHistoryEnemyChampionStats = [];
     matchHistoryLaneOpponentStats = [];
     matchHistorySelfVsLaneOpponentStats = [];
+    matchHistoryLaneMatchupTimeline = [];
     updateState({
       matchHistoryChampionStats,
       matchHistoryEnemyChampionStats,
       matchHistoryLaneOpponentStats,
       matchHistorySelfVsLaneOpponentStats,
+      matchHistoryLaneMatchupTimeline,
       matchHistorySummary: null,
       matchHistoryStatus: createMatchHistoryStatus({
         ...getState().matchHistoryStatus,
@@ -201,6 +207,7 @@ function createMatchHistoryController({
     matchHistorySelfVsLaneOpponentStats = Array.isArray(history.selfVsLaneOpponentStats)
       ? history.selfVsLaneOpponentStats
       : aggregateSelfChampionVsLaneOpponentStats(matches);
+    matchHistoryLaneMatchupTimeline = Array.isArray(history.laneMatchupTimeline) ? history.laneMatchupTimeline : [];
     const summary = createMatchHistorySummary({
       updatedAt: history.updatedAt || null,
       requestedMatches: matches.length,
@@ -216,6 +223,7 @@ function createMatchHistoryController({
       matchHistoryEnemyChampionStats,
       matchHistoryLaneOpponentStats,
       matchHistorySelfVsLaneOpponentStats,
+      matchHistoryLaneMatchupTimeline,
       matchHistorySummary: summary,
       matchHistoryStatus: createMatchHistoryStatus({
         ...getState().matchHistoryStatus,
@@ -283,6 +291,8 @@ function createMatchHistoryController({
     cachePath,
     historyPath,
     matchesById,
+    laneMatchupTimeline,
+    laneMatchupTimelineMatchIds,
     storagePuuid,
     targetPuuid,
     riotId,
@@ -297,6 +307,8 @@ function createMatchHistoryController({
     cachePath: string;
     historyPath: string;
     matchesById: MatchMap;
+    laneMatchupTimeline: any[];
+    laneMatchupTimelineMatchIds: string[];
     storagePuuid: string;
     targetPuuid: string;
     riotId: RiotId;
@@ -335,7 +347,9 @@ function createMatchHistoryController({
       championStats,
       enemyChampionStats,
       laneOpponentStats,
-      selfVsLaneOpponentStats
+      selfVsLaneOpponentStats,
+      laneMatchupTimeline,
+      laneMatchupTimelineMatchIds
     };
 
     await writeJsonFile(historyPath, history);
@@ -357,11 +371,13 @@ function createMatchHistoryController({
       matchHistoryEnemyChampionStats = enemyChampionStats;
       matchHistoryLaneOpponentStats = laneOpponentStats;
       matchHistorySelfVsLaneOpponentStats = selfVsLaneOpponentStats;
+      matchHistoryLaneMatchupTimeline = laneMatchupTimeline;
       updateState({
         matchHistoryChampionStats,
         matchHistoryEnemyChampionStats,
         matchHistoryLaneOpponentStats,
         matchHistorySelfVsLaneOpponentStats,
+        matchHistoryLaneMatchupTimeline,
         matchHistorySummary: summary
       });
     }
@@ -373,6 +389,7 @@ function createMatchHistoryController({
       enemyChampionStats,
       laneOpponentStats,
       selfVsLaneOpponentStats,
+      laneMatchupTimeline,
       loggedInPuuid,
       updatedAt
     };
@@ -539,6 +556,16 @@ function createMatchHistoryController({
         existingHistory,
         storagePuuid
       });
+      const analysisMatchIdSet = new Set(analysisMatchIds.map(String));
+      // Timeline の生データは保持せず、前回保存した 5 分集計だけを再利用する。
+      const existingLaneMatchupTimeline = Array.isArray((existingHistory as any)?.laneMatchupTimeline)
+        ? (existingHistory as any).laneMatchupTimeline.filter((point: any) => analysisMatchIdSet.has(String(point?.matchId)))
+        : [];
+      const timelineMatchIds = new Set([
+        ...((Array.isArray((existingHistory as any)?.laneMatchupTimelineMatchIds) ? (existingHistory as any).laneMatchupTimelineMatchIds : []).map(String)),
+        ...existingLaneMatchupTimeline.map((point: any) => String(point?.matchId))
+      ]);
+      const missingTimelineMatchIds = analysisMatchIds.filter((matchId: MatchId) => !timelineMatchIds.has(String(matchId)));
       const missingMatchIds = collectMissingMatchIds(normalizedMatchIds, matchesById);
       if (mode === 'season' && source === 'manual') {
         const confirmed = await confirmSeasonMatchHistoryCollection({
@@ -562,10 +589,11 @@ function createMatchHistoryController({
           return { canceled: true, requestedMatches: normalizedMatchIds.length, updatedMatches: 0 };
         }
       }
-      const detailConcurrency = mode === 'season' ? constants.seasonDetailConcurrency : constants.detailConcurrency;
       const detailBatchDelayMs = mode === 'season' ? constants.seasonDetailBatchDelayMs : constants.detailBatchDelayMs;
       let fetchedMatches = 0;
       let failedRequests = 0;
+      let laneMatchupTimeline = existingLaneMatchupTimeline;
+      const laneMatchupTimelineMatchIds = [...timelineMatchIds];
       let snapshotPromise: Promise<PublishedMatchHistorySnapshot | null> = Promise.resolve(null);
       const publishCurrentSnapshot = ({ swallowErrors = false }: { swallowErrors?: boolean } = {}) => {
         const nextSnapshotPromise = snapshotPromise
@@ -574,6 +602,8 @@ function createMatchHistoryController({
             cachePath,
             historyPath,
             matchesById,
+            laneMatchupTimeline,
+            laneMatchupTimelineMatchIds,
             storagePuuid,
             targetPuuid,
             riotId,
@@ -596,44 +626,53 @@ function createMatchHistoryController({
         onRateLimitStart: () => publishCurrentSnapshot({ swallowErrors: true })
       });
 
-      for (let index = 0; index < missingMatchIds.length; index += detailConcurrency) {
-        const batch = missingMatchIds.slice(index, index + detailConcurrency);
+      const missingMatchIdSet = new Set(missingMatchIds.map(String));
+      const missingTimelineMatchIdSet = new Set(missingTimelineMatchIds.map(String));
+      let completedTimelineMatches = 0;
 
-        updateMatchHistoryStatus({
-          phase: 'collecting',
-          message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
-        });
-        clearRiotRateLimitCountdown();
-
-        try {
-          const result = await riotMatchHistoryService.collectBffMatchDetailsBatch({
-            region,
-            matchIds: batch,
-            matchesById,
-            onRetry: detailOnRetry,
-            publishCurrentSnapshot
+      // 1 試合ごとに Detail を先に確定させ、その直後に Timeline を集計する。
+      for (const matchId of analysisMatchIds) {
+        const matchIdKey = String(matchId);
+        if (missingMatchIdSet.has(matchIdKey)) {
+          updateMatchHistoryStatus({
+            phase: 'collecting',
+            message: `試合詳細を取得中... ${fetchedMatches}/${missingMatchIds.length} 試合`
           });
-          fetchedMatches += result.fetchedMatches;
-          failedRequests += result.failedMatchIds.length;
-          result.failedMatchIds.forEach((matchId) => {
-            log.warn(`Riot BFF match detail fetch failed for matchId=${matchId}`);
-          });
-        } catch (error) {
-          failedRequests += batch.length;
-          log.warn('Riot BFF match detail batch fetch failed', {
-            matchIds: batch,
-            error: serializeForLog(error)
-          });
+          try {
+            const result = await riotMatchHistoryService.collectBffMatchDetailsBatch({
+              region,
+              matchIds: [matchId],
+              matchesById,
+              onRetry: detailOnRetry,
+              publishCurrentSnapshot
+            });
+            fetchedMatches += result.fetchedMatches;
+            failedRequests += result.failedMatchIds.length;
+          } catch (error) {
+            failedRequests += 1;
+            log.warn(`Riot BFF match detail fetch failed for matchId=${matchIdKey}`, serializeForLog(error));
+          }
         }
 
-        updateMatchHistoryStatus({
-          phase: 'collecting',
-          fetchedMatches,
-          failedRequests,
-          message: `試合データ収集中... ${fetchedMatches}/${missingMatchIds.length} 試合`
-        });
+        if (missingTimelineMatchIdSet.has(matchIdKey) && matchesById[matchIdKey]) {
+          updateMatchHistoryStatus({
+            phase: 'collecting',
+            message: `タイムラインを取得中... ${completedTimelineMatches}/${missingTimelineMatchIds.length} 試合`
+          });
+          const timelineResult = await riotMatchHistoryService.collectBffMatchTimelines({
+            region,
+            matchIds: [matchId],
+            onRetry: detailOnRetry,
+            onTimeline: (_timelineMatchId: MatchId, timeline: unknown) => {
+              laneMatchupTimeline.push(...extractUserLaneMatchupTimeline(matchesById[matchIdKey], timeline, targetPuuid));
+              laneMatchupTimelineMatchIds.push(matchIdKey);
+            }
+          });
+          failedRequests += timelineResult.failedMatchIds.length;
+          completedTimelineMatches += timelineResult.fetchedTimelines;
+        }
 
-        if (detailBatchDelayMs > 0 && index + detailConcurrency < missingMatchIds.length) {
+        if (detailBatchDelayMs > 0 && missingMatchIdSet.has(matchIdKey)) {
           await new Promise((resolve) => setTimeout(resolve, detailBatchDelayMs));
         }
       }

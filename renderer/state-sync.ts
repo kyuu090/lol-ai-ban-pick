@@ -30,6 +30,9 @@
       state.matchHistorySelfVsLaneOpponentStats = Array.isArray(nextState.matchHistorySelfVsLaneOpponentStats)
         ? nextState.matchHistorySelfVsLaneOpponentStats
         : [];
+      state.matchHistoryLaneMatchupTimeline = Array.isArray(nextState.matchHistoryLaneMatchupTimeline)
+        ? nextState.matchHistoryLaneMatchupTimeline
+        : [];
       if (!state.championPoolDirty) {
         state.championPool = deps.normalizeChampionPool(nextState.championPool);
       }

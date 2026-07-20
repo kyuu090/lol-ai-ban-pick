@@ -99,6 +99,7 @@
 
     function enqueueChampionIconRequest(id: number): Promise<string | null> {
       const cached = cache.get(id);
+      if (typeof cached === 'string') return Promise.resolve(cached);
       if (cached) return cached;
       if (cached === null) return Promise.resolve(null);
 

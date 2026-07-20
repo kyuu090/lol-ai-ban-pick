@@ -186,6 +186,12 @@ git push origin v0.1.1
 - `match-history-workflow.js` は match history 更新時の ID 結合、重複排除、キャッシュ済み detail 判定を担当します。
 - `logger.js` で `electron-log` を設定し、`npm run dev` では実行ディレクトリ直下の `debug.log` へ DEBUG ログを出します。packaged build でも `app.getPath('userData')/logs/debug.log` へ INFO 以上を常時出力し、約 5MB で `debug.old.log` へローテーションします。`render-process-gone`、`did-fail-load`、`preload-error` などの Electron 重要イベントも記録します。
 
+## Electron画面の自動キャプチャ
+
+`npm run capture:ui -- --view=timeline` で、本番preload/IPC経路を使った分析画面のPNGを生成できます。StatsAPIは既定で本番環境を使用し、LCU状態はキャプチャ専用fixtureを使用します。
+
+画面種別、テーマ、解像度、オフラインfixtureなどの指定方法は [Electron UIキャプチャハーネス](./electron-ui-capture-harness.md) を参照してください。
+
 ## 安全方針
 
 このアプリは情報表示と提案のみを行います。
