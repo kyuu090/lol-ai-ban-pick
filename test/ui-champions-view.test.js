@@ -349,13 +349,13 @@ test('lane fight indicator uses role-specific lane combat formulas', () => {
   assert.deepEqual(getStatsApiLaneFightIndicator(
     laneFights,
     'JUNGLE',
-    { avgKills: 1.8 },
-    { avgKills: 1.25 }
+    { avgKills: 1.8, avgAssists: 2.4 },
+    { avgKills: 1.25, avgAssists: 1.6 }
   ), {
-    label: 'JGキル差',
-    description: '全Kill: 自JG − 相手JG',
-    detail: '自JG Kill 1.80 / 相手JG Kill 1.25',
-    value: 0.55
+    label: 'JGキル関与数差',
+    description: '全Kill + Assist: 自JG − 相手JG',
+    detail: '自JG K+A 4.20 / 相手JG K+A 2.85',
+    value: 1.35
   });
   assert.deepEqual(getStatsApiLaneFightIndicator(laneFights, 'BOTTOM'), {
     label: '2v2キル収支',
@@ -365,6 +365,15 @@ test('lane fight indicator uses role-specific lane combat formulas', () => {
   });
   assert.throws(
     () => getStatsApiLaneFightIndicator(laneFights, 'JUNGLE'),
-    /requires champion\.avgKills and opponent\.avgKills/
+    /requires champion\/opponent avgKills and avgAssists/
+  );
+  assert.throws(
+    () => getStatsApiLaneFightIndicator(
+      laneFights,
+      'JUNGLE',
+      { avgKills: 1.8 },
+      { avgKills: 1.25, avgAssists: 1.6 }
+    ),
+    /requires champion\/opponent avgKills and avgAssists/
   );
 });

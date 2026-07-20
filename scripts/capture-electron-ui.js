@@ -55,6 +55,7 @@ const statsSource = readOption('stats-source', 'production') === 'fixture' ? 'fi
 const width = positiveInteger(readOption('width', '1440'), 1440);
 const height = positiveInteger(readOption('height', '900'), 900);
 const scrollMode = readOption('scroll', 'top') === 'bottom' ? 'bottom' : 'top';
+const hoverSelector = readOption('hover', '').trim();
 const showWindow = hasFlag('show');
 const holdMs = Math.max(0, Number(readOption('hold-ms', showWindow ? '5000' : '0')) || 0);
 const defaultOutput = path.join(projectRoot, '.tmp-ui-captures', `${target}-${themeMode}.png`);
@@ -221,12 +222,38 @@ async function capture() {
     .stats-api-loading-overlay { display: none !important; }
   `);
   await window.webContents.executeJavaScript(`window.scrollTo(0, 0); document.querySelectorAll(".stats-api-details-view, .stats-table-wrap").forEach((element) => { element.scrollTop = ${scrollMode === 'bottom' ? 'element.scrollHeight' : '0'}; element.scrollLeft = 0; }); document.body.getBoundingClientRect();`, true);
+  let hoverResult = null;
+  if (hoverSelector) {
+    hoverResult = await window.webContents.executeJavaScript(`(() => {
+      const element = document.querySelector(${JSON.stringify(hoverSelector)});
+      if (!element) return { hovered: false, error: 'element not found' };
+      const rect = element.getBoundingClientRect();
+      const eventOptions = {
+        bubbles: false,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        pointerType: 'mouse'
+      };
+      element.dispatchEvent(new PointerEvent('pointerenter', eventOptions));
+      element.dispatchEvent(new PointerEvent('pointermove', eventOptions));
+      const tooltip = element.closest('.stats-api-timeline-chart-wrap, .stats-api-impact-chart-wrap')
+        ?.querySelector('.stats-api-timeline-tooltip');
+      return {
+        hovered: true,
+        tooltipHidden: tooltip?.hidden,
+        tooltipText: tooltip?.textContent || ''
+      };
+    })()`, true);
+    if (!hoverResult?.hovered || hoverResult.tooltipHidden !== false) {
+      throw new Error(`Could not show hover tooltip for ${hoverSelector}: ${hoverResult?.error || 'tooltip stayed hidden'}.`);
+    }
+  }
   window.webContents.invalidate();
   await delay(300);
   const image = await window.webContents.capturePage();
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, image.toPNG());
-  process.stdout.write(`${JSON.stringify({ outputPath, target, captureLane, themeMode, statsSource, width, height, scrollMode, consoleErrors }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ outputPath, target, captureLane, themeMode, statsSource, width, height, scrollMode, hoverSelector, hoverResult, consoleErrors }, null, 2)}\n`);
   if (holdMs > 0) await delay(holdMs);
   if (!window.isDestroyed()) window.destroy();
   app.quit();

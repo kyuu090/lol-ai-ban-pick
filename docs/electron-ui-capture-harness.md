@@ -57,6 +57,7 @@ npm run capture:ui -- --view=matchup --theme=dark
 | `--width=1440` | BrowserWindowの幅 |
 | `--height=900` | BrowserWindowの高さ |
 | `--scroll=top|bottom` | 分析領域の撮影位置。既定値は `top` |
+| `--hover=<CSS selector>` | 撮影直前に対象要素へマウスホバーを再現する。独自ツールチップの表示確認に使用する |
 | `--output=<path>` | PNG出力先 |
 | `--show` | 撮影時にElectronウィンドウを表示する |
 | `--hold-ms=5000` | 撮影後にウィンドウを表示し続ける時間 |
@@ -73,6 +74,12 @@ npm run capture:ui -- --view=timeline --stats-source=fixture
 ```
 
 fixtureは `scripts/ui-capture-fixtures.js` にあり、Meta、チャンピオン一覧、ビルド、マッチアップ一覧、特定マッチアップ推移、タイムライン分析をカバーする。
+
+タイムライングラフのツールチップを撮影する例:
+
+```powershell
+npm run capture:ui -- --view=timeline --stats-source=fixture --hover=".metric-gold .stats-api-timeline-hover-target"
+```
 
 ## Codexでの確認手順
 
