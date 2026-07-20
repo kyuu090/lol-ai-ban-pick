@@ -29,6 +29,7 @@
     matchHistoryEnemyChampionStats: any[];
     matchHistoryLaneOpponentStats: any[];
     matchHistorySelfVsLaneOpponentStats: any[];
+    matchHistoryLaneMatchupTimeline: any[];
     championPoolDirty: boolean;
     markedLaneOpponentCellId: number | null;
     lastRenderedState: any | null;
@@ -69,6 +70,7 @@
       matchHistoryEnemyChampionStats: [],
       matchHistoryLaneOpponentStats: [],
       matchHistorySelfVsLaneOpponentStats: [],
+      matchHistoryLaneMatchupTimeline: [],
       championPoolDirty: false,
       markedLaneOpponentCellId: null,
       lastRenderedState: null,

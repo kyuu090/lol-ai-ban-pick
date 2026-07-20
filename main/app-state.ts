@@ -37,6 +37,7 @@ interface CreateInitialStateOptions {
   matchHistoryEnemyChampionStats?: EnemyChampionStats[];
   matchHistoryLaneOpponentStats?: LaneOpponentStats[];
   matchHistorySelfVsLaneOpponentStats?: SelfVsLaneOpponentStats[];
+  matchHistoryLaneMatchupTimeline?: any[];
 }
 
 function createLaneMatchupAnalysisState(
@@ -109,7 +110,8 @@ function createInitialState({
   matchHistoryChampionStats = [],
   matchHistoryEnemyChampionStats = [],
   matchHistoryLaneOpponentStats = [],
-  matchHistorySelfVsLaneOpponentStats = []
+  matchHistorySelfVsLaneOpponentStats = [],
+  matchHistoryLaneMatchupTimeline = []
 }: CreateInitialStateOptions): AppState {
   return {
     settings,
@@ -128,6 +130,7 @@ function createInitialState({
     matchHistoryEnemyChampionStats,
     matchHistoryLaneOpponentStats,
     matchHistorySelfVsLaneOpponentStats,
+    matchHistoryLaneMatchupTimeline,
     gameflowSession: null,
     laneMatchupAnalysis: createLaneMatchupAnalysisState(),
     lastEvent: null,

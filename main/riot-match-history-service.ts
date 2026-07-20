@@ -73,10 +73,17 @@ interface CollectBffMatchDetailsBatchOptions extends RequestRetryOptions {
   maxAttempts?: number;
 }
 
+interface CollectBffMatchTimelinesOptions extends RequestRetryOptions {
+  region: string;
+  matchIds: MatchId[];
+  onTimeline: (matchId: MatchId, timeline: unknown) => void | Promise<void>;
+}
+
 interface RiotMatchHistoryService {
   collectBffMatchDetailsBatch: (
     options: CollectBffMatchDetailsBatchOptions
   ) => Promise<{ fetchedMatches: number; failedMatchIds: MatchId[] }>;
+  collectBffMatchTimelines: (options: CollectBffMatchTimelinesOptions) => Promise<{ fetchedTimelines: number; failedMatchIds: MatchId[] }>;
   collectMatchIdsByMode: (options: CollectMatchIdsByModeOptions) => Promise<MatchId[]>;
   requestBffAccountByRiotId: (options: RequestBffAccountByRiotIdOptions) => Promise<unknown>;
   requestBffHealth: (options?: RequestRetryOptions) => Promise<unknown>;
@@ -224,6 +231,29 @@ function createRiotMatchHistoryService({
     return normalizeBffMatchDetailsResponse(body);
   }
 
+  function requestBffMatchTimeline(region: string, matchId: MatchId, onRetry: RetryCallback | null = null): Promise<unknown> {
+    return requestBffJson({
+      path: createRiotBffPath(region, ['matches', matchId, 'timeline']),
+      onRetry,
+      maxRetries: 3
+    });
+  }
+
+  async function collectBffMatchTimelines({ region, matchIds, onTimeline, onRetry = null }: CollectBffMatchTimelinesOptions): Promise<{ fetchedTimelines: number; failedMatchIds: MatchId[] }> {
+    let fetchedTimelines = 0;
+    const failedMatchIds: MatchId[] = [];
+    for (const matchId of matchIds) {
+      try {
+        const timeline = await requestBffMatchTimeline(region, matchId, onRetry);
+        await onTimeline(matchId, timeline);
+        fetchedTimelines += 1;
+      } catch {
+        failedMatchIds.push(matchId);
+      }
+    }
+    return { fetchedTimelines, failedMatchIds };
+  }
+
   async function collectBffMatchDetailsBatch({
     region,
     matchIds,
@@ -264,6 +294,7 @@ function createRiotMatchHistoryService({
 
   return {
     collectBffMatchDetailsBatch,
+    collectBffMatchTimelines,
     collectMatchIdsByMode,
     requestBffAccountByRiotId,
     requestBffHealth

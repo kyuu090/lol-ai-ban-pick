@@ -2880,14 +2880,43 @@
       return chartWrap;
     }
 
+    function getUserStatsApiTimeline(opponentChampionId = 0): StatsApiTimelinePoint[] {
+      const championId = normalizeChampionId(selectedChampionId);
+      const position = normalizeStatsApiPosition(getStatsApiSelectedFilters().position);
+      const points = (deps.getMatchHistoryLaneMatchupTimeline ? deps.getMatchHistoryLaneMatchupTimeline() : [])
+        .filter((point: any) => Number(point?.championId) === championId && normalizeStatsApiPosition(point?.position) === position && (!opponentChampionId || Number(point?.opponentChampionId) === opponentChampionId));
+      const numericKeys = ['avgGold', 'avgXp', 'avgCs', 'avgLevel', 'avgDamageToChampions', 'avgDamageTaken', 'avgTimeEnemyCcMs', 'avgKills', 'avgDeaths', 'avgAssists'];
+      const differenceKeys = ['avgGold', 'avgXp', 'avgCs', 'goldLeadRate', 'xpLeadRate', 'csLeadRate'];
+      const fightKeys = ['fight_occurred_rate', 'isolated_kills_vs_lane', 'isolated_deaths_vs_lane', 'isolated_assists_vs_lane', 'isolated_kills_vs_lane_occurred_rate', 'isolated_deaths_vs_lane_occurred_rate', 'isolated_assists_vs_lane_occurred_rate'];
+      const objectiveKeys = ['avgLaneOuterPlatesTaken', 'avgLaneOuterPlatesLost', 'laneOuterTowerTakenRate', 'laneOuterTowerLostRate'];
+      return [...new Set(points.map((point: any) => Number(point.minute)))].sort((a, b) => a - b).map((minute) => {
+        const samples = points.filter((point: any) => Number(point.minute) === minute);
+        const average = (source: string, key: string) => samples.reduce((sum: number, point: any) => sum + Number(point?.[source]?.[key] || 0), 0) / samples.length;
+        const side = (source: string) => Object.fromEntries(numericKeys.map((key) => [key, average(source, key)]));
+        return {
+          minute,
+          games: samples.length,
+          champion: side('champion'),
+          opponent: side('opponent'),
+          difference: Object.fromEntries(differenceKeys.map((key) => [key, average('difference', key)])),
+          laneFights: Object.fromEntries(fightKeys.map((key) => [key, average('laneFights', key)])),
+          laneObjectives: Object.fromEntries(objectiveKeys.map((key) => [key, average('laneObjectives', key)]))
+        } as unknown as StatsApiTimelinePoint;
+      });
+    }
+
     function createStatsApiTimelineMetricCard(
       timeline: StatsApiTimelinePoint[],
       metric: StatsApiTimelineMetric,
-      sharedLeadRateScale?: { maximum: number; minimum: number }
+      sharedLeadRateScale?: { maximum: number; minimum: number },
+      userTimeline: StatsApiTimelinePoint[] = []
     ): HTMLElement {
       const config = getStatsApiTimelineMetricConfig(metric);
       const differences = timeline.map((point) => Number(point.difference?.[config.differenceKey] || 0));
       const leadRates = timeline.map((point) => Number(point.difference?.[config.leadRateKey] || 0));
+      const userByMinute = new Map(userTimeline.map((point) => [Number(point.minute), point]));
+      const userDifferences = timeline.map((point) => Number(userByMinute.get(Number(point.minute))?.difference?.[config.differenceKey]));
+      const userLeadRates = timeline.map((point) => Number(userByMinute.get(Number(point.minute))?.difference?.[config.leadRateKey]));
       const card = doc.createElement('section');
       card.className = `stats-api-timeline-chart-card metric-${metric}`;
 
@@ -2899,11 +2928,12 @@
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
         createText('stats-api-timeline-legend difference', '差分'),
-        createText('stats-api-timeline-legend lead-rate', 'リード率')
+        createText('stats-api-timeline-legend lead-rate', 'リード率'),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均')] : [])
       );
       card.append(heading, meta);
 
-      const maxAbs = Math.max(1, ...differences.map((value) => Math.abs(value)));
+      const maxAbs = Math.max(1, ...[...differences, ...userDifferences].filter(Number.isFinite).map((value) => Math.abs(value)));
       const width = 640;
       const height = 196;
       const padding = { top: 15, right: 50, bottom: 28, left: 64 };
@@ -2954,6 +2984,12 @@
         differences.map((value, index) => `${x(index)},${differenceY(value)}`).join(' '),
         'stats-api-timeline-line'
       );
+      if (userTimeline.length) {
+        const userDifferencePoints = userDifferences.map((value, index) => Number.isFinite(value) ? `${x(index)},${differenceY(value)}` : '').filter(Boolean).join(' ');
+        const userLeadPoints = userLeadRates.map((value, index) => Number.isFinite(value) ? `${x(index)},${leadRateY(value)}` : '').filter(Boolean).join(' ');
+        if (userDifferencePoints) appendStatsApiTimelinePolyline(svg, userDifferencePoints, 'stats-api-timeline-user-line');
+        if (userLeadPoints) appendStatsApiTimelinePolyline(svg, userLeadPoints, 'stats-api-timeline-user-lead-line');
+      }
       appendStatsApiTimelinePolyline(
         svg,
         leadRates.map((value, index) => `${x(index)},${leadRateY(value)}`).join(' '),
@@ -2976,8 +3012,9 @@
           `${point.minute}分`,
           `${config.label} ${formatStatsApiTimelineDifference(differences[index], metric)}`,
           `リード率 ${formatStatsApiRate(leadRates[index])}`,
+          Number.isFinite(userDifferences[index]) ? `あなた ${formatStatsApiTimelineDifference(userDifferences[index], metric)} / ${formatStatsApiRate(userLeadRates[index])}（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
           `試合数 ${formatStatsApiGames(point.games)}試合`
-        ];
+        ].filter(Boolean);
         appendStatsApiTimelineHoverPoint(
           svg,
           tooltip,
@@ -3004,7 +3041,7 @@
       return card;
     }
 
-    function createStatsApiLaneFightChartCard(timeline: StatsApiTimelinePoint[]): HTMLElement {
+    function createStatsApiLaneFightChartCard(timeline: StatsApiTimelinePoint[], userTimeline: StatsApiTimelinePoint[] = []): HTMLElement {
       const laneFightTimeline = timeline.filter((point) => Number(point.minute) <= 20);
       const latestPoint = laneFightTimeline[laneFightTimeline.length - 1];
       const position = getStatsApiSelectedFilters().position;
@@ -3021,7 +3058,12 @@
         latestPoint?.opponent
       );
       const netValues = indicators.map((indicator) => indicator.value);
-      const maximumAbsoluteValue = getStatsApiTimelineAxisMaximum(netValues.map((value) => Math.abs(value)), 0.1);
+      const userByMinute = new Map(userTimeline.map((point) => [Number(point.minute), point]));
+      const userValues = laneFightTimeline.map((point) => {
+        const userPoint = userByMinute.get(Number(point.minute));
+        return userPoint ? getStatsApiLaneFightIndicator(userPoint.laneFights, position, userPoint.champion, userPoint.opponent).value : Number.NaN;
+      });
+      const maximumAbsoluteValue = getStatsApiTimelineAxisMaximum([...netValues, ...userValues].filter(Number.isFinite).map((value) => Math.abs(value)), 0.1);
       const formatNetValue = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(2)}`;
       const card = doc.createElement('section');
       card.className = 'stats-api-timeline-chart-card lane-fights';
@@ -3036,7 +3078,8 @@
       meta.className = 'stats-api-timeline-card-meta fight-legend';
       meta.append(
         createText('stats-api-timeline-legend fight-net', latestIndicator.description),
-        createText('stats-api-timeline-net-direction', '＋ 対象優勢 / − 対面優勢')
+        createText('stats-api-timeline-net-direction', '＋ 対象優勢 / − 対面優勢'),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均')] : [])
       );
       card.append(heading, meta);
 
@@ -3066,6 +3109,8 @@
         appendStatsApiTimelineYAxisLabel(svg, formatNetValue(value), padding.left - 7, y(value), 'end');
       });
       appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
+      const userPoints = userValues.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : '').filter(Boolean).join(' ');
+      if (userPoints) appendStatsApiTimelinePolyline(svg, userPoints, 'stats-api-timeline-user-line');
       const barWidth = Math.min(50, barSlotWidth * 0.38);
       const valueLabelGap = 20;
       laneFightTimeline.forEach((point, index) => {
@@ -3081,8 +3126,9 @@
           `${point.minute}分`,
           `${indicators[index].label} ${formatNetValue(value)}`,
           indicators[index].detail,
+          Number.isFinite(userValues[index]) ? `あなた ${formatNetValue(userValues[index])}（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
           `試合数 ${formatStatsApiGames(point.games)}試合`
-        ]);
+        ].filter(Boolean));
         svg.append(bar);
         const valueLabel = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
         valueLabel.setAttribute('class', `stats-api-timeline-net-value ${value >= 0 ? 'positive' : 'negative'}`);
@@ -3115,6 +3161,7 @@
 
     function createStatsApiCombatImpactFacet(
       timeline: StatsApiTimelinePoint[],
+      userTimeline: StatsApiTimelinePoint[],
       config: {
         divisor?: number;
         key: 'avgDamageToChampions' | 'avgDamageTaken' | 'avgTimeEnemyCcMs';
@@ -3125,7 +3172,10 @@
       const divisor = Number(config.divisor || 1);
       const championValues = timeline.map((point) => Number(point.champion?.[config.key] || 0) / divisor);
       const opponentValues = timeline.map((point) => Number(point.opponent?.[config.key] || 0) / divisor);
-      const axisMaximum = getStatsApiTimelineAxisMaximum([...championValues, ...opponentValues]);
+      const userByMinute = new Map(userTimeline.map((point) => [Number(point.minute), point]));
+      const userChampionValues = timeline.map((point) => Number(userByMinute.get(Number(point.minute))?.champion?.[config.key]) / divisor);
+      const userOpponentValues = timeline.map((point) => Number(userByMinute.get(Number(point.minute))?.opponent?.[config.key]) / divisor);
+      const axisMaximum = getStatsApiTimelineAxisMaximum([...championValues, ...opponentValues, ...userChampionValues, ...userOpponentValues].filter(Number.isFinite));
       const formatValue = (value: number, compact = false) => {
         if (config.unit === '秒') return `${value.toFixed(1)}秒`;
         if (compact && Math.abs(value) >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
@@ -3158,13 +3208,18 @@
       appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
       appendStatsApiTimelinePolyline(svg, championValues.map((value, index) => `${x(index)},${y(value)}`).join(' '), 'stats-api-impact-self-line');
       appendStatsApiTimelinePolyline(svg, opponentValues.map((value, index) => `${x(index)},${y(value)}`).join(' '), 'stats-api-impact-opponent-line');
+      if (userTimeline.length) {
+        appendStatsApiTimelinePolyline(svg, userChampionValues.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : '').filter(Boolean).join(' '), 'stats-api-impact-user-self-line');
+        appendStatsApiTimelinePolyline(svg, userOpponentValues.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : '').filter(Boolean).join(' '), 'stats-api-impact-user-opponent-line');
+      }
       timeline.forEach((point, index) => {
         const tooltipLines = [
           `${point.minute}分`,
           `対象 ${formatValue(championValues[index])}`,
           `対面 ${formatValue(opponentValues[index])}`,
+          Number.isFinite(userChampionValues[index]) ? `あなた 対象 ${formatValue(userChampionValues[index])} / 対面 ${formatValue(userOpponentValues[index])}` : '',
           `試合数 ${formatStatsApiGames(point.games)}試合`
-        ];
+        ].filter(Boolean);
         appendStatsApiTimelineHoverPoint(
           svg,
           tooltip,
@@ -3198,7 +3253,7 @@
       return facet;
     }
 
-    function createStatsApiCombatImpactCard(timeline: StatsApiTimelinePoint[]): HTMLElement | null {
+    function createStatsApiCombatImpactCard(timeline: StatsApiTimelinePoint[], userTimeline: StatsApiTimelinePoint[] = []): HTMLElement | null {
       const hasData = timeline.some((point) => (
         Number.isFinite(Number(point.champion?.avgDamageToChampions))
         || Number.isFinite(Number(point.champion?.avgDamageTaken))
@@ -3214,20 +3269,21 @@
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
         createText('stats-api-timeline-legend impact-self', '対象'),
-        createText('stats-api-timeline-legend impact-opponent', '対面')
+        createText('stats-api-timeline-legend impact-opponent', '対面'),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均（橙: 対象 / 水色: 対面）')] : [])
       );
       const facets = doc.createElement('div');
       facets.className = 'stats-api-impact-facets';
       facets.append(
-        createStatsApiCombatImpactFacet(timeline, { key: 'avgDamageToChampions', label: '対チャンピオンダメージ', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, { key: 'avgDamageTaken', label: '被ダメージ', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, { key: 'avgTimeEnemyCcMs', label: '敵へのCC時間', unit: '秒', divisor: 1000 })
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageToChampions', label: '対チャンピオンダメージ', unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageTaken', label: '被ダメージ', unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgTimeEnemyCcMs', label: '敵へのCC時間', unit: '秒', divisor: 1000 })
       );
       card.append(heading, meta, facets);
       return card;
     }
 
-    function createStatsApiLaneObjectivesCard(timeline: StatsApiTimelinePoint[]): HTMLElement | null {
+    function createStatsApiLaneObjectivesCard(timeline: StatsApiTimelinePoint[], userTimeline: StatsApiTimelinePoint[] = []): HTMLElement | null {
       const objectiveTimeline = timeline.filter((point) => Number(point.minute) <= 20);
       const hasData = objectiveTimeline.some((point) => point.laneObjectives && (
         Number.isFinite(Number(point.laneObjectives.avgLaneOuterPlatesTaken))
@@ -3238,7 +3294,13 @@
       const plateLost = objectiveTimeline.map((point) => Number(point.laneObjectives?.avgLaneOuterPlatesLost || 0));
       const towerTaken = objectiveTimeline.map((point) => Number(point.laneObjectives?.laneOuterTowerTakenRate || 0));
       const towerLost = objectiveTimeline.map((point) => Number(point.laneObjectives?.laneOuterTowerLostRate || 0));
-      const plateMaximum = getStatsApiTimelineAxisMaximum([...plateTaken, ...plateLost]);
+      const userByMinute = new Map(userTimeline.map((point) => [Number(point.minute), point]));
+      const userValues = (key: keyof StatsApiTimelineLaneObjectives) => objectiveTimeline.map((point) => Number(userByMinute.get(Number(point.minute))?.laneObjectives?.[key]));
+      const userPlateTaken = userValues('avgLaneOuterPlatesTaken');
+      const userPlateLost = userValues('avgLaneOuterPlatesLost');
+      const userTowerTaken = userValues('laneOuterTowerTakenRate');
+      const userTowerLost = userValues('laneOuterTowerLostRate');
+      const plateMaximum = getStatsApiTimelineAxisMaximum([...plateTaken, ...plateLost, ...userPlateTaken, ...userPlateLost].filter(Number.isFinite));
       const card = doc.createElement('section');
       card.className = 'stats-api-timeline-chart-card stats-api-lane-objectives-card';
       const heading = doc.createElement('header');
@@ -3254,7 +3316,8 @@
         createText('stats-api-timeline-legend plate-taken', 'プレート取得'),
         createText('stats-api-timeline-legend plate-lost', 'プレート喪失'),
         createText('stats-api-timeline-legend tower-taken', 'アウタータワー取得率'),
-        createText('stats-api-timeline-legend tower-lost', 'アウタータワー喪失率')
+        createText('stats-api-timeline-legend tower-lost', 'アウタータワー喪失率'),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均（破線）')] : [])
       );
       card.append(heading, meta);
 
@@ -3286,13 +3349,22 @@
         { values: towerTaken, className: 'stats-api-objective-tower-taken-line', y: rateY },
         { values: towerLost, className: 'stats-api-objective-tower-lost-line', y: rateY }
       ].forEach(({ values, className, y }) => appendStatsApiTimelinePolyline(svg, values.map((value, index) => `${x(index)},${y(value)}`).join(' '), className));
+      if (userTimeline.length) {
+        [
+          { values: userPlateTaken, className: 'stats-api-objective-plate-taken-line user', y: plateY },
+          { values: userPlateLost, className: 'stats-api-objective-plate-lost-line user', y: plateY },
+          { values: userTowerTaken, className: 'stats-api-objective-tower-taken-line user', y: rateY },
+          { values: userTowerLost, className: 'stats-api-objective-tower-lost-line user', y: rateY }
+        ].forEach(({ values, className, y }) => appendStatsApiTimelinePolyline(svg, values.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : '').filter(Boolean).join(' '), className));
+      }
       objectiveTimeline.forEach((point, index) => {
         const tooltipLines = [
           `${point.minute}分`,
           `プレート 取得 ${plateTaken[index].toFixed(2)} / 喪失 ${plateLost[index].toFixed(2)}`,
           `アウタータワー 取得 ${formatStatsApiRate(towerTaken[index])} / 喪失 ${formatStatsApiRate(towerLost[index])}`,
+          Number.isFinite(userPlateTaken[index]) ? `あなた プレート ${userPlateTaken[index].toFixed(2)} / ${userPlateLost[index].toFixed(2)}、タワー ${formatStatsApiRate(userTowerTaken[index])} / ${formatStatsApiRate(userTowerLost[index])}` : '',
           `試合数 ${formatStatsApiGames(point.games)}試合`
-        ];
+        ].filter(Boolean);
         [
           plateY(plateTaken[index]),
           plateY(plateLost[index]),
@@ -3325,14 +3397,15 @@
         point.difference?.xpLeadRate,
         point.difference?.csLeadRate
       ]));
+      const userTimeline = getUserStatsApiTimeline(selectedMatchupOpponentChampionId);
       const cards: HTMLElement[] = [
-        createStatsApiTimelineMetricCard(timeline, 'gold', sharedLeadRateScale),
-        createStatsApiTimelineMetricCard(timeline, 'xp', sharedLeadRateScale),
-        createStatsApiTimelineMetricCard(timeline, 'cs', sharedLeadRateScale),
-        createStatsApiLaneFightChartCard(timeline)
+        createStatsApiTimelineMetricCard(timeline, 'gold', sharedLeadRateScale, userTimeline),
+        createStatsApiTimelineMetricCard(timeline, 'xp', sharedLeadRateScale, userTimeline),
+        createStatsApiTimelineMetricCard(timeline, 'cs', sharedLeadRateScale, userTimeline),
+        createStatsApiLaneFightChartCard(timeline, userTimeline)
       ];
-      const combatImpactCard = createStatsApiCombatImpactCard(timeline);
-      const laneObjectivesCard = createStatsApiLaneObjectivesCard(timeline);
+      const combatImpactCard = createStatsApiCombatImpactCard(timeline, userTimeline);
+      const laneObjectivesCard = createStatsApiLaneObjectivesCard(timeline, userTimeline);
       if (combatImpactCard) cards.push(combatImpactCard);
       if (laneObjectivesCard) cards.push(laneObjectivesCard);
       dashboard.append(...cards);

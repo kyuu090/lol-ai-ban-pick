@@ -39,6 +39,7 @@ export interface AppState {
   matchHistoryEnemyChampionStats: EnemyChampionStats[];
   matchHistoryLaneOpponentStats: LaneOpponentStats[];
   matchHistorySelfVsLaneOpponentStats: SelfVsLaneOpponentStats[];
+  matchHistoryLaneMatchupTimeline: any[];
   gameflowSession: GameflowSession | LcuErrorPayload | null;
   laneMatchupAnalysis: LaneMatchupAnalysisState;
   lastEvent: LcuJsonApiEvent | null;
