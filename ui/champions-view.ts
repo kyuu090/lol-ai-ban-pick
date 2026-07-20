@@ -2455,10 +2455,10 @@
       const navigation = doc.createElement('nav');
       navigation.className = 'stats-api-analysis-tabs';
       navigation.setAttribute('aria-label', 'チャンピオン分析メニュー');
-      const sections: Array<{ id: StatsApiDetailsSection; label: string }> = [
-        { id: 'build', label: 'ビルド' },
-        { id: 'matchups', label: 'マッチアップ分析' },
-        { id: 'timeline', label: 'タイムライン分析' }
+      const sections: Array<{ id: StatsApiDetailsSection; label: string; icon: string }> = [
+        { id: 'build', label: 'ビルド', icon: '🛠' },
+        { id: 'timeline', label: 'タイムライン分析', icon: '↗' },
+        { id: 'matchups', label: 'マッチアップ分析', icon: '⚔' }
       ];
       navigation.append(...sections.map((section) => {
         const button = doc.createElement('button');
@@ -2466,7 +2466,9 @@
         button.type = 'button';
         button.className = `stats-api-analysis-tab${active ? ' active' : ''}`;
         button.setAttribute('aria-pressed', String(active));
-        button.append(createText('stats-api-analysis-tab-label', section.label, 'strong'));
+        const icon = createText('stats-api-analysis-tab-icon', section.icon, 'span');
+        icon.setAttribute('aria-hidden', 'true');
+        button.append(icon, createText('stats-api-analysis-tab-label', section.label, 'strong'));
         button.addEventListener('click', () => {
           if (activeDetailsSection === section.id) return;
           activeDetailsSection = section.id;

@@ -1964,9 +1964,10 @@
   background: var(--stats-api-panel-bg);
   border: 1px solid var(--stats-api-panel-border);
   border-radius: 10px;
-  display: grid;
+  align-items: stretch;
+  display: flex;
   gap: 4px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: flex-start;
   padding: 4px;
 }
 
@@ -1977,7 +1978,9 @@
   border-radius: 8px;
   box-shadow: none;
   color: var(--muted);
-  display: grid;
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
   min-height: 36px;
   padding: 6px 10px;
   text-align: left;
@@ -1989,10 +1992,24 @@
   color: var(--stats-api-tab-active-text);
 }
 
+.stats-api-analysis-tab:hover,
+.stats-api-analysis-tab:focus-visible {
+  background: var(--stats-api-tab-active-bg);
+  color: var(--stats-api-tab-active-text);
+}
+
 .stats-api-analysis-tab-label {
   color: inherit;
   font-size: 12px;
   line-height: 1.2;
+}
+
+.stats-api-analysis-tab-icon {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  width: 14px;
 }
 
 .stats-api-analysis-panel {
