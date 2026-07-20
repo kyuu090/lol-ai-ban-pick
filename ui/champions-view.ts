@@ -2828,9 +2828,15 @@
         Math.min(containerRect.width - tooltipHalfWidth - horizontalPadding, targetCenterX)
       );
       const targetTop = targetRect.top - containerRect.top;
-      const placeBelow = targetTop - tooltip.offsetHeight - 8 < 0;
+      const targetBottom = targetRect.bottom - containerRect.top;
+      const spaceAbove = targetTop;
+      const spaceBelow = containerRect.height - targetBottom;
+      const placeBelow = (
+        spaceAbove < tooltip.offsetHeight + 8 &&
+        spaceBelow > spaceAbove
+      );
       tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${placeBelow ? targetRect.bottom - containerRect.top : targetTop}px`;
+      tooltip.style.top = `${placeBelow ? targetBottom : targetTop}px`;
       tooltip.dataset.placement = placeBelow ? 'below' : 'above';
     }
 
@@ -3072,6 +3078,7 @@
       });
       appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
       const barWidth = Math.min(50, barSlotWidth * 0.38);
+      const valueLabelGap = 20;
       laneFightTimeline.forEach((point, index) => {
         const value = netValues[index];
         const bar = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -3092,8 +3099,8 @@
         valueLabel.setAttribute('class', `stats-api-timeline-net-value ${value >= 0 ? 'positive' : 'negative'}`);
         valueLabel.setAttribute('x', String(x(index)));
         valueLabel.setAttribute('y', String(value >= 0
-          ? Math.max(padding.top + 8, y(value) - 5)
-          : Math.min(height - padding.bottom - 2, y(value) + 12)));
+          ? Math.min(height - padding.bottom - 2, y(0) + valueLabelGap)
+          : Math.max(padding.top + valueLabelGap, y(0) - valueLabelGap)));
         valueLabel.setAttribute('text-anchor', 'middle');
         valueLabel.textContent = formatNetValue(value);
         svg.append(valueLabel);
@@ -3144,7 +3151,7 @@
 
       const width = 210;
       const height = 132;
-      const padding = { top: 8, right: 8, bottom: 22, left: 39 };
+      const padding = { top: 8, right: 8, bottom: 22, left: 44 };
       const plotWidth = width - padding.left - padding.right;
       const plotHeight = height - padding.top - padding.bottom;
       const x = (index: number) => padding.left + (timeline.length <= 1 ? plotWidth / 2 : index * plotWidth / (timeline.length - 1));
@@ -3257,14 +3264,15 @@
       meta.append(
         createText('stats-api-timeline-legend plate-taken', 'プレート取得'),
         createText('stats-api-timeline-legend plate-lost', 'プレート喪失'),
-        createText('stats-api-timeline-legend tower-taken', '外塔取得率'),
-        createText('stats-api-timeline-legend tower-lost', '外塔喪失率')
+        createText('stats-api-timeline-legend tower-taken', 'アウタータワー取得率'),
+        createText('stats-api-timeline-legend tower-lost', 'アウタータワー喪失率')
       );
       card.append(heading, meta);
 
       const width = 640;
       const height = 196;
-      const padding = { top: 15, right: 50, bottom: 28, left: 54 };
+      // Reserve room for both axes and the bottom labels in this narrower card.
+      const padding = { top: 15, right: 86, bottom: 36, left: 74 };
       const plotWidth = width - padding.left - padding.right;
       const plotHeight = height - padding.top - padding.bottom;
       const x = (index: number) => padding.left + (objectiveTimeline.length <= 1 ? plotWidth / 2 : index * plotWidth / (objectiveTimeline.length - 1));
@@ -3274,7 +3282,7 @@
       svg.setAttribute('class', 'stats-api-timeline-chart stats-api-objectives-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', '20分までのレーン外塔プレートと外塔取得・喪失率の時間推移');
+      svg.setAttribute('aria-label', '20分までのレーンのアウタータワープレートとアウタータワー取得・喪失率の時間推移');
       const tooltip = createStatsApiTimelineTooltip();
       [0, 0.5, 1].forEach((rate) => {
         appendStatsApiTimelineGuideLine(svg, padding.left, rateY(rate), width - padding.right, rateY(rate), rate === 0.5 ? 'stats-api-timeline-zero-line' : 'stats-api-timeline-grid-line');
@@ -3293,7 +3301,7 @@
         const tooltipLines = [
           `${point.minute}分`,
           `プレート 取得 ${plateTaken[index].toFixed(2)} / 喪失 ${plateLost[index].toFixed(2)}`,
-          `外塔 取得 ${formatStatsApiRate(towerTaken[index])} / 喪失 ${formatStatsApiRate(towerLost[index])}`,
+          `アウタータワー 取得 ${formatStatsApiRate(towerTaken[index])} / 喪失 ${formatStatsApiRate(towerLost[index])}`,
           `試合数 ${formatStatsApiGames(point.games)}試合`
         ];
         [
@@ -3393,7 +3401,7 @@
       if (timeline.some((point) => Boolean(point.laneObjectives))) {
         rows.push(
           { label: 'プレート 取得 / 喪失', values: timeline.map((point) => `${Number(point.laneObjectives?.avgLaneOuterPlatesTaken || 0).toFixed(2)} / ${Number(point.laneObjectives?.avgLaneOuterPlatesLost || 0).toFixed(2)}`) },
-          { label: '外塔 取得 / 喪失', values: timeline.map((point) => `${formatStatsApiRate(point.laneObjectives?.laneOuterTowerTakenRate)} / ${formatStatsApiRate(point.laneObjectives?.laneOuterTowerLostRate)}`) }
+          { label: 'アウタータワー 取得 / 喪失', values: timeline.map((point) => `${formatStatsApiRate(point.laneObjectives?.laneOuterTowerTakenRate)} / ${formatStatsApiRate(point.laneObjectives?.laneOuterTowerLostRate)}`) }
         );
       }
       rows.push({ label: '試合数', values: timeline.map((point) => formatStatsApiGames(point.games)) });

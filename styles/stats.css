@@ -2122,7 +2122,19 @@
 .stats-api-timeline-dashboard {
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.stats-api-timeline-dashboard > .stats-api-timeline-chart-card {
+  grid-column: span 3;
+}
+
+.stats-api-timeline-dashboard > .stats-api-combat-impact-card {
+  grid-column: span 4;
+}
+
+.stats-api-timeline-dashboard > .stats-api-lane-objectives-card {
+  grid-column: span 2;
 }
 
 .stats-api-timeline-card-heading {
@@ -2214,7 +2226,7 @@
   border-radius: 7px;
   box-shadow: 0 8px 22px rgba(3, 7, 18, 0.28);
   color: var(--text);
-  font-size: 9px;
+  font-size: 13.5px;
   font-weight: 800;
   line-height: 1.45;
   max-width: calc(100% - 10px);
@@ -2311,14 +2323,20 @@
 
 .stats-api-timeline-axis-label {
   fill: var(--muted);
-  font-size: 8px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .stats-api-timeline-y-axis-label {
   fill: var(--muted);
-  font-size: 8px;
+  font-size: 16px;
   font-weight: 800;
+}
+
+/* The objectives card is narrower than the main timeline cards. */
+.stats-api-objectives-chart .stats-api-timeline-axis-label,
+.stats-api-objectives-chart .stats-api-timeline-y-axis-label {
+  font-size: 24px;
 }
 
 .stats-api-timeline-legend.fight-net {
@@ -2353,7 +2371,7 @@
 }
 
 .stats-api-timeline-net-value {
-  font-size: 9px;
+  font-size: 18px;
   font-weight: 900;
 }
 
@@ -2402,6 +2420,12 @@
   display: block;
   min-width: 0;
   width: 100%;
+}
+
+/* Impact facets use a near 1:1 viewBox scale, unlike the wide timeline charts. */
+.stats-api-impact-chart .stats-api-timeline-axis-label,
+.stats-api-impact-chart .stats-api-timeline-y-axis-label {
+  font-size: 14px;
 }
 
 .stats-api-impact-self-line,

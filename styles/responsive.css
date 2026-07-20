@@ -150,6 +150,10 @@
     grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
 
+  .stats-api-timeline-dashboard > .stats-api-timeline-chart-card {
+    grid-column: span 1;
+  }
+
   .stats-api-opponent-filter {
     min-width: 0;
   }
