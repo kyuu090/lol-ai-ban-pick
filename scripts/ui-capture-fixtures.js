@@ -74,6 +74,22 @@ function createTimelinePoint(minute, variant = 'overall') {
   const championCs = 4.1 * minute + Math.max(cs, 0) / 2;
   const opponentCs = championCs - cs;
   const fightRate = Math.min(0.82, 0.12 + index * 0.085);
+  const championDamageToChampions = Math.round(420 + minute * 205 + index * index * 32);
+  const opponentDamageToChampions = Math.round(championDamageToChampions * (variant === 'matchup' ? 1.04 : 0.93));
+  const championDamageTaken = Math.round(520 + minute * 188 + index * index * 28);
+  const opponentDamageTaken = Math.round(championDamageTaken * (variant === 'matchup' ? 0.96 : 1.06));
+  const championCcMs = Math.round(120 + minute * 74 + index * 36);
+  const opponentCcMs = Math.round(championCcMs * (variant === 'matchup' ? 1.12 : 0.88));
+  const championKills = Number((0.08 + index * 0.43).toFixed(2));
+  const opponentKills = Number((0.1 + index * (variant === 'matchup' ? 0.47 : 0.38)).toFixed(2));
+  const championDeaths = Number((0.06 + index * 0.31).toFixed(2));
+  const opponentDeaths = Number((0.07 + index * 0.34).toFixed(2));
+  const championAssists = Number((0.12 + index * 0.58).toFixed(2));
+  const opponentAssists = Number((0.1 + index * 0.54).toFixed(2));
+  const plateProgress = [0.18, 0.72, 1.34, 1.42, 1.42, 1.42, 1.42, 1.42][index];
+  const plateLostProgress = [0.14, 0.56, 1.02, 1.08, 1.08, 1.08, 1.08, 1.08][index];
+  const towerTakenRate = [0.01, 0.05, 0.18, 0.34, 0.42, 0.46, 0.48, 0.49][index];
+  const towerLostRate = [0.01, 0.04, 0.14, 0.27, 0.36, 0.4, 0.43, 0.45][index];
   return {
     minute,
     games: Math.max(286, 420 - index * 18),
@@ -81,13 +97,25 @@ function createTimelinePoint(minute, variant = 'overall') {
       avgGold: Math.round(championGold),
       avgXp: Math.round(championXp),
       avgCs: Number(championCs.toFixed(1)),
-      avgLevel: Number((1 + minute * 0.62).toFixed(1))
+      avgLevel: Number((1 + minute * 0.62).toFixed(1)),
+      avgDamageToChampions: championDamageToChampions,
+      avgDamageTaken: championDamageTaken,
+      avgTimeEnemyCcMs: championCcMs,
+      avgKills: championKills,
+      avgDeaths: championDeaths,
+      avgAssists: championAssists
     },
     opponent: {
       avgGold: Math.round(opponentGold),
       avgXp: Math.round(opponentXp),
       avgCs: Number(opponentCs.toFixed(1)),
-      avgLevel: Number((1 + minute * 0.61).toFixed(1))
+      avgLevel: Number((1 + minute * 0.61).toFixed(1)),
+      avgDamageToChampions: opponentDamageToChampions,
+      avgDamageTaken: opponentDamageTaken,
+      avgTimeEnemyCcMs: opponentCcMs,
+      avgKills: opponentKills,
+      avgDeaths: opponentDeaths,
+      avgAssists: opponentAssists
     },
     difference: {
       avgGold: gold,
@@ -105,6 +133,12 @@ function createTimelinePoint(minute, variant = 'overall') {
       isolated_deaths_vs_lane_occurred_rate: Number(Math.min(0.48, 0.025 + index * 0.052).toFixed(3)),
       isolated_assists_vs_lane_occurred_rate: Number(Math.min(0.36, 0.012 + index * 0.038).toFixed(3)),
       fight_occurred_rate: Number(fightRate.toFixed(3))
+    },
+    laneObjectives: {
+      avgLaneOuterPlatesTaken: Number(plateProgress.toFixed(2)),
+      avgLaneOuterPlatesLost: Number(plateLostProgress.toFixed(2)),
+      laneOuterTowerTakenRate: Number(towerTakenRate.toFixed(3)),
+      laneOuterTowerLostRate: Number(towerLostRate.toFixed(3))
     }
   };
 }
@@ -151,7 +185,7 @@ function createStatsFixtureResponse(pathOrUrl) {
         regions: ['JP1', 'KR'],
         queueIds: [420],
         ranks: ['DIAMOND', 'MASTER'],
-        positions: ['MIDDLE'],
+        positions: ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'],
         watermark: '2026-07-16T00:00:00.000Z'
       }
     };
@@ -196,13 +230,15 @@ function createStatsFixtureResponse(pathOrUrl) {
   if (/\/champions\/103\/details$/.test(path)) {
     return { data: createChampionDetailsData() };
   }
-  if (/\/positions\/MIDDLE\/champions$/.test(path)) {
+  const championsMatch = path.match(/\/positions\/(TOP|JUNGLE|MIDDLE|BOTTOM|UTILITY)\/champions$/);
+  if (championsMatch) {
+    const position = championsMatch[1];
     return {
       data: [
-        { championId: 103, winRate: 0.52, pickRate: 0.084, banRate: 0.071, tierScore: 57.4, tier: 'S', games: 1840, mostPlayedLane: 'MIDDLE' },
-        { championId: 134, winRate: 0.514, pickRate: 0.062, banRate: 0.055, tierScore: 54.8, tier: 'A', games: 1510, mostPlayedLane: 'MIDDLE' },
-        { championId: 61, winRate: 0.506, pickRate: 0.048, banRate: 0.012, tierScore: 52.1, tier: 'A', games: 1260, mostPlayedLane: 'MIDDLE' },
-        { championId: 238, winRate: 0.498, pickRate: 0.071, banRate: 0.126, tierScore: 50.9, tier: 'B', games: 1620, mostPlayedLane: 'MIDDLE' }
+        { championId: 103, winRate: 0.52, pickRate: 0.084, banRate: 0.071, tierScore: 57.4, tier: 'S', games: 1840, mostPlayedLane: position },
+        { championId: 134, winRate: 0.514, pickRate: 0.062, banRate: 0.055, tierScore: 54.8, tier: 'A', games: 1510, mostPlayedLane: position },
+        { championId: 61, winRate: 0.506, pickRate: 0.048, banRate: 0.012, tierScore: 52.1, tier: 'A', games: 1260, mostPlayedLane: position },
+        { championId: 238, winRate: 0.498, pickRate: 0.071, banRate: 0.126, tierScore: 50.9, tier: 'B', games: 1620, mostPlayedLane: position }
       ]
     };
   }

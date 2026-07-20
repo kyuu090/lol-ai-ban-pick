@@ -1971,15 +1971,14 @@
 }
 
 .stats-api-analysis-tab {
-  align-items: flex-start;
+  align-items: center;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
   box-shadow: none;
   color: var(--muted);
   display: grid;
-  gap: 2px;
-  min-height: 44px;
+  min-height: 36px;
   padding: 6px 10px;
   text-align: left;
 }
@@ -1994,12 +1993,6 @@
   color: inherit;
   font-size: 12px;
   line-height: 1.2;
-}
-
-.stats-api-analysis-tab-description {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
 }
 
 .stats-api-analysis-panel {
@@ -2187,10 +2180,28 @@
 }
 
 .stats-api-timeline-legend.lead-rate {
-  color: var(--muted);
+  color: var(--blue);
 }
 
 .stats-api-timeline-legend.lead-rate::before {
+  background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px);
+}
+
+.stats-api-timeline-legend.impact-self,
+.stats-api-timeline-legend.plate-taken,
+.stats-api-timeline-legend.tower-taken {
+  color: #16a34a;
+}
+
+.stats-api-timeline-legend.impact-opponent,
+.stats-api-timeline-legend.plate-lost,
+.stats-api-timeline-legend.tower-lost {
+  color: #dc2626;
+}
+
+.stats-api-timeline-legend.impact-opponent::before,
+.stats-api-timeline-legend.tower-taken::before,
+.stats-api-timeline-legend.tower-lost::before {
   background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px);
 }
 
@@ -2250,10 +2261,16 @@
 
 .stats-api-timeline-lead-line {
   fill: none;
-  stroke: var(--muted);
+  stroke: var(--blue);
   stroke-dasharray: 4 3;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-width: 2.3;
+}
+
+.stats-api-timeline-lead-point {
+  fill: var(--blue);
+  stroke: var(--stats-api-panel-strong-bg);
   stroke-width: 1.5;
 }
 
@@ -2284,6 +2301,134 @@
   fill: var(--muted);
   font-size: 8px;
   font-weight: 800;
+}
+
+.stats-api-timeline-legend.fight-net {
+  color: var(--stats-api-tab-active-text);
+}
+
+.stats-api-timeline-legend.fight-net::before {
+  height: 7px;
+  width: 7px;
+}
+
+.stats-api-timeline-net-direction {
+  color: var(--muted);
+}
+
+.stats-api-timeline-net-zero-line {
+  stroke: var(--text);
+  stroke-opacity: 0.58;
+  stroke-width: 1.5;
+}
+
+.stats-api-timeline-net-bar {
+  opacity: 0.82;
+}
+
+.stats-api-timeline-net-bar.positive {
+  fill: var(--stats-api-chip-accent);
+}
+
+.stats-api-timeline-net-bar.negative {
+  fill: var(--danger);
+}
+
+.stats-api-timeline-net-value {
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.stats-api-timeline-net-value.positive {
+  fill: var(--stats-api-chip-accent);
+}
+
+.stats-api-timeline-net-value.negative {
+  fill: var(--danger);
+}
+
+.stats-api-impact-facets {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.stats-api-impact-facet {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stats-api-impact-facet + .stats-api-impact-facet {
+  border-left: 1px solid var(--stats-api-panel-border-soft);
+  padding-left: 6px;
+}
+
+.stats-api-impact-facet-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.stats-api-impact-facet-title {
+  color: var(--text);
+  font-size: 9px;
+  margin: 0;
+}
+
+.stats-api-impact-facet-value {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-api-impact-chart {
+  aspect-ratio: 210 / 132;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.stats-api-impact-self-line,
+.stats-api-impact-opponent-line,
+.stats-api-objective-plate-taken-line,
+.stats-api-objective-plate-lost-line,
+.stats-api-objective-tower-taken-line,
+.stats-api-objective-tower-lost-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.stats-api-impact-self-line,
+.stats-api-objective-plate-taken-line {
+  stroke: #16a34a;
+}
+
+.stats-api-impact-opponent-line,
+.stats-api-objective-plate-lost-line {
+  stroke: #dc2626;
+}
+
+.stats-api-impact-opponent-line {
+  stroke-dasharray: 4 3;
+}
+
+.stats-api-objective-tower-taken-line {
+  stroke: #16a34a;
+  stroke-dasharray: 5 4;
+}
+
+.stats-api-objective-tower-lost-line {
+  stroke: #dc2626;
+  stroke-dasharray: 5 4;
 }
 
 .stats-api-timeline-fight-line,

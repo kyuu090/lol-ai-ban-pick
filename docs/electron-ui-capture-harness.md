@@ -8,7 +8,7 @@ StatsAPIは既定で本番の `https://db.banpick-ai.lol` を使用する。LCU�
 
 ## 基本コマンド
 
-全体推移画面をライトテーマ、1440×900で撮影する。
+タイムライン分析画面をライトテーマ、1440×900で撮影する。
 
 ```powershell
 npm run capture:ui -- --view=timeline
@@ -53,12 +53,14 @@ npm run capture:ui -- --view=matchup --theme=dark
 | オプション | 内容 |
 | --- | --- |
 | `--theme=light|dark` | テーマ。既定値は `light` |
+| `--lane=TOP|JUNGLE|MIDDLE|BOTTOM|UTILITY` | 分析対象レーン。既定値は `MIDDLE` |
 | `--width=1440` | BrowserWindowの幅 |
 | `--height=900` | BrowserWindowの高さ |
+| `--scroll=top|bottom` | 分析領域の撮影位置。既定値は `top` |
 | `--output=<path>` | PNG出力先 |
 | `--show` | 撮影時にElectronウィンドウを表示する |
 | `--hold-ms=5000` | 撮影後にウィンドウを表示し続ける時間 |
-| `--stats-source=production|fixture` | StatsAPIのデータ元。既定値は `production` |
+| `--stats-source=production|fixture` | StatsAPIのデータ元。既定値は `production`。固定データでも全レーンを選択可能 |
 
 `--show` を指定した場合、既定で撮影後5秒間ウィンドウを表示する。
 
@@ -70,7 +72,7 @@ npm run capture:ui -- --view=matchup --theme=dark
 npm run capture:ui -- --view=timeline --stats-source=fixture
 ```
 
-fixtureは `scripts/ui-capture-fixtures.js` にあり、Meta、チャンピオン一覧、ビルド、対面一覧、特定対面推移、全体推移をカバーする。
+fixtureは `scripts/ui-capture-fixtures.js` にあり、Meta、チャンピオン一覧、ビルド、マッチアップ一覧、特定マッチアップ推移、タイムライン分析をカバーする。
 
 ## Codexでの確認手順
 

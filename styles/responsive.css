@@ -146,10 +146,6 @@
     flex-direction: column;
   }
 
-  .stats-api-analysis-tab-description {
-    display: none;
-  }
-
   .stats-api-timeline-dashboard {
     grid-template-columns: repeat(2, minmax(180px, 1fr));
   }

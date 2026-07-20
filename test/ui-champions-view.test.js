@@ -14,6 +14,8 @@ const {
   buildStatsApiRunesDataUrl,
   formatStatsApiErrorMessage,
   getStatsApiOpponentChampionOptions,
+  getStatsApiLaneFightIndicator,
+  getStatsApiLeadRateScale,
   getStatsApiLaneLabel,
   getStatsApiShardRowIndex,
   normalizeStatsApiSearchText,
@@ -319,4 +321,50 @@ test('matchup rows sort by opponent, games, win rate, and baseline difference', 
   assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'games', 'desc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
   assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'winRate', 'desc', championLabel).map((entry) => entry.opponentChampionId), [2, 1, 3]);
   assert.deepEqual(sortStatsApiMatchupRows(matchups, 0.52, 'difference', 'asc', championLabel).map((entry) => entry.opponentChampionId), [3, 1, 2]);
+});
+
+test('lead rate scale stays centered on 50 percent and zooms to small changes', () => {
+  assert.deepEqual(getStatsApiLeadRateScale([0.52, 0.55]), {
+    minimum: 0.44,
+    maximum: 0.56
+  });
+  assert.deepEqual(getStatsApiLeadRateScale([0.31, 0.53]), {
+    minimum: 0.3,
+    maximum: 0.7
+  });
+});
+
+test('lane fight indicator uses role-specific lane combat formulas', () => {
+  const laneFights = {
+    isolated_kills_vs_lane: 0.4,
+    isolated_deaths_vs_lane: 0.2,
+    isolated_assists_vs_lane: 0.3
+  };
+  assert.deepEqual(getStatsApiLaneFightIndicator(laneFights, 'TOP'), {
+    label: 'ソロキル収支',
+    description: 'ソロKill − ソロDeath',
+    detail: 'Kill 0.40 / Death 0.20',
+    value: 0.2
+  });
+  assert.deepEqual(getStatsApiLaneFightIndicator(
+    laneFights,
+    'JUNGLE',
+    { avgKills: 1.8 },
+    { avgKills: 1.25 }
+  ), {
+    label: 'JGキル差',
+    description: '全Kill: 自JG − 相手JG',
+    detail: '自JG Kill 1.80 / 相手JG Kill 1.25',
+    value: 0.55
+  });
+  assert.deepEqual(getStatsApiLaneFightIndicator(laneFights, 'BOTTOM'), {
+    label: '2v2キル収支',
+    description: 'Kill − Death（2v2）',
+    detail: 'Kill 0.40 / Death 0.20',
+    value: 0.2
+  });
+  assert.throws(
+    () => getStatsApiLaneFightIndicator(laneFights, 'JUNGLE'),
+    /requires champion\.avgKills and opponent\.avgKills/
+  );
 });

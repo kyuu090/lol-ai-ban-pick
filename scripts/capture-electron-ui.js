@@ -33,6 +33,12 @@ function normalizeTarget(value) {
   return ['champions', 'build', 'matchups', 'matchup', 'timeline'].includes(value) ? value : 'timeline';
 }
 
+/** @param {string} value */
+function normalizeLane(value) {
+  const lane = String(value || '').toUpperCase();
+  return ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'].includes(lane) ? lane : 'MIDDLE';
+}
+
 /**
  * @param {string} value
  * @param {number} fallback
@@ -43,10 +49,12 @@ function positiveInteger(value, fallback) {
 }
 
 const target = normalizeTarget(readOption('view', 'timeline'));
+const captureLane = normalizeLane(readOption('lane', 'MIDDLE'));
 const themeMode = readOption('theme', 'light') === 'dark' ? 'dark' : 'light';
 const statsSource = readOption('stats-source', 'production') === 'fixture' ? 'fixture' : 'production';
 const width = positiveInteger(readOption('width', '1440'), 1440);
 const height = positiveInteger(readOption('height', '900'), 900);
+const scrollMode = readOption('scroll', 'top') === 'bottom' ? 'bottom' : 'top';
 const showWindow = hasFlag('show');
 const holdMs = Math.max(0, Number(readOption('hold-ms', showWindow ? '5000' : '0')) || 0);
 const defaultOutput = path.join(projectRoot, '.tmp-ui-captures', `${target}-${themeMode}.png`);
@@ -124,8 +132,8 @@ async function waitForRenderer(window, expression, label, timeoutMs = 12000) {
  * @param {string} label
  */
 async function clickByScript(window, expression, label) {
-  const clicked = await window.webContents.executeJavaScript(`(() => { const element = ${expression}; if (!element) return false; element.click(); return true; })()`, true);
-  if (!clicked) throw new Error(`Could not click ${label}.`);
+  const result = await window.webContents.executeJavaScript(`(() => { try { const element = ${expression}; if (!element) return { clicked: false, error: 'element not found' }; element.click(); return { clicked: true }; } catch (error) { return { clicked: false, error: String(error?.stack || error) }; } })()`, true);
+  if (!result?.clicked) throw new Error(`Could not click ${label}: ${result?.error || 'unknown renderer error'}.`);
 }
 
 /** @param {Electron.BrowserWindow} window */
@@ -136,11 +144,11 @@ async function openCaptureTarget(window) {
 
   await clickByScript(
     window,
-    "document.querySelector('#statsApiLaneTabs button[data-lane=\"MIDDLE\"]')",
-    'MID lane tab'
+    `document.querySelector('#statsApiLaneTabs button[data-lane=${JSON.stringify(captureLane)}]')`,
+    `${captureLane} lane tab`
   );
   await waitForCaptureIdle(window);
-  await waitForRenderer(window, "document.querySelectorAll('#statsApiChampionsTableBody tr').length > 0", 'MID champion rows');
+  await waitForRenderer(window, "document.querySelectorAll('#statsApiChampionsTableBody tr').length > 0", `${captureLane} champion rows`);
 
   await clickByScript(
     window,
@@ -150,21 +158,21 @@ async function openCaptureTarget(window) {
   await waitForRenderer(window, "document.querySelectorAll('.stats-api-analysis-tab').length === 3", 'analysis tabs');
   if (target === 'build') return;
 
-  const tabLabel = target === 'timeline' ? '全体推移' : '対面分析';
+  const tabLabel = target === 'timeline' ? 'タイムライン分析' : 'マッチアップ分析';
   await clickByScript(
     window,
     `Array.from(document.querySelectorAll('.stats-api-analysis-tab')).find((button) => button.textContent.includes(${JSON.stringify(tabLabel)}))`,
     `${tabLabel} tab`
   );
   if (target === 'timeline') {
-    await waitForRenderer(window, "document.querySelectorAll('.stats-api-timeline-chart-card').length === 4", 'timeline dashboard');
+    await waitForRenderer(window, "document.querySelectorAll('.stats-api-timeline-chart-card').length >= 4", 'timeline dashboard');
     return;
   }
 
   await waitForRenderer(window, "document.querySelectorAll('.stats-api-matchups-table tbody tr').length > 0", 'matchup rows');
   if (target === 'matchups') return;
   await clickByScript(window, "document.querySelector('.stats-api-matchups-table tbody tr')", 'first matchup row');
-  await waitForRenderer(window, "document.querySelectorAll('.stats-api-timeline-chart-card').length === 4", 'matchup timeline dashboard');
+  await waitForRenderer(window, "document.querySelectorAll('.stats-api-timeline-chart-card').length >= 4", 'matchup timeline dashboard');
 }
 
 /** @param {Electron.BrowserWindow} window */
@@ -212,13 +220,13 @@ async function capture() {
     html, body { scroll-behavior: auto !important; }
     .stats-api-loading-overlay { display: none !important; }
   `);
-  await window.webContents.executeJavaScript('window.scrollTo(0, 0); document.querySelectorAll(".stats-api-details-view, .stats-table-wrap").forEach((element) => { element.scrollTop = 0; element.scrollLeft = 0; }); document.body.getBoundingClientRect();', true);
+  await window.webContents.executeJavaScript(`window.scrollTo(0, 0); document.querySelectorAll(".stats-api-details-view, .stats-table-wrap").forEach((element) => { element.scrollTop = ${scrollMode === 'bottom' ? 'element.scrollHeight' : '0'}; element.scrollLeft = 0; }); document.body.getBoundingClientRect();`, true);
   window.webContents.invalidate();
   await delay(300);
   const image = await window.webContents.capturePage();
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, image.toPNG());
-  process.stdout.write(`${JSON.stringify({ outputPath, target, themeMode, statsSource, width, height, consoleErrors }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ outputPath, target, captureLane, themeMode, statsSource, width, height, scrollMode, consoleErrors }, null, 2)}\n`);
   if (holdMs > 0) await delay(holdMs);
   if (!window.isDestroyed()) window.destroy();
   app.quit();

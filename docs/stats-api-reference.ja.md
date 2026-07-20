@@ -174,8 +174,8 @@ GET /v1/stats/positions/MIDDLE/champions/103/matchups/238?patch=latest&rank=MAST
     "timeline": [{
       "minute": 10,
       "games": 205,
-      "champion": { "avgGold": 5180, "avgXp": 4120, "avgCs": 78.1, "avgLevel": 8.2 },
-      "opponent": { "avgGold": 4950, "avgXp": 3990, "avgCs": 73.4, "avgLevel": 8.0 },
+      "champion": { "avgGold": 5180, "avgXp": 4120, "avgCs": 78.1, "avgLevel": 8.2, "avgDamageToChampions": 4200, "avgDamageTaken": 3100, "avgTimeEnemyCcMs": 1200 },
+      "opponent": { "avgGold": 4950, "avgXp": 3990, "avgCs": 73.4, "avgLevel": 8.0, "avgDamageToChampions": 3900, "avgDamageTaken": 3500, "avgTimeEnemyCcMs": 1000 },
       "difference": {
         "avgGold": 230, "avgXp": 130, "avgCs": 4.7,
         "goldLeadRate": 0.56, "xpLeadRate": 0.54, "csLeadRate": 0.58
@@ -188,17 +188,24 @@ GET /v1/stats/positions/MIDDLE/champions/103/matchups/238?patch=latest&rank=MAST
         "isolated_deaths_vs_lane_occurred_rate": 0.10,
         "isolated_assists_vs_lane_occurred_rate": 0.02,
         "fight_occurred_rate": 0.22
+      },
+      "laneObjectives": {
+        "avgLaneOuterPlatesTaken": 1.2,
+        "avgLaneOuterPlatesLost": 0.8,
+        "laneOuterTowerTakenRate": 0.31,
+        "laneOuterTowerLostRate": 0.27
       }
     }]
   }
 }
 ```
 
-- `champion` / `opponent`: 対象側・対面側の平均総ゴールド、経験値、総CS、レベル
+- `champion` / `opponent`: 対象側・対面側の平均総ゴールド、経験値、総CS、レベル、与ダメージ、被ダメージ、敵へのCC時間
 - `difference`: 対象側から見た平均との差と、値が正の試合割合
 - `laneFights.isolated_kills_vs_lane`, `isolated_deaths_vs_lane`, `isolated_assists_vs_lane`: その時点までの累積値の試合平均。保存列名をそのまま使用
 - `*_occurred_rate`: 対応する累積値が1以上の試合割合
 - `fight_occurred_rate`: kill / death / assist のいずれかが1以上の試合割合
+- `laneObjectives`: lane outer plate の平均取得・喪失数と、lane outer tower の取得・喪失試合割合
 
 TOP/MIDDLE/JUNGLE の `isolated_*_vs_lane` は1v1、BOTTOM/UTILITYはduo laneの2v2基準です。キャッシュは5分間fresh、続く30分間stale-while-revalidateです。
 
