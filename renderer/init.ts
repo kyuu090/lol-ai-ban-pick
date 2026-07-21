@@ -713,27 +713,6 @@ async function saveLolInstallDir() {
         elements.saveLolDirButton.disabled = false;
     }
 }
-async function saveRiotPlatformRegion() {
-    const riotPlatformRegion = elements.riotPlatformRegionSelect.value;
-    elements.saveRiotPlatformRegionButton.disabled = true;
-    elements.settingsMessage.textContent = '';
-    try {
-        const settings = await window.lcuApi.updateRiotPlatformRegion(riotPlatformRegion);
-        renderSettings(settings);
-        logDebug('Riot platform region saved', {
-            riotPlatformRegion: settings.riotPlatformRegion,
-            riotRegionalRoute: settings.riotRegionalRoute
-        });
-        elements.settingsMessage.textContent = `Regionを${settings.riotPlatformRegion}に保存しました。`;
-    }
-    catch (error) {
-        logWarn('Riot platform region save failed', { message: error.message, stack: error.stack });
-        elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
-    }
-    finally {
-        elements.saveRiotPlatformRegionButton.disabled = false;
-    }
-}
 async function saveThemeMode() {
     const themeMode = normalizeThemeMode(elements.themeModeSelect.value);
     elements.saveThemeModeButton.disabled = true;
@@ -801,7 +780,6 @@ elements.statsSubtabButtons.forEach((button) => {
 });
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
-elements.saveRiotPlatformRegionButton.addEventListener('click', saveRiotPlatformRegion);
 elements.saveThemeModeButton.addEventListener('click', saveThemeMode);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);

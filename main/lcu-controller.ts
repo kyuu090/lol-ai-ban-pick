@@ -10,6 +10,7 @@ import type {
   Summoner
 } from '../types/domain/lcu';
 import type { PublicSettings } from '../types/domain/settings';
+import type { RiotPlatformRegion, RiotRegionalRoute } from '../types/domain/settings';
 
 const { createChampionsById } = require('../lcu-logic');
 const { createLaneMatchupAnalysisState } = require('./app-state');
@@ -70,7 +71,12 @@ interface LcuControllerDeps {
     gameflowPhase: string;
     gameflowSession: string;
     championSummary: string;
+    regionLocale: string;
   };
+  getRiotRoutingFromLcu: (regionLocale: unknown) => Promise<{
+    riotPlatformRegion: RiotPlatformRegion;
+    riotRegionalRoute: RiotRegionalRoute;
+  } | null>;
   lockfileRetryMs: number;
   websocketReconnectMs: number;
   log: {
@@ -94,6 +100,7 @@ function createLcuController({
   updateState,
   getLaneMatchupController,
   getMatchHistoryController,
+  getRiotRoutingFromLcu,
   endpoints,
   lockfileRetryMs,
   websocketReconnectMs,
@@ -149,21 +156,28 @@ function createLcuController({
       lcuWatch.clearRetryTimer();
       championIconUnavailableUntil = 0;
       championIconUnavailableLogged = false;
-      updateState({ lcuStatus: 'connecting', error: null });
+      updateState({
+        lcuStatus: 'connecting',
+        detectedRiotPlatformRegion: null,
+        detectedRiotRegionalRoute: null,
+        error: null
+      });
 
-      const [lobby, champSelect, perksCurrentPage, summoner, gameflowPhase, gameflowSession, championSummary] = await Promise.all([
+      const [lobby, champSelect, perksCurrentPage, summoner, gameflowPhase, gameflowSession, championSummary, regionLocale] = await Promise.all([
         lcuClient.fetchJson(endpoints.lobby).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.champSelect).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.perksCurrentPage).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.summoner).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.gameflowPhase).catch((error: Error) => ({ error: error.message })),
         lcuClient.fetchJson(endpoints.gameflowSession).catch((error: Error) => ({ error: error.message })),
-        lcuClient.fetchJson(endpoints.championSummary).catch(() => [])
+        lcuClient.fetchJson(endpoints.championSummary).catch(() => []),
+        lcuClient.fetchJson(endpoints.regionLocale).catch(() => null)
       ]);
 
       if (hasError(summoner) && hasError(gameflowPhase)) {
         throw new Error(`LCU API request failed: ${summoner.error}`);
       }
+      const detectedRiotRouting = await getRiotRoutingFromLcu(regionLocale);
 
       const lcuChampionsById = createChampionsById(championSummary);
       const championsById = Object.keys(lcuChampionsById).length > 0
@@ -187,6 +201,8 @@ function createLcuController({
         gameflowPhase: gameflowPhase as GameflowPhase | null,
         gameflowSession: gameflowSession as GameflowSession | LcuErrorPayload | null,
         championsById,
+        detectedRiotPlatformRegion: detectedRiotRouting?.riotPlatformRegion ?? null,
+        detectedRiotRegionalRoute: detectedRiotRouting?.riotRegionalRoute ?? null,
         lcuStatus: 'connected',
         error: null
       });
@@ -214,6 +230,8 @@ function createLcuController({
         perksCurrentPage: null,
         championsById: fallbackChampionsById,
         laneMatchupAnalysis: createLaneMatchupAnalysisState(),
+        detectedRiotPlatformRegion: null,
+        detectedRiotRegionalRoute: null,
         error: normalizedError.message
       });
       getMatchHistoryController().resetData({ reason: 'lcu-disconnected' });

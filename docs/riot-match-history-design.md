@@ -151,28 +151,21 @@ ChampionPool表示では、初期は両方を見せてもよいが、推薦ス�
 
 ## Routing
 
-Settings には platform routing value を保存する。
+Match-V5 と Account-V1 は regional routing value を使う。ログイン後に LCU の `GET /riotclient/region-locale` から得る `region` を、`ASIA`、`AMERICAS`、`EUROPE`、`SEA` のいずれかへ正規化して保存する。
 
-```text
-JP1
-NA1
-KR
-EUW1
-```
-
-Match-V5 では regional routing value を使うため、platform region から自動導出する。
+LCU の region は platform ID（`JP1`、`NA1` など）へも正規化して保存する。これは platform routing を使う将来の API にも再利用できる。LCU 未接続時は、最後に自動検出した platform / regional route を使う。
 
 例:
 
 ```text
-JP1 -> ASIA
-KR -> ASIA
-NA1 -> AMERICAS
-EUW1 -> EUROPE
-SG2 -> SEA
+JP -> JP1 -> ASIA
+LAN -> LA1 -> AMERICAS
+LAS -> LA2 -> AMERICAS
+EUW -> EUW1 -> EUROPE
+SG -> SG2 -> SEA
 ```
 
-`riot-api.js` の `createRiotApiHosts` を使って host を作る。
+BFF の `:region` path parameter には platform ID を渡す。BFF 側で Account-V1 / Match-V5 用の regional route を導出して regional host を使用するため、BFF 契約の変更は不要である。
 
 ## API Flow
 

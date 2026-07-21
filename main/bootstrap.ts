@@ -43,7 +43,11 @@ const {
 } = require('./ai-analysis-service');
 const { requestStatsDbApiJson } = require('../stats-db-api');
 const { createRiotMatchHistoryService } = require('./riot-match-history-service');
-const { normalizeRiotPlatformRegion } = require('../riot-api');
+const {
+  getRiotPlatformRegionFromLcuRegion,
+  getRiotRegionalRoute,
+  normalizeRiotPlatformRegion
+} = require('../riot-api');
 const { createStatePublisher } = require('./state-publisher');
 const { createLaneMatchupController } = require('./lane-matchup-controller');
 const { createMatchHistoryController } = require('./match-history-controller');
@@ -63,7 +67,8 @@ const LCU_ENDPOINTS = {
   summoner: '/lol-summoner/v1/current-summoner',
   gameflowPhase: '/lol-gameflow/v1/gameflow-phase',
   gameflowSession: '/lol-gameflow/v1/session',
-  championSummary: '/lol-game-data/assets/v1/champion-summary.json'
+  championSummary: '/lol-game-data/assets/v1/champion-summary.json',
+  regionLocale: '/riotclient/region-locale'
 };
 const LOCKFILE_RETRY_MS = 5000;
 const WEBSOCKET_RECONNECT_MS = 3000;
@@ -89,6 +94,7 @@ const SPLASH_LOAD_TIMEOUT_MS = 3000;
 type StoredSettings = {
   lolInstallDir: string;
   riotPlatformRegion: RiotPlatformRegion;
+  riotRegionalRoute: import('../types/domain/settings').RiotRegionalRoute;
   themeMode: ThemeMode;
 };
 
@@ -141,7 +147,6 @@ function bootstrap(): void {
   const matchHistoryController = createMatchHistoryController({
     dialog,
     getMainWindow: () => mainWindow,
-    getSettings: () => settings,
     getState: statePublisher.getState,
     updateState: statePublisher.updateState,
     createMatchHistoryStatus,
@@ -189,6 +194,18 @@ function bootstrap(): void {
     updateState: statePublisher.updateState,
     getLaneMatchupController: () => laneMatchupController,
     getMatchHistoryController: () => matchHistoryController,
+    getRiotRoutingFromLcu: async (regionLocale: unknown) => {
+      const lcuRegion = (regionLocale as { region?: unknown } | null)?.region;
+      const riotPlatformRegion = getRiotPlatformRegionFromLcuRegion(lcuRegion);
+      if (!riotPlatformRegion) {
+        log.warn('Unknown LCU region; Riot API calls will remain unavailable', { lcuRegion: String(lcuRegion || '') });
+        return null;
+      }
+      const riotRegionalRoute = getRiotRegionalRoute(riotPlatformRegion);
+      matchHistoryController.scheduleStartupIfReady('lcu-region-detected');
+      log.debug('Riot routing detected from LCU', { riotPlatformRegion, riotRegionalRoute });
+      return { riotPlatformRegion, riotRegionalRoute };
+    },
     endpoints: LCU_ENDPOINTS,
     lockfileRetryMs: LOCKFILE_RETRY_MS,
     websocketReconnectMs: WEBSOCKET_RECONNECT_MS,
@@ -354,7 +371,11 @@ function bootstrap(): void {
   }
 
   async function updateRiotPlatformRegion(_event: unknown, riotPlatformRegion: unknown): Promise<PublicSettings> {
-    await saveSettings({ riotPlatformRegion: normalizeRiotPlatformRegion(riotPlatformRegion) });
+    const normalizedRegion = normalizeRiotPlatformRegion(riotPlatformRegion);
+    await saveSettings({
+      riotPlatformRegion: normalizedRegion,
+      riotRegionalRoute: getRiotRegionalRoute(normalizedRegion)
+    });
     matchHistoryController.scheduleStartupIfReady('riot-region-saved');
     return createPublicSettings(settings);
   }
@@ -490,7 +511,11 @@ function bootstrap(): void {
           getChampionIcon: lcuController.getClient().getChampionIcon,
           getChampionPool: () => championPool,
           saveChampionPool,
-          getSettings: () => createPublicSettings(settings),
+          getSettings: () => ({
+            ...statePublisher.getState().settings,
+            detectedRiotPlatformRegion: statePublisher.getState().detectedRiotPlatformRegion,
+            detectedRiotRegionalRoute: statePublisher.getState().detectedRiotRegionalRoute
+          }),
           getClientVersion,
           chooseLolInstallDir,
           updateLolInstallDir,

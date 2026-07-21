@@ -9,9 +9,6 @@ import type {
   MatchHistorySummary,
   SelfVsLaneOpponentStats
 } from '../types/domain/match-history';
-import type { RiotPlatformRegion } from '../types/domain/settings';
-
-const { normalizeRiotPlatformRegion } = require('../riot-api');
 const {
   aggregateEnemyChampionStats,
   aggregateChampionStats,
@@ -32,8 +29,6 @@ type Timer = ReturnType<typeof setTimeout>;
 type RiotId = { gameName: string; tagLine: string };
 type MatchId = string | number;
 type MatchMap = Record<string, unknown>;
-type SettingsLike = { riotPlatformRegion: RiotPlatformRegion | string };
-
 interface PublishedMatchHistorySnapshot {
   summary: MatchHistorySummary;
   normalizedMatches: unknown[];
@@ -66,7 +61,6 @@ interface RiotMatchHistoryServiceLike {
 interface MatchHistoryControllerDeps {
   dialog: DialogLike;
   getMainWindow: () => unknown;
-  getSettings: () => SettingsLike;
   getState: () => AppState;
   updateState: (patch: Partial<AppState>) => void;
   createMatchHistoryStatus: (patch?: Partial<MatchHistoryStatus>) => MatchHistoryStatus;
@@ -117,7 +111,6 @@ interface MatchHistoryController {
 function createMatchHistoryController({
   dialog,
   getMainWindow,
-  getSettings,
   getState,
   updateState,
   createMatchHistoryStatus,
@@ -514,7 +507,10 @@ function createMatchHistoryController({
       }
 
       const riotId = getRiotIdFromSummoner(getState().summoner);
-      const region = normalizeRiotPlatformRegion(getSettings().riotPlatformRegion);
+      const region = getState().detectedRiotPlatformRegion;
+      if (!region) {
+        throw new Error('LoLクライアントからログイン先サーバを検出できていません');
+      }
       const onRetry = createRiotRetryHandler();
       const storagePuuid = currentSummonerPuuid;
       await riotMatchHistoryService.requestBffHealth({

@@ -2,12 +2,46 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   DEFAULT_RIOT_BFF_BASE_URL,
+  getRiotRegionalRouteFromLcuRegion,
+  getRiotPlatformRegionFromLcuRegion,
   getRetryDelayMs,
   normalizeRiotBffBaseUrl,
   parseRetryAfterMs,
   RiotApiError,
   requestRiotBffJson
 } = require('../riot-api');
+
+test('getRiotRegionalRouteFromLcuRegion derives Match-V5 routes without a platform ID', () => {
+  assert.equal(getRiotRegionalRouteFromLcuRegion('JP'), 'ASIA');
+  assert.equal(getRiotRegionalRouteFromLcuRegion('NA'), 'AMERICAS');
+  assert.equal(getRiotRegionalRouteFromLcuRegion('EUW'), 'EUROPE');
+  assert.equal(getRiotRegionalRouteFromLcuRegion('PH'), 'SEA');
+  assert.equal(getRiotRegionalRouteFromLcuRegion('unknown'), null);
+});
+
+test('getRiotPlatformRegionFromLcuRegion supports every current LoL platform', () => {
+  assert.deepEqual({
+    BR: getRiotPlatformRegionFromLcuRegion('BR'),
+    EUNE: getRiotPlatformRegionFromLcuRegion('EUNE'),
+    EUW: getRiotPlatformRegionFromLcuRegion('EUW'),
+    JP: getRiotPlatformRegionFromLcuRegion('JP'),
+    KR: getRiotPlatformRegionFromLcuRegion('KR'),
+    LAN: getRiotPlatformRegionFromLcuRegion('LAN'),
+    LAS: getRiotPlatformRegionFromLcuRegion('LAS'),
+    NA: getRiotPlatformRegionFromLcuRegion('NA'),
+    OCE: getRiotPlatformRegionFromLcuRegion('OCE'),
+    TR: getRiotPlatformRegionFromLcuRegion('TR'),
+    RU: getRiotPlatformRegionFromLcuRegion('RU'),
+    SG: getRiotPlatformRegionFromLcuRegion('SG'),
+    TW: getRiotPlatformRegionFromLcuRegion('TW'),
+    VN: getRiotPlatformRegionFromLcuRegion('VN')
+  }, {
+    BR: 'BR1', EUNE: 'EUN1', EUW: 'EUW1', JP: 'JP1', KR: 'KR',
+    LAN: 'LA1', LAS: 'LA2', NA: 'NA1', OCE: 'OC1', TR: 'TR1', RU: 'RU', SG: 'SG2', TW: 'TW2', VN: 'VN2'
+  });
+  assert.equal(getRiotPlatformRegionFromLcuRegion('PH'), 'SG2');
+  assert.equal(getRiotPlatformRegionFromLcuRegion('TH'), 'SG2');
+});
 
 test('parseRetryAfterMs supports seconds', () => {
   assert.equal(parseRetryAfterMs('1.5'), 1500);
