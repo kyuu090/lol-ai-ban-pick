@@ -217,6 +217,11 @@
     grid-template-columns: 1fr;
   }
 
+  .draft-champion-card-grid,
+  .pool-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .draft-recommend-shell .stats-api-keystone-list,
   .draft-recommend-grid .stats-api-rune-page,
   .draft-recommend-grid .stats-api-rune-page-secondary-row {

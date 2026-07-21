@@ -13,6 +13,18 @@
         }
         return new URL(`/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/details`, baseUrl).toString();
       };
+    const buildStatsApiMatchupsUrl = typeof statsApiHelpers.buildStatsApiMatchupsUrl === 'function'
+      ? statsApiHelpers.buildStatsApiMatchupsUrl
+      : (filters: any, baseUrl = 'https://db.banpick-ai.lol') => {
+        const position = String(filters?.position || '').trim().toUpperCase();
+        const championId = Number(filters?.championId) || 0;
+        if (!position || !championId) {
+          throw new Error('StatsAPI matchup filters are required.');
+        }
+        const url = new URL(`/v1/stats/positions/${encodeURIComponent(position)}/champions/${championId}/matchups`, baseUrl);
+        url.searchParams.set('minGames', String(Math.max(0, Math.floor(Number(filters?.minGames) || 0))));
+        return url.toString();
+      };
     const formatStatsApiErrorMessage = typeof statsApiHelpers.formatStatsApiErrorMessage === 'function'
       ? statsApiHelpers.formatStatsApiErrorMessage
       : (error: any) => String(error?.message || error || 'StatsAPIを取得できませんでした。');
@@ -97,6 +109,18 @@
     let selectedRecommendationKeystoneId = 0;
     let draftRecommendationOpponentChampionId = 0;
     const draftRecommendationResponseCache = new Map<string, any>();
+    const DRAFT_MATCHUP_DEFAULT_MIN_GAMES = 40;
+    const DRAFT_MATCHUP_MIN_GAMES_OPTIONS = [0, 20, 40, 60, 100];
+    const DRAFT_MATCHUP_LIMIT = 5;
+    let draftMatchupMinGames = DRAFT_MATCHUP_DEFAULT_MIN_GAMES;
+    let draftMatchupRequestId = 0;
+    let draftMatchupQueryKey = '';
+    let draftMatchupStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+    let draftMatchupError = '';
+    let draftMatchupData: any = null;
+    const draftMatchupResponseCache = new Map<string, any>();
+    const draftChampionBackgroundCache = new Map<number, { image: HTMLImageElement; src: string }>();
+    const draftChampionBackgroundPromiseCache = new Map<number, Promise<string | null>>();
     interface DraftRuneAssetEntry {
       iconPath?: string;
       id: number;
@@ -196,6 +220,13 @@
       selectedRecommendationKeystoneId = 0;
       draftRecommendationOpponentChampionId = 0;
       draftRecommendationResponseCache.clear();
+      draftMatchupRequestId += 1;
+      draftMatchupQueryKey = '';
+      draftMatchupStatus = 'idle';
+      draftMatchupError = '';
+      draftMatchupData = null;
+      draftMatchupMinGames = DRAFT_MATCHUP_DEFAULT_MIN_GAMES;
+      draftMatchupResponseCache.clear();
       setDraftRecommendationVisibility(false);
     }
 
@@ -857,20 +888,140 @@
         row.style.setProperty('--pick-card-image-opacity', options.selected ? '0.98' : options.intent ? '0.82' : '0.9');
         row.classList.add('has-champion-background');
       };
-      const backgroundUrl = getChampionBackgroundUrl(championId);
-      if (backgroundUrl) {
-        setBackground(backgroundUrl);
+      const numericChampionId = normalizePositiveId(championId);
+      const cachedBackground = draftChampionBackgroundCache.get(numericChampionId);
+      if (cachedBackground?.src) {
+        setBackground(cachedBackground.src);
         return;
       }
 
-      const image = doc.createElement('img');
-      const applyBackground = () => {
-        const src = String((image as HTMLImageElement).src || '');
-        setBackground(src);
-      };
-      image.addEventListener('load', applyBackground);
-      deps.loadChampionIcon(image as HTMLImageElement, championId);
-      applyBackground();
+      const tileUrl = getChampionBackgroundUrl(numericChampionId);
+      if (tileUrl) setBackground(tileUrl);
+      void resolveDraftChampionBackground(numericChampionId, tileUrl).then((src) => {
+        if (src) setBackground(src);
+      });
+    }
+
+    function resolveDraftChampionBackground(championId: number, tileUrl: string): Promise<string | null> {
+      const cachedBackground = draftChampionBackgroundCache.get(championId);
+      if (cachedBackground?.src) return Promise.resolve(cachedBackground.src);
+      const pendingBackground = draftChampionBackgroundPromiseCache.get(championId);
+      if (pendingBackground) return pendingBackground;
+
+      const promise = new Promise<string | null>((resolve) => {
+        const cacheAndResolve = (image: HTMLImageElement, src: string) => {
+          if (src) draftChampionBackgroundCache.set(championId, { image, src });
+          draftChampionBackgroundPromiseCache.delete(championId);
+          resolve(src || null);
+        };
+        const loadFallbackIcon = () => {
+          const fallbackImage = doc.createElement('img') as HTMLImageElement;
+          fallbackImage.addEventListener('load', () => {
+            cacheAndResolve(fallbackImage, String(fallbackImage.src || ''));
+          }, { once: true });
+          fallbackImage.addEventListener('error', () => {
+            draftChampionBackgroundPromiseCache.delete(championId);
+            resolve(null);
+          }, { once: true });
+          const loadFallback = deps.loadChampionIconEager || deps.loadChampionIcon;
+          loadFallback(fallbackImage, championId);
+          if (fallbackImage.complete && fallbackImage.naturalWidth > 0 && fallbackImage.src) {
+            cacheAndResolve(fallbackImage, String(fallbackImage.src));
+          }
+        };
+
+        if (!tileUrl) {
+          loadFallbackIcon();
+          return;
+        }
+
+        const tileImage = doc.createElement('img') as HTMLImageElement;
+        tileImage.addEventListener('load', () => {
+          cacheAndResolve(tileImage, tileUrl);
+        }, { once: true });
+        tileImage.addEventListener('error', loadFallbackIcon, { once: true });
+        tileImage.src = tileUrl;
+        if (tileImage.complete && tileImage.naturalWidth > 0) {
+          cacheAndResolve(tileImage, tileUrl);
+        }
+      });
+      draftChampionBackgroundPromiseCache.set(championId, promise);
+      void promise.finally(() => {
+        if (draftChampionBackgroundPromiseCache.get(championId) === promise) {
+          draftChampionBackgroundPromiseCache.delete(championId);
+        }
+      });
+      return promise;
+    }
+
+    function getDraftMatchupContext(champSelect: any, localMember: any, activeAction: any): any | null {
+      const position = String(localMember?.assignedPosition || '').trim().toUpperCase();
+      const actionType = String(activeAction?.type || '').toLowerCase();
+      const isDraftActionPhase = String(champSelect?.timer?.phase || '').toUpperCase() === 'BAN_PICK';
+      if (!position || !isDraftActionPhase || !activeAction) return null;
+
+      if (actionType === 'ban') {
+        if (!activeAction.isInProgress) return null;
+        const plannedChampionId = normalizePositiveId(deps.getMemberChampionId(localMember));
+        return plannedChampionId ? { mode: 'ban', championId: plannedChampionId, position } : null;
+      }
+
+      if (actionType === 'pick') {
+        const opponentChampionId = normalizePositiveId(getMarkedLaneOpponentChampionId(champSelect));
+        return opponentChampionId ? { mode: 'pick', championId: opponentChampionId, position } : null;
+      }
+      return null;
+    }
+
+    function buildDraftMatchupQueryKey(context: any): string {
+      return context ? `${context.mode}:${buildStatsApiMatchupsUrl({
+        championId: context.championId,
+        position: context.position,
+        minGames: draftMatchupMinGames
+      })}` : '';
+    }
+
+    async function refreshDraftMatchupInsights(champSelect: any, localMember: any, activeAction: any): Promise<void> {
+      const context = getDraftMatchupContext(champSelect, localMember, activeAction);
+      const queryKey = buildDraftMatchupQueryKey(context);
+      if (!context || !queryKey) {
+        draftMatchupRequestId += 1;
+        draftMatchupQueryKey = '';
+        draftMatchupStatus = 'idle';
+        draftMatchupError = '';
+        draftMatchupData = null;
+        return;
+      }
+      if (draftMatchupQueryKey === queryKey && (draftMatchupStatus === 'loading' || draftMatchupStatus === 'ready')) return;
+
+      draftMatchupQueryKey = queryKey;
+      draftMatchupStatus = 'loading';
+      draftMatchupError = '';
+      draftMatchupData = null;
+      const requestId = ++draftMatchupRequestId;
+      if (!deps.requestStatsApiJson) {
+        draftMatchupStatus = 'error';
+        draftMatchupError = 'StatsAPI request helper が利用できません。';
+        renderDraftFocus(champSelect, activeAction);
+        return;
+      }
+
+      try {
+        const requestUrl = queryKey.slice(queryKey.indexOf(':') + 1);
+        const cachedResponse = draftMatchupResponseCache.get(requestUrl);
+        const response = cachedResponse || await deps.requestStatsApiJson(requestUrl);
+        if (requestId !== draftMatchupRequestId || draftMatchupQueryKey !== queryKey) return;
+        draftMatchupResponseCache.set(requestUrl, response);
+        draftMatchupData = response?.data || null;
+        draftMatchupStatus = 'ready';
+        renderDraftFocus(champSelect, activeAction);
+      } catch (error: any) {
+        if (requestId !== draftMatchupRequestId || draftMatchupQueryKey !== queryKey) return;
+        draftMatchupData = null;
+        draftMatchupStatus = 'error';
+        draftMatchupError = formatStatsApiErrorMessage(error);
+        renderDraftFocus(champSelect, activeAction);
+      }
     }
 
     function renderChampSelect(champSelect: any, gameflowPhase: any): void {
@@ -897,6 +1048,7 @@
         localAssignedPosition: localMember?.assignedPosition,
         markedLaneOpponentCellId: deps.getMarkedLaneOpponentCellId()
       });
+      void refreshDraftMatchupInsights(champSelect, localMember, activeAction);
       void refreshDraftRecommendations(localMember, champSelect);
       renderDraftFocus(champSelect, activeAction);
       if (isLocalPickTurn) {
@@ -1081,12 +1233,14 @@
         }
         elements.currentPick.textContent = isLocalTurn
           ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
-          : isDraftActionPhase && isActionInProgress ? `Summoner ${(activeAction.actorCellId ?? 0) + 1} の操作待ちです` : 'チャンピオン選択情報を監視しています。';
+          : '';
+        elements.currentPick.hidden = !isLocalTurn;
         return;
       }
 
       elements.currentAction.textContent = localMember?.championId ? deps.championLabel(localMember.championId) : '待機中';
-      elements.currentPick.textContent = 'チャンピオン選択情報を監視しています。';
+      elements.currentPick.textContent = '';
+      elements.currentPick.hidden = true;
     }
 
     function renderDraftSelfSummary(localMember: any): void {
@@ -1150,7 +1304,7 @@
 
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       const minGames = getBanInsightMinGames();
-      const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position, minGames);
+      const plannedPickThreatSection = createPlannedPickBanThreatSection(champSelect, localMember, position);
       const laneStats = deps.sortWorstWinRateStats(deps.getMatchHistoryLaneOpponentStats().filter((stats: any) => (
         String(stats.position || '').toUpperCase() === position &&
         Number(stats.games || 0) >= minGames
@@ -1160,15 +1314,53 @@
       ))).slice(0, deps.BAN_INSIGHT_LIMIT);
 
       const sections = [
-        createBanInsightSampleControl(champSelect, localMember),
-        createBanInsightSection(`${deps.positionLabel(position)} lane opponents`, laneStats)
+        createLaneOpponentInsightSection(champSelect, localMember, position, laneStats)
       ];
       if (plannedPickThreatSection) {
-        sections.splice(1, 0, plannedPickThreatSection);
+        sections.unshift(plannedPickThreatSection);
       }
-      sections.push(createCollapsedBanInsightSection('Worst enemy picks', enemyStats));
+      sections.push(createCollapsedBanInsightSection('Your toughest enemy champions', enemyStats));
 
       panel.replaceChildren(...sections);
+    }
+
+    function createLaneOpponentInsightSection(
+      champSelect: any,
+      localMember: any,
+      position: string,
+      statsList: any[]
+    ): HTMLElement {
+      const section = doc.createElement('section');
+      section.className = 'ban-insight-section lane-history-section';
+
+      const header = doc.createElement('div');
+      header.className = 'ban-insight-section-header';
+      header.append(
+        createText(
+          'ban-insight-section-title',
+          `Your lowest-win-rate ${deps.positionLabel(position)} matchups`,
+          'h4'
+        ),
+        createBanInsightSampleControl(champSelect, localMember)
+      );
+      section.append(header);
+
+      if (!statsList.length) {
+        section.append(createText('ban-insight-empty', 'No match data', 'p'));
+        return section;
+      }
+
+      const list = doc.createElement('ol');
+      list.className = 'draft-champion-card-grid lane-history-card-grid';
+      statsList.forEach((stats: any) => {
+        list.append(createDraftChampionCard(
+          normalizePositiveId(stats?.championId),
+          stats,
+          { tone: 'threat', winRateLabel: 'WR' }
+        ));
+      });
+      section.append(list);
+      return section;
     }
 
     function getBanInsightMinGames(): number {
@@ -1183,10 +1375,10 @@
       label.className = 'ban-insight-sample-filter';
 
       const text = doc.createElement('span');
-      text.textContent = 'Sample';
+      text.textContent = 'Min. games';
 
       const select = doc.createElement('select');
-      select.setAttribute('aria-label', 'Ban insight sample filter');
+      select.setAttribute('aria-label', 'Minimum games for lane matchup history');
       deps.BAN_INSIGHT_SAMPLE_OPTIONS.forEach((games: number) => {
         const option = doc.createElement('option');
         option.value = String(games);
@@ -1205,16 +1397,8 @@
       return control;
     }
 
-    function createPlannedPickBanThreatSection(champSelect: any, localMember: any, position: string, minGames: number): HTMLElement | null {
-      const { plannedChampionId, statsList } = deps.getPlannedPickThreatStats({
-        stats: deps.getMatchHistorySelfVsLaneOpponentStats().filter((stats: any) => (
-          Number(stats.games || 0) >= minGames &&
-          Number(stats.winRate || 0) < 0.5
-        )),
-        champSelect,
-        localMember,
-        limit: deps.BAN_INSIGHT_LIMIT
-      });
+    function createPlannedPickBanThreatSection(champSelect: any, localMember: any, position: string): HTMLElement | null {
+      const plannedChampionId = normalizePositiveId(deps.getMemberChampionId(localMember));
       if (!plannedChampionId || !position) return null;
 
       const section = doc.createElement('section');
@@ -1222,41 +1406,51 @@
 
       const heading = doc.createElement('h4');
       heading.append(
-        'Threats for your ',
+        'Counters to ',
         deps.createInlineChampionName(plannedChampionId, 'inline-champion-name heading-champion-name'),
-        ` ${deps.positionLabel(position)}`
+        ` (${deps.positionLabel(position)})`,
+        createDraftMatchupMinGamesControl(champSelect, localMember)
       );
       section.append(heading);
+
+      if (draftMatchupStatus === 'loading') {
+        section.append(createText('ban-insight-empty', 'StatsAPIからカウンター候補を取得中です。', 'p'));
+        return section;
+      }
+      if (draftMatchupStatus === 'error') {
+        section.append(createText('ban-insight-empty', draftMatchupError || 'カウンター候補を取得できませんでした。', 'p'));
+        return section;
+      }
+
+      const allyPlannedChampionIds = new Set((Array.isArray(champSelect?.myTeam) ? champSelect.myTeam : [])
+        .flatMap((member: any) => [normalizePositiveId(member?.championId), normalizePositiveId(member?.championPickIntent)])
+        .filter(Boolean));
+      const statsList = (Array.isArray(draftMatchupData?.matchups) ? draftMatchupData.matchups : [])
+        .map((entry: any) => ({
+          championId: normalizePositiveId(entry?.opponentChampionId),
+          games: Number(entry?.games) || 0,
+          wins: Number(entry?.wins) || 0,
+          winRate: Number(entry?.winRateVsOpponent)
+        }))
+        .filter((entry: any) => entry.championId && !allyPlannedChampionIds.has(entry.championId))
+        .sort((a: any, b: any) => (a.winRate - b.winRate) || (b.games - a.games) || (a.championId - b.championId))
+        .slice(0, DRAFT_MATCHUP_LIMIT);
 
       if (!statsList.length) {
         const empty = doc.createElement('p');
         empty.className = 'ban-insight-empty';
-        empty.textContent = 'No losing same-role matchup history';
+        empty.textContent = `対象データがありません（${draftMatchupMinGames}+ games）`;
         section.append(empty);
         return section;
       }
 
       const list = doc.createElement('ol');
+      list.className = 'draft-champion-card-grid counter-card-grid';
       statsList.forEach((stats: any) => {
-        list.append(createPlannedPickBanThreatItem(stats));
+        list.append(createDraftChampionCard(stats.championId, stats, { tone: 'threat', winRateLabel: 'WR' }));
       });
       section.append(list);
       return section;
-    }
-
-    function createPlannedPickBanThreatItem(stats: any): HTMLLIElement {
-      const item = doc.createElement('li');
-
-      const nameBlock = doc.createElement('span');
-      nameBlock.className = 'ban-insight-name';
-      nameBlock.append(deps.createInlineChampionName(stats.opponentChampionId));
-
-      const detail = deps.createWinRateStatsElement(stats, { includeKda: true });
-
-      item.append(nameBlock, detail);
-      deps.appendLowSampleBadge(nameBlock, stats.games);
-
-      return item;
     }
 
     function renderPickPoolInsights(visible: boolean, champSelect: any, localMember: any): void {
@@ -1269,25 +1463,43 @@
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       const championIds = lane ? normalizedChampionPool[lane.id] || [] : [];
       const unavailableReasons = deps.collectUnavailableChampionReasons(champSelect);
+      const opponentChampionId = getMarkedLaneOpponentChampionId(champSelect);
+      const matchupStatsByChampionId = getLocalPoolMatchupStatsByChampionId(opponentChampionId, position);
       const candidates = championIds.map((championId: number) => {
-        const stats = deps.getChampionRoleDisplayStats(championId, position);
+        const overallStats = deps.getChampionRoleDisplayStats(championId, position);
+        const matchupStats = opponentChampionId ? matchupStatsByChampionId.get(Number(championId)) || null : null;
         const unavailableReason = unavailableReasons.get(Number(championId)) || '';
 
         return {
           championId,
-          stats,
+          stats: opponentChampionId ? matchupStats : overallStats,
+          sortStats: opponentChampionId ? matchupStats : overallStats,
           unavailableReason,
           available: !unavailableReason
         };
       });
-      const sortedCandidates = deps.sortPickPoolCandidates(candidates, deps.RELIABLE_SAMPLE_GAMES);
-      const visibleCandidates = sortedCandidates.slice(0, deps.PICK_POOL_CANDIDATE_LIMIT);
+      const sortedCandidates = [...candidates].sort((a: any, b: any) => (
+        (Number(b.available) - Number(a.available)) ||
+        (Number(b.sortStats?.winRate ?? -1) - Number(a.sortStats?.winRate ?? -1)) ||
+        (Number(b.sortStats?.games || 0) - Number(a.sortStats?.games || 0)) ||
+        (Number(a.championId) - Number(b.championId))
+      ));
+      const visibleCandidates = sortedCandidates;
 
       const header = doc.createElement('section');
       header.className = 'pick-pool-header';
 
       const title = doc.createElement('h4');
-      title.textContent = lane ? `Your ${lane.label} Pool` : 'Your Pool';
+      title.append(lane ? `Your ${lane.label} Pool` : 'Your Pool');
+      if (opponentChampionId) {
+        title.append(
+          ' vs ',
+          deps.createInlineChampionName(
+            opponentChampionId,
+            'inline-champion-name heading-champion-name'
+          )
+        );
+      }
 
       const summary = doc.createElement('p');
       summary.textContent = championIds.length > 0
@@ -1309,9 +1521,9 @@
       }
 
       const list = doc.createElement('ol');
-      list.className = 'pick-pool-list';
+      list.className = 'pick-pool-list draft-champion-card-grid pool-card-grid';
       visibleCandidates.forEach((candidate: any) => {
-        list.append(createPickPoolCandidateItem(candidate, position));
+        list.append(createPickPoolCandidateItem(candidate, Boolean(opponentChampionId)));
       });
 
       panel.replaceChildren(
@@ -1339,13 +1551,6 @@
       const position = String(localMember?.assignedPosition || '').toUpperCase();
       if (!opponentChampionId || !position) return [];
 
-      const statsList = deps.getBestIntoOpponentStats({
-        stats: deps.getMatchHistorySelfVsLaneOpponentStats(),
-        opponentChampionId,
-        position,
-        limit: 5
-      });
-
       const section = doc.createElement('section');
       section.className = 'marked-opponent-insight';
 
@@ -1353,30 +1558,81 @@
       header.className = 'pick-pool-header';
 
       const title = doc.createElement('h4');
-      title.append('Best into ', deps.createInlineChampionName(opponentChampionId, 'inline-champion-name heading-champion-name'));
+      title.append('Best picks against ', deps.createInlineChampionName(opponentChampionId, 'inline-champion-name heading-champion-name'));
 
-      const summary = doc.createElement('p');
-      summary.textContent = `${deps.positionLabel(position)} history`;
+      const summary = createDraftMatchupMinGamesControl(champSelect, localMember);
 
       header.append(title, summary);
       section.append(header);
 
+      if (draftMatchupStatus === 'loading') {
+        section.append(createText('ban-insight-empty', 'StatsAPIから有利候補を取得中です。', 'p'));
+        return [section];
+      }
+      if (draftMatchupStatus === 'error') {
+        section.append(createText('ban-insight-empty', draftMatchupError || '有利候補を取得できませんでした。', 'p'));
+        return [section];
+      }
+
+      const unavailableReasons = deps.collectUnavailableChampionReasons(champSelect);
+      const statsList = (Array.isArray(draftMatchupData?.matchups) ? draftMatchupData.matchups : [])
+        .map((entry: any) => {
+          const games = Number(entry?.games) || 0;
+          const opponentWins = Number(entry?.wins) || 0;
+          const opponentWinRate = Number(entry?.winRateVsOpponent);
+          return {
+            championId: normalizePositiveId(entry?.opponentChampionId),
+            games,
+            wins: Math.max(0, games - opponentWins),
+            winRate: Number.isFinite(opponentWinRate) ? 1 - opponentWinRate : 0
+          };
+        })
+        .filter((entry: any) => entry.championId && !unavailableReasons.has(entry.championId))
+        .sort((a: any, b: any) => (b.winRate - a.winRate) || (b.games - a.games) || (a.championId - b.championId))
+        .slice(0, DRAFT_MATCHUP_LIMIT);
+
       if (!statsList.length) {
         const empty = doc.createElement('p');
         empty.className = 'ban-insight-empty';
-        empty.textContent = 'No direct history';
+        empty.textContent = `対象データがありません（${draftMatchupMinGames}+ games）`;
         section.append(empty);
         return [section];
       }
 
       const list = doc.createElement('ol');
-      list.className = 'pick-pool-list marked-opponent-list';
+      list.className = 'pick-pool-list marked-opponent-list draft-champion-card-grid counter-card-grid';
       statsList.forEach((stats: any) => {
-        list.append(createMarkedOpponentPickItem(stats));
+        list.append(createDraftChampionCard(stats.championId, stats, { tone: 'counter', winRateLabel: '対面WR' }));
       });
       section.append(list);
 
       return [section];
+    }
+
+    function createDraftMatchupMinGamesControl(champSelect: any, localMember: any): HTMLLabelElement {
+      const label = doc.createElement('label');
+      label.className = 'draft-matchup-min-games';
+      label.append(createText('draft-matchup-source', 'MIN. GAMES'));
+
+      const select = doc.createElement('select');
+      select.setAttribute('aria-label', 'Minimum games for StatsAPI matchups');
+      DRAFT_MATCHUP_MIN_GAMES_OPTIONS.forEach((games) => {
+        const option = doc.createElement('option');
+        option.value = String(games);
+        option.textContent = games === 0 ? 'All' : `${games}+`;
+        select.append(option);
+      });
+      select.value = String(draftMatchupMinGames);
+      select.addEventListener('change', () => {
+        draftMatchupMinGames = DRAFT_MATCHUP_MIN_GAMES_OPTIONS.includes(Number(select.value))
+          ? Number(select.value)
+          : DRAFT_MATCHUP_DEFAULT_MIN_GAMES;
+        const activeAction = deps.getActiveAction(champSelect, champSelect?.localPlayerCellId);
+        void refreshDraftMatchupInsights(champSelect, localMember, activeAction);
+        renderDraftFocus(champSelect, activeAction);
+      });
+      label.append(select);
+      return label;
     }
 
     function getMarkedLaneOpponentChampionId(champSelect: any): number | null {
@@ -1388,66 +1644,62 @@
       return championId > 0 ? championId : null;
     }
 
-    function createMarkedOpponentPickItem(stats: any): HTMLLIElement {
-      const item = doc.createElement('li');
-      item.className = 'pick-pool-candidate marked-opponent-candidate';
-
-      const name = deps.createInlineChampionName(stats.championId);
-
-      const detail = deps.createWinRateStatsElement(stats, { includeGames: false, includeKda: true });
-      item.append(name, detail);
-
-      deps.appendLowSampleBadge(item, stats.games);
-
-      return item;
-    }
-
-    function createPickPoolCandidateItem(candidate: any, position: string): HTMLLIElement {
-      const item = doc.createElement('li');
-      item.className = `pick-pool-candidate${candidate.available ? '' : ' unavailable'}`;
-
-      const name = deps.createInlineChampionName(candidate.championId);
-
-      const detail = createPickPoolCandidateStatsElement(candidate.stats, position);
-
-      item.append(name, detail);
-
-      if (candidate.unavailableReason) {
-        const status = doc.createElement('em');
-        status.textContent = candidate.unavailableReason;
-        item.append(status);
-      } else {
-        deps.appendLowSampleBadge(item, candidate.stats?.games);
-      }
-
-      return item;
-    }
-
-    function createPickPoolCandidateStatsElement(stats: any, position: string): HTMLSpanElement {
-      const container = doc.createElement('span');
-      container.className = 'pick-pool-stats';
-
-      if (!stats || !stats.games) {
-        container.append(deps.createPickPoolStatChip('Games', `No ${deps.positionLabel(position)}`));
-        return container;
-      }
-
-      const wins = Number(stats.wins || 0);
-      const losses = Number.isFinite(stats.losses) ? stats.losses : Math.max(0, Number(stats.games || 0) - wins);
-      [
-        ['W-L', `${wins}-${losses}`],
-        ['WR', deps.formatPercent(stats.winRate)],
-        ['KDA', deps.formatAverageKda(stats)]
-      ].forEach(([label, value]) => {
-        container.append(deps.createPickPoolStatChip(label, value));
+    function createPickPoolCandidateItem(candidate: any, hasOpponent: boolean): HTMLLIElement {
+      const item = createDraftChampionCard(candidate.championId, candidate.stats, {
+        tone: 'pool',
+        winRateLabel: hasOpponent ? '対面WR' : 'WR'
       });
-
-      return container;
+      item.classList.toggle('unavailable', !candidate.available);
+      if (candidate.unavailableReason) item.append(createText('draft-champion-card-status', candidate.unavailableReason, 'em'));
+      return item;
     }
 
-    function createBanInsightSection(title: string, statsList: any[]): HTMLElement {
+    function getLocalPoolMatchupStatsByChampionId(opponentChampionId: number | null, position: string): Map<number, any> {
+      const statsByChampionId = new Map<number, any>();
+      if (!opponentChampionId || !position) return statsByChampionId;
+      (Array.isArray(deps.getMatchHistorySelfVsLaneOpponentStats?.())
+        ? deps.getMatchHistorySelfVsLaneOpponentStats()
+        : []).forEach((entry: any) => {
+        const championId = normalizePositiveId(entry?.championId);
+        if (
+          !championId ||
+          normalizePositiveId(entry?.opponentChampionId) !== opponentChampionId ||
+          String(entry?.position || '').toUpperCase() !== position
+        ) return;
+        statsByChampionId.set(championId, {
+          ...entry,
+          championId
+        });
+      });
+      return statsByChampionId;
+    }
+
+    function createDraftChampionCard(
+      championId: number,
+      stats: any,
+      options: { tone?: 'threat' | 'counter' | 'pool'; winRateLabel?: string } = {}
+    ): HTMLLIElement {
+      const item = doc.createElement('li');
+      item.className = `pick-pool-candidate draft-champion-card ${options.tone || 'pool'}`;
+      applyPickCardBackground(item, championId, { selected: true });
+
+      const name = createText('draft-champion-card-name', deps.championLabel(championId), 'strong');
+      const statsRow = doc.createElement('span');
+      statsRow.className = 'pick-pool-stats draft-champion-card-stats';
+      const games = Number(stats?.games) || 0;
+      const winRate = Number(stats?.winRate);
+      statsRow.append(deps.createPickPoolStatChip(
+        options.winRateLabel || 'WR',
+        Number.isFinite(winRate) ? deps.formatPercent(winRate) : '-'
+      ));
+      statsRow.append(deps.createPickPoolStatChip('Games', games > 0 ? String(Math.round(games)) : '-'));
+      item.append(name, statsRow);
+      return item;
+    }
+
+    function createBanInsightSection(title: string, statsList: any[], className = ''): HTMLElement {
       const section = doc.createElement('section');
-      section.className = 'ban-insight-section';
+      section.className = `ban-insight-section${className ? ` ${className}` : ''}`;
 
       const heading = doc.createElement('h4');
       heading.textContent = title;

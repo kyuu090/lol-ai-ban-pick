@@ -479,8 +479,8 @@ Orianna     No MID games
 - 候補はロール別自己戦績を優先して並べる
 - ロール別サンプルがない場合は fallback せず `No games`
 - サンプルが少ない場合は勝率を強調しすぎず `Low sample` を表示する
-- 対面想定 champion が見えている場合は、同一ロール対面に絞った `Best into ...` を上部に表示する
-- BANフェーズ中に自分の予定pickがある場合は、同一ロール対面に絞った `Threats for your ...` を上部に表示する
+- 対面想定 champion が見えている場合は、同一ロール対面に絞った `Best picks against ...` を上部に表示する
+- BANフェーズ中に自分の予定pickがある場合は、StatsAPIの同一ポジション対面統計を使った `Counters to ...` を上部に表示する
 - champion 名には小さい champion icon を帯同表示する
 
 この候補パネルは、AI 推薦に進む前の deterministic な非AIモードとして扱う。

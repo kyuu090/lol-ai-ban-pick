@@ -60,7 +60,7 @@ type SortableStats = DraftAnyRecord;
     if (member?.championPickIntent) {
       return `${championLabel(member.championPickIntent)} を予定`;
     }
-    return 'PICKING NEXT';
+    return 'PICK PENDING';
   }
 
   function normalizeChampionIds(value: any): number[] {

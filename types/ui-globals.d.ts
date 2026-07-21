@@ -82,6 +82,7 @@ declare global {
     laneToPosition: Record<string, string>;
     normalizeChampionPool(pool: ChampionPool): ChampionPool;
     loadChampionIcon(img: HTMLImageElement, championId: number): void;
+    loadChampionIconEager?(img: HTMLImageElement, championId: number): void;
     championLabel(championId: number): string;
     championTitle(championId: number): string;
     getChampionsById(): Record<string | number, ChampionSummaryItem>;

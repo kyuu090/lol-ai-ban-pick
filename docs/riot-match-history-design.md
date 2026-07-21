@@ -482,9 +482,9 @@ self.position + self.championId + opponentChampionId
 }
 ```
 
-ChampSelect 中に対面想定プレイヤーをマークした場合は、`opponentChampionId + assignedPosition` でこの集計を絞り込み、勝率の高い自分 champion を `Best into ...` として表示する。表示には W-L / WR / KDA を含める。
+ChampSelect 中に対面想定プレイヤーをマークした場合は、`opponentChampionId + assignedPosition` でこの集計を絞り込み、勝率の高い自分 champion を `Best picks against ...` として表示する。表示には W-L / WR / KDA を含める。
 
-BANフェーズ中に自分の予定pickがある場合は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` に該当する `selfVsLaneOpponentStats` だけを使い、勝率の低い同一ロール対面 champion を `Threats for your ...` として表示する。ここでも敵チーム全体や別ロールには fallback しない。
+BANフェーズ中の本人のレーン対面履歴は、担当ポジションに該当する `laneOpponentStats` を勝率の低い順に `Your lowest-win-rate <position> matchups` として表示する。予定pickに対する `Counters to ...` はStatsAPIを使用する。
 
 ## ChampionPool との照合
 
@@ -513,7 +513,7 @@ ChampionPool画面とバンピック中の候補表示では、戦績はチッ�
 
 ChampSelect 中も、自分の行だけ現在の `assignedPosition + championId` のロール別戦績を表示する。味方全員や敵側には、自分の使用戦績を表示しない。
 
-ChampSelect 中の候補名、`Best into ...`、`Threats for your ...` などの champion 名には、champion icon を小さく帯同表示する。画像取得は既存の icon cache / queue を使い、一度に大量取得しない。通常は LCU の `/lol-game-data/assets/v1/champion-icons/<id>.png` を使い、LCU 未接続時や一時的な取得失敗時は Data Dragon へフォールバックする。
+ChampSelect 中の候補名、`Best picks against ...`、`Counters to ...` などの champion 名には、champion icon を小さく帯同表示する。カード背景はData Dragonのタイル画像を維持し、タイルの読み込みが実際に失敗した場合だけLCU／Data Dragonの正方形アイコンへフォールバックする。採用した背景画像はRenderer終了までセッションキャッシュする。
 
 表示・推薦では次を判定する。
 

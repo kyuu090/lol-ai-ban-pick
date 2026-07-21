@@ -888,6 +888,22 @@
   justify-content: flex-end;
 }
 
+.ban-insight-section-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.ban-insight-section-header .ban-insight-control {
+  flex: 0 0 auto;
+}
+
+.ban-insight-section-header .ban-insight-section-title {
+  margin: 0;
+}
+
 .ban-insight-sample-filter {
   align-items: center;
   display: inline-grid;
@@ -1100,6 +1116,162 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.lane-history-card-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.draft-matchup-source {
+  color: var(--muted) !important;
+  font-size: 9px !important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.draft-matchup-min-games {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.draft-matchup-min-games select {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(97, 54, 255, 0.2);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 10px;
+  min-height: 25px;
+  padding: 2px 5px;
+}
+
+.planned-pick-threat-section > h4 {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.draft-champion-card-grid {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pool-card-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-height: 198px;
+  overflow-y: auto;
+  padding-right: 3px;
+  scrollbar-gutter: stable;
+}
+
+.draft-champion-card.pick-pool-candidate {
+  align-items: stretch;
+  background: #11182a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 5px 12px rgba(11, 17, 32, 0.14);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 92px;
+  overflow: hidden;
+  padding: 8px;
+  position: relative;
+}
+
+.pool-card-grid .draft-champion-card {
+  min-height: 82px;
+}
+
+.draft-champion-card::before {
+  background:
+    linear-gradient(180deg, rgba(7, 10, 24, 0.2) 0%, rgba(7, 10, 24, 0.08) 34%, rgba(7, 10, 24, 0.92) 100%),
+    linear-gradient(90deg, rgba(7, 10, 24, 0.28), transparent),
+    var(--pick-card-image, none);
+  background-position: center 18%;
+  background-size: cover;
+  content: "";
+  inset: 0;
+  opacity: var(--pick-card-image-opacity, 0.9);
+  position: absolute;
+}
+
+.draft-champion-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.draft-champion-card.threat {
+  border-color: rgba(255, 88, 123, 0.68);
+}
+
+.draft-champion-card.counter {
+  border-color: rgba(80, 155, 255, 0.72);
+}
+
+.draft-champion-card.pool {
+  border-color: rgba(155, 124, 255, 0.56);
+}
+
+.draft-champion-card .draft-champion-card-name {
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.18;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+.draft-champion-card-stats {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+.draft-champion-card-stats .pick-pool-stat-chip {
+  background: rgba(9, 13, 28, 0.76);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f8f9ff;
+  flex: 1 1 auto;
+  gap: 3px;
+  justify-content: center;
+  min-width: 0;
+  padding: 2px 4px;
+}
+
+.draft-champion-card-stats .pick-pool-stat-chip small {
+  color: rgba(226, 232, 255, 0.72);
+  font-size: 7px;
+}
+
+.draft-champion-card-stats .pick-pool-stat-chip b {
+  color: #fff;
+  font-size: 10px;
+}
+
+.draft-champion-card-status {
+  background: rgba(9, 13, 28, 0.8);
+  border-radius: 5px;
+  color: #ffb4c4 !important;
+  font-size: 9px !important;
+  padding: 3px 5px;
+  position: absolute !important;
+  right: 6px;
+  top: 6px;
+}
+
+.draft-champion-card.unavailable {
+  filter: grayscale(0.8);
+  opacity: 0.6;
 }
 
 .pick-pool-candidate {
