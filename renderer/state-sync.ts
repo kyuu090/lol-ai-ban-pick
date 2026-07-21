@@ -39,7 +39,11 @@
       deps.renderStatus(nextState);
       deps.renderMatchHistoryStatus(nextState.matchHistoryStatus);
       deps.renderMatchDataSummary(nextState.matchHistorySummary, nextState.settings);
-      deps.renderSettings(nextState.settings);
+      deps.renderSettings({
+        ...nextState.settings,
+        detectedRiotPlatformRegion: nextState.detectedRiotPlatformRegion,
+        detectedRiotRegionalRoute: nextState.detectedRiotRegionalRoute
+      });
       deps.renderChampionPool();
       deps.renderPlayedChampionStats();
       deps.renderLaneOpponentStats();

@@ -45,9 +45,7 @@ const RIOT_PLATFORM_REGIONS = [
   'OC1',
   'TR1',
   'RU',
-  'PH2',
   'SG2',
-  'TH2',
   'TW2',
   'VN2'
 ];
@@ -72,6 +70,7 @@ const PLATFORM_TO_REGIONAL_ROUTE = {
 };
 
 const DEFAULT_RIOT_PLATFORM_REGION = 'JP1';
+const RIOT_REGIONAL_ROUTES = ['AMERICAS', 'EUROPE', 'ASIA', 'SEA'];
 const DEFAULT_RIOT_BFF_BASE_URL = 'https://lol-ai-ban-pick-bff-production.up.railway.app';
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 30000;
@@ -92,7 +91,41 @@ class RiotApiError extends Error {
 
 function normalizeRiotPlatformRegion(value: any): string {
   const region = String(value || '').trim().toUpperCase();
+  if (['PH', 'PH2', 'TH', 'TH2'].includes(region)) return 'SG2';
   return RIOT_PLATFORM_REGIONS.includes(region) ? region : DEFAULT_RIOT_PLATFORM_REGION;
+}
+
+function normalizeRiotRegionalRoute(value: any): string {
+  const route = String(value || '').trim().toUpperCase();
+  return RIOT_REGIONAL_ROUTES.includes(route) ? route : 'ASIA';
+}
+
+function getRiotRegionalRouteFromLcuRegion(value: any): string | null {
+  const platformRegion = getRiotPlatformRegionFromLcuRegion(value);
+  return platformRegion ? getRiotRegionalRoute(platformRegion) : null;
+}
+
+function getRiotPlatformRegionFromLcuRegion(value: any): string | null {
+  const region = String(value || '').trim().toUpperCase();
+  const platformByLcuRegion: Record<string, string> = {
+    BR: 'BR1', BR1: 'BR1',
+    EUNE: 'EUN1', EUN1: 'EUN1',
+    EUW: 'EUW1', EUW1: 'EUW1',
+    JP: 'JP1', JP1: 'JP1',
+    KR: 'KR',
+    LAN: 'LA1', LA1: 'LA1',
+    LAS: 'LA2', LA2: 'LA2',
+    NA: 'NA1', NA1: 'NA1',
+    OCE: 'OC1', OC1: 'OC1',
+    TR: 'TR1', TR1: 'TR1',
+    RU: 'RU',
+    PH: 'SG2', PH2: 'SG2',
+    SG: 'SG2', SG2: 'SG2',
+    TH: 'SG2', TH2: 'SG2',
+    TW: 'TW2', TW2: 'TW2',
+    VN: 'VN2', VN2: 'VN2'
+  };
+  return platformByLcuRegion[region] || null;
 }
 
 function normalizeRiotBffBaseUrl(value: any): string {
@@ -251,9 +284,13 @@ function requestHttpJson({ url, method = 'GET', headers, body = null, timeoutMs 
 module.exports = {
   RiotApiError,
   RIOT_PLATFORM_REGIONS,
+  RIOT_REGIONAL_ROUTES,
   DEFAULT_RIOT_PLATFORM_REGION,
   DEFAULT_RIOT_BFF_BASE_URL,
   normalizeRiotPlatformRegion,
+  normalizeRiotRegionalRoute,
+  getRiotPlatformRegionFromLcuRegion,
+  getRiotRegionalRouteFromLcuRegion,
   normalizeRiotBffBaseUrl,
   getRiotRegionalRoute,
   createRiotApiHosts,

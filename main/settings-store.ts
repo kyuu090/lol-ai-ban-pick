@@ -4,7 +4,8 @@ const {
   RIOT_PLATFORM_REGIONS,
   DEFAULT_RIOT_PLATFORM_REGION,
   createRiotApiHosts,
-  normalizeRiotPlatformRegion
+  normalizeRiotPlatformRegion,
+  normalizeRiotRegionalRoute
 } = require('../riot-api');
 
 import type { PublicSettings, RiotPlatformRegion, RiotRegionalRoute, ThemeMode } from '../types/domain/settings';
@@ -15,6 +16,7 @@ const THEME_MODES: readonly ThemeMode[] = ['system', 'light', 'dark'];
 interface StoredSettings {
   lolInstallDir: string;
   riotPlatformRegion: RiotPlatformRegion;
+  riotRegionalRoute: RiotRegionalRoute;
   themeMode: ThemeMode;
 }
 
@@ -38,6 +40,7 @@ function createDefaultSettings(): StoredSettings {
   return {
     lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
     riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION as RiotPlatformRegion,
+    riotRegionalRoute: 'ASIA',
     themeMode: 'system'
   };
 }
@@ -53,6 +56,9 @@ function normalizeSettings(sourceSettings: SettingsInput = {}): StoredSettings {
       ? sourceSettings.lolInstallDir
       : defaults.lolInstallDir,
     riotPlatformRegion: normalizeRiotPlatformRegion(sourceSettings.riotPlatformRegion) as RiotPlatformRegion,
+    riotRegionalRoute: normalizeRiotRegionalRoute(
+      sourceSettings.riotRegionalRoute || createRiotApiHosts(sourceSettings.riotPlatformRegion).regionalRoute
+    ) as RiotRegionalRoute,
     themeMode: normalizeThemeMode(sourceSettings.themeMode)
   };
 }
@@ -60,12 +66,11 @@ function normalizeSettings(sourceSettings: SettingsInput = {}): StoredSettings {
 function createPublicSettings(sourceSettings: SettingsInput): PublicSettings {
   const settings = normalizeSettings(sourceSettings);
   const riotPlatformRegion = normalizeRiotPlatformRegion(settings.riotPlatformRegion) as RiotPlatformRegion;
-  const riotHosts = createRiotApiHosts(riotPlatformRegion) as { regionalRoute: RiotRegionalRoute };
 
   return {
     lolInstallDir: settings.lolInstallDir,
     riotPlatformRegion,
-    riotRegionalRoute: riotHosts.regionalRoute,
+    riotRegionalRoute: settings.riotRegionalRoute,
     riotPlatformRegions: RIOT_PLATFORM_REGIONS as readonly RiotPlatformRegion[],
     themeMode: normalizeThemeMode(settings.themeMode),
     themeModes: THEME_MODES

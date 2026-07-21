@@ -116,6 +116,8 @@ function createInitialState({
   return {
     settings,
     lcuStatus: 'disconnected',
+    detectedRiotPlatformRegion: null,
+    detectedRiotRegionalRoute: null,
     websocketStatus: 'disconnected',
     gameflowPhase: null,
     summoner: null,

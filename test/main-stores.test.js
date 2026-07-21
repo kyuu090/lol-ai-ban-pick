@@ -47,6 +47,7 @@ test('settings store normalizes, saves, loads, and exposes public settings', asy
   assert.deepEqual(saved, {
     lolInstallDir: 'D:\\League',
     riotPlatformRegion: 'KR',
+    riotRegionalRoute: 'ASIA',
     themeMode: 'dark'
   });
 

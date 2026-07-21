@@ -32,32 +32,21 @@
       elements.lolInstallDirInput.value = settings.lolInstallDir;
     }
 
-    renderRiotPlatformRegions(settings, { document: doc, elements });
     if (doc.activeElement !== elements.themeModeSelect) {
       elements.themeModeSelect.value = themeMode;
     }
     elements.themeModeStatus.textContent = describeThemeMode(themeMode);
-    elements.riotRegionalRouteStatus.textContent = `ログイン先サーバ: ${settings.riotPlatformRegion || 'JP1'} / Match-V5 route: ${settings.riotRegionalRoute || 'ASIA'}`;
+    elements.riotRegionalRouteStatus.textContent = settings.detectedRiotPlatformRegion && settings.detectedRiotRegionalRoute
+      ? `LCUから自動検出したサーバ: ${settings.detectedRiotPlatformRegion} / Match-V5 route: ${settings.detectedRiotRegionalRoute}`
+      : 'LoLログイン後に LCU から自動検出します。';
   }
 
   function renderRiotPlatformRegions(settings: any, deps: SettingsViewDeps = {}): void {
     const doc = (deps.document || root.document) as Document;
     const elements = (deps.elements || root.UiDomElements?.elements) as UiDomElements;
-    const regions = Array.isArray(settings.riotPlatformRegions) ? settings.riotPlatformRegions : [];
-    const selectedRegion = settings.riotPlatformRegion || 'JP1';
-
-    if (elements.riotPlatformRegionSelect.childElementCount === 0 && regions.length > 0) {
-      elements.riotPlatformRegionSelect.replaceChildren(...regions.map((region: string) => {
-        const option = doc.createElement('option');
-        option.value = region;
-        option.textContent = region;
-        return option;
-      }));
-    }
-
-    if (doc.activeElement !== elements.riotPlatformRegionSelect) {
-      elements.riotPlatformRegionSelect.value = selectedRegion;
-    }
+    void settings;
+    void doc;
+    void elements;
   }
 
   const api = {

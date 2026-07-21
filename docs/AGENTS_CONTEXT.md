@@ -178,8 +178,8 @@ Settings画面を実装済み。
 - 保存後、既存WebSocketを閉じてLCUへ再接続する
 - Riot API key はクライアントで扱わず、BFF経由で試合履歴を取得する
 - BFF Base URL はクライアント設定として公開せず、内部定数として扱う
-- ログイン先サーバとして Riot API のplatform regionを選択・保存できる
-- Match-V5などで使うregional routeはplatform regionから自動導出する
+- ログイン後、LCU の `/riotclient/region-locale` から platform region（`JP1` など）と Match-V5 用 regional route を自動検出する
+- 検出結果はアプリのメモリだけに保持する。LCU 未接続時または検出失敗時は「未検出」とし、BFF の Riot API 呼び出しを行わない
 
 現在のデータ取得方針では、BFF経由の Riot API Match-V5 を自己戦績取得の本線にする。LCU match history は fallback / 調査用として扱う。
 
@@ -737,8 +737,8 @@ BFF用の薄いクライアント基盤は `riot-api.js` に置く。
 
 現在の試合履歴取得方針では BFF 経由の Riot API Match-V5 が本線。LCU match history は fallback / 調査用として扱う。
 
-- `riotPlatformRegion` は `JP1`, `NA1`, `KR` などのplatform routing value
-- Match-V5のようなregional routing APIでは `createRiotApiHosts` で `ASIA`, `AMERICAS`, `EUROPE`, `SEA` を導出する
+- `riotPlatformRegion` は `JP1`, `NA1`, `KR` などの platform routing value。LCU の `/riotclient/region-locale` の `region` から対応表で自動検出する
+- Match-V5 / Account-V1 用の regional route は BFF 側で platform region から導出する
 - HTTP 429が返った場合は `Retry-After` ヘッダを優先して待機し、ヘッダがなければ短いfallback delayでretryする
 - Riot API key はクライアントで扱わず、BFF側で管理する
 - 自己戦績取得は recent 90 と season 全件の2モード

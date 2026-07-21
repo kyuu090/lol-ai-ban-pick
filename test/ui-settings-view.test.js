@@ -8,18 +8,6 @@ const {
   renderSettings
 } = require('../ui/settings-view');
 
-function createSelectElement() {
-  return {
-    childElementCount: 0,
-    children: [],
-    value: '',
-    replaceChildren(...children) {
-      this.children = children;
-      this.childElementCount = children.length;
-    }
-  };
-}
-
 test('theme mode helpers normalize and describe settings values', () => {
   assert.equal(normalizeThemeMode('light'), 'light');
   assert.equal(normalizeThemeMode('dark'), 'dark');
@@ -47,10 +35,8 @@ test('applyThemeMode writes and clears document theme state', () => {
 });
 
 test('renderSettings updates setting controls without overriding focused fields', () => {
-  const riotPlatformRegionSelect = createSelectElement();
   const elements = {
     lolInstallDirInput: { value: '' },
-    riotPlatformRegionSelect,
     riotRegionalRouteStatus: { textContent: '' },
     themeModeSelect: { value: '' },
     themeModeStatus: { textContent: '' }
@@ -61,23 +47,17 @@ test('renderSettings updates setting controls without overriding focused fields'
       dataset: {},
       removeAttribute() {}
     },
-    createElement(tagName) {
-      return { tagName, value: '', textContent: '' };
-    }
   };
 
   renderSettings({
     lolInstallDir: 'C:/Riot Games/League of Legends',
-    riotPlatformRegion: 'KR',
-    riotPlatformRegions: ['JP1', 'KR'],
-    riotRegionalRoute: 'ASIA',
+    detectedRiotPlatformRegion: 'JP1',
+    detectedRiotRegionalRoute: 'ASIA',
     themeMode: 'dark'
   }, { document: doc, elements });
 
   assert.equal(elements.lolInstallDirInput.value, 'C:/Riot Games/League of Legends');
   assert.equal(elements.themeModeSelect.value, 'dark');
   assert.equal(elements.themeModeStatus.textContent, 'ダークモードを使用します。');
-  assert.equal(elements.riotRegionalRouteStatus.textContent, 'ログイン先サーバ: KR / Match-V5 route: ASIA');
-  assert.deepEqual(riotPlatformRegionSelect.children.map((option) => option.value), ['JP1', 'KR']);
-  assert.equal(riotPlatformRegionSelect.value, 'KR');
+  assert.equal(elements.riotRegionalRouteStatus.textContent, 'LCUから自動検出したサーバ: JP1 / Match-V5 route: ASIA');
 });

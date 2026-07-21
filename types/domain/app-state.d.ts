@@ -20,11 +20,13 @@ import type {
   MatchHistorySummary,
   SelfVsLaneOpponentStats
 } from './match-history';
-import type { PublicSettings } from './settings';
+import type { PublicSettings, RiotPlatformRegion, RiotRegionalRoute } from './settings';
 
 export interface AppState {
   settings: PublicSettings;
   lcuStatus: LcuStatus;
+  detectedRiotPlatformRegion: RiotPlatformRegion | null;
+  detectedRiotRegionalRoute: RiotRegionalRoute | null;
   websocketStatus: WebSocketStatus;
   gameflowPhase: GameflowPhase | null;
   summoner: Summoner | LcuErrorPayload | null;
