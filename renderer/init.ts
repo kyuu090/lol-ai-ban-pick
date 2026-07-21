@@ -16,8 +16,7 @@ const CHAMPION_POOL_LANE_TO_POSITION = {
     utility: 'UTILITY'
 };
 const RELIABLE_SAMPLE_GAMES = 5;
-const PICK_POOL_CANDIDATE_LIMIT = 6;
-const BAN_INSIGHT_LIMIT = 3;
+const BAN_INSIGHT_LIMIT = 5;
 const BAN_INSIGHT_SAMPLE_OPTIONS = [0, 3, 5, 10, 20];
 const { formatAverageKda, formatDate, formatMatchDataDate, formatNumber, formatPercent } = window.UiFormatters;
 const { loadChampionIcon, loadChampionIconEager } = window.UiChampionIcons;
@@ -182,6 +181,7 @@ const { renderChampSelect, renderDraftAiAnalysis, resetDraftRecommendationState 
     getChampionsById: () => rendererState.championsById,
     fetch: window.fetch?.bind(window),
     loadChampionIcon,
+    loadChampionIconEager,
     createInlineChampionName,
     createChampionStatsElement,
     getChampionRoleDisplayStats,
@@ -218,7 +218,6 @@ const { renderChampSelect, renderDraftAiAnalysis, resetDraftRecommendationState 
     formatPercent,
     formatAverageKda,
     RELIABLE_SAMPLE_GAMES,
-    PICK_POOL_CANDIDATE_LIMIT,
     BAN_INSIGHT_LIMIT,
     BAN_INSIGHT_SAMPLE_OPTIONS,
     getDraftAiAnalysisStatus: () => rendererState.draftAiAnalysisStatus,

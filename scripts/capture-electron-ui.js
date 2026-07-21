@@ -6,6 +6,7 @@ const path = require('node:path');
 const {
   CAPTURE_SETTINGS,
   createCaptureState,
+  createDraftCaptureState,
   createChampionIconDataUrl,
   createStatsFixtureResponse
 } = require('./ui-capture-fixtures');
@@ -30,7 +31,7 @@ function hasFlag(name) {
 
 /** @param {string} value */
 function normalizeTarget(value) {
-  return ['champions', 'build', 'matchups', 'matchup', 'timeline'].includes(value) ? value : 'timeline';
+  return ['champions', 'build', 'matchups', 'matchup', 'timeline', 'draft-ban', 'draft-pick', 'draft-pick-pool'].includes(value) ? value : 'timeline';
 }
 
 /** @param {string} value */
@@ -60,7 +61,12 @@ const showWindow = hasFlag('show');
 const holdMs = Math.max(0, Number(readOption('hold-ms', showWindow ? '5000' : '0')) || 0);
 const defaultOutput = path.join(projectRoot, '.tmp-ui-captures', `${target}-${themeMode}.png`);
 const outputPath = path.resolve(readOption('output', defaultOutput));
-const captureState = createCaptureState(themeMode);
+const captureState = target === 'draft-ban'
+  ? createDraftCaptureState('ban')
+  : target === 'draft-pick' || target === 'draft-pick-pool'
+    ? createDraftCaptureState('pick')
+    : createCaptureState(themeMode);
+captureState.settings.themeMode = themeMode;
 const captureSettings = { ...CAPTURE_SETTINGS, themeMode };
 
 app.disableHardwareAcceleration();
@@ -97,11 +103,21 @@ function registerFixtureIpc() {
   handle('lcu:resolve-in-game-stats-opponent', () => null);
   handle('riot-match-history:collect', () => captureState.matchHistorySummary);
   handle('stats-api:request', async (_event, pathOrUrl) => {
-    if (statsSource === 'fixture') return createStatsFixtureResponse(pathOrUrl);
+    if (statsSource === 'fixture') {
+      if (target.startsWith('draft-') && /\/matchups(?:\?|$)/.test(String(pathOrUrl))) {
+        await delay(600);
+      }
+      return createStatsFixtureResponse(pathOrUrl);
+    }
     const { requestStatsDbApiJson } = require(path.join(projectRoot, 'dist-app', 'stats-db-api.js'));
     return requestStatsDbApiJson(pathOrUrl);
   });
-  handle('openai:pick-phase', () => ({ notes: [] }));
+  handle('openai:pick-phase', () => ({
+    notes: [
+      { title: '対面候補を比較', body: 'StatsAPIの対面勝率と自分のChampionPoolを合わせて選択できます。' },
+      { title: '使用不可を自動除外', body: 'BAN済み・他プレイヤーがPICK済みの候補は対面候補から除外しています。' }
+    ]
+  }));
   handle('openai:final-composition', () => ({ notes: [] }));
   ipcMain.on('log:renderer', () => undefined);
 }
@@ -139,6 +155,24 @@ async function clickByScript(window, expression, label) {
 
 /** @param {Electron.BrowserWindow} window */
 async function openCaptureTarget(window) {
+  if (target === 'draft-ban' || target === 'draft-pick' || target === 'draft-pick-pool') {
+    await waitForRenderer(window, "!document.querySelector('#draftView')?.hidden", 'draft view');
+    if (target === 'draft-pick') {
+      await clickByScript(
+        window,
+        "Array.from(document.querySelectorAll('.lane-opponent-target')).find((element) => element.textContent.includes('ゼド'))",
+        'mock lane opponent'
+      );
+      await waitForRenderer(window, "document.querySelectorAll('.pool-card-grid .draft-champion-card').length >= 10 && document.querySelector('.marked-opponent-insight .ban-insight-empty')?.textContent.includes('取得中')", 'immediate champion pool');
+    } else if (target === 'draft-ban') {
+      await waitForRenderer(window, "document.querySelectorAll('.lane-history-section li').length > 0 && document.querySelector('.planned-pick-threat-section .ban-insight-empty')?.textContent.includes('取得中')", 'immediate lane history');
+    } else {
+      await waitForRenderer(window, "document.querySelectorAll('.pool-card-grid .draft-champion-card').length >= 10", 'champion pool cards');
+      return;
+    }
+    await waitForRenderer(window, "document.querySelectorAll('.counter-card-grid .draft-champion-card').length >= 5", 'draft matchup cards');
+    return;
+  }
   await waitForRenderer(window, "document.querySelectorAll('#statsApiChampionsTableBody tr').length > 0", 'champion rows');
   await clickByScript(window, "document.querySelector('[data-view=\"champions\"]')", 'Champions tab');
   if (target === 'champions') return;

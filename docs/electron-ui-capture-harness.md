@@ -41,6 +41,9 @@ npm run capture:ui -- --view=timeline
 | `matchups` | 対面一覧 |
 | `matchup` | 対面一覧の先頭対面を開いた時間推移 |
 | `timeline` | 全対面を含む時間推移。既定値 |
+| `draft-ban` | BAN予定チャンピオンに対するStatsAPIカウンター候補のモック |
+| `draft-pick` | 指定した対面に対するStatsAPI有利候補とChampionPoolのモック |
+| `draft-pick-pool` | 対面未指定時の通常戦績を表示するChampionPoolのモック |
 
 例:
 
@@ -74,6 +77,14 @@ npm run capture:ui -- --view=timeline --stats-source=fixture
 ```
 
 fixtureは `scripts/ui-capture-fixtures.js` にあり、Meta、チャンピオン一覧、ビルド、マッチアップ一覧、特定マッチアップ推移、タイムライン分析をカバーする。
+
+ドラフト画面はLeague Clientなしで次のように確認できる。`draft-pick` はfixture内のゼドを対面指定する操作も自動で行う。
+
+```powershell
+npm run capture:ui -- --view=draft-ban --stats-source=fixture
+npm run capture:ui -- --view=draft-pick --stats-source=fixture
+npm run capture:ui -- --view=draft-pick-pool --stats-source=fixture
+```
 
 タイムライングラフのツールチップを撮影する例:
 

@@ -620,11 +620,11 @@ BAN表示:
 実装済みのバンピック中インサイト:
 
 - 自分のBANフェーズでは `YOUR BAN` とBAN候補インサイトを中央に表示する
-- BAN候補インサイトは、中央パネル内の `Sample` フィルタで `0 / 3 / 5 / 10 / 20+ games` から最小サンプル数を変更できる。デフォルトは `5+ games`
-- BAN候補インサイトは、`Threats for your ...` がある場合は最優先で表示し、次に同レーン対面で苦手な champion を最大3件表示する。敵チーム全体で苦手な champion は折りたたみ表示にする
-- 自分のBANフェーズ中に自分の予定pickがある場合、`Threats for your {champion} {role}` を先頭に表示する
-- `Threats for your ...` は、`self.championId === plannedChampionId` かつ `self.position === assignedPosition` の試合だけを対象にし、相手も同一ロール対面 champion だけを集計する。別ロールや敵チーム全体には fallback しない
-- `Threats for your ...` には W-L / WR / KDA を表示し、少数サンプルには `Low sample` を付ける。対象履歴がない場合は `No same-role matchup history` を表示する
+- BAN候補インサイトは、`Your lowest-win-rate <position> matchups` 見出し横の `Min. games` フィルタで `0 / 3 / 5 / 10 / 20+ games` からローカル対面履歴の最小試合数を変更できる。デフォルトは `5+ games`
+- BAN候補インサイトは、StatsAPIの `Counters to ...` を最優先で表示し、次に本人の `Your lowest-win-rate <position> matchups` を最大5件表示する。敵チーム全体で苦手な champion は `Your toughest enemy champions` として折りたたみ表示にする
+- 自分のBANフェーズ中に予定pickがある場合、`Counters to {champion} ({role})` を先頭に表示する
+- `Counters to ...` はStatsAPIの同一ポジション対面統計を独立した `MIN. GAMES`（初期値40）で取得し、予定チャンピオン側の勝率が低い順に最大5体表示する。味方の確定・予定pickは除外する
+- 本人のレーン対面履歴には `WR / Games` を表示し、`Min. games` で最小試合数を変更する
 - 自分のPICKフェーズでは、まだ自分のpickが未確定なら `YOUR PICK` と現在 assignedPosition の ChampionPool 候補を表示する
 - 自分のpickが確定したあとは、中央パネルで StatsAPI の `/v1/stats/positions/{position}/champions/{championId}/details` を叩き、返ってきた最大2件の keystone 候補を選べるようにする。対面想定プレイヤーを手動マークしていて相手 champion が見えている場合は `opponentChampionId` を付けて対面フィルター付きで取得し、未指定に戻した場合は対面フィルターなしで取り直す。選択中 keystone に対応するルーンセットとサモナースペルは、Champions 詳細画面の `stats-api-*` デザインに合わせて表示する
 - 対面フィルター付きで取得している間は、おすすめパネル上部に `vs {opponent champion}` を表示し、ライト/ダーク両テーマで読めるテーマ色を使う
@@ -632,7 +632,7 @@ BAN表示:
 - ChampionPool候補はBAN済み/選択済みを unavailable 表示にし、戦績をチップ表示する
 - 対面想定プレイヤーをマークしており、相手championが見えている場合は、その対面championに対して自分が過去に成績の良かったchampionを表示する
 - 対面別の自分champion実績は ChampionPool 外のchampionも含め、W-L / WR / KDA を表示する
-- `Best into ...`、`Threats for your ...`、BAN/PICK候補の champion 名には、小さい champion icon を帯同表示する
+- `Best picks against ...`、`Counters to ...`、BAN/PICK候補の champion 名には、小さい champion icon を帯同表示する
 
 ### ChampionPool
 

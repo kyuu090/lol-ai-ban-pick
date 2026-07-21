@@ -225,7 +225,7 @@ test('small normalization helpers handle LCU edge cases', () => {
   assert.equal(positionLabel('jungle'), 'JG');
   assert.equal(positionLabel('fill'), 'FILL');
   assert.equal(positionLabel(null), '未確定');
-  assert.equal(getPendingLabel({}, () => 'Unused'), 'PICKING NEXT');
+  assert.equal(getPendingLabel({}, () => 'Unused'), 'PICK PENDING');
   assert.equal(getPendingLabel({ championPickIntent: 103 }, (championId) => `Champion ${championId}`), 'Champion 103 を予定');
 });
 

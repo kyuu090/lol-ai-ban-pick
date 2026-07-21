@@ -1,11 +1,24 @@
 // @ts-check
 
 const CAPTURE_CHAMPIONS = {
+  1: { id: 1, name: 'アニー', alias: 'Annie', title: '闇の申し子' },
   4: { id: 4, name: 'ツイステッド・フェイト', alias: 'TwistedFate', title: 'カードマスター' },
+  7: { id: 7, name: 'ルブラン', alias: 'Leblanc', title: '幻惑の奇術師' },
+  18: { id: 18, name: 'トリスターナ', alias: 'Tristana', title: 'ヨードルの主砲' },
+  25: { id: 25, name: 'モルガナ', alias: 'Morgana', title: '堕天の高潔' },
+  55: { id: 55, name: 'カタリナ', alias: 'Katarina', title: '凶兆の刃' },
   61: { id: 61, name: 'オリアナ', alias: 'Orianna', title: '時計仕掛けの舞姫' },
+  84: { id: 84, name: 'アカリ', alias: 'Akali', title: '主なき暗殺者' },
+  99: { id: 99, name: 'ラックス', alias: 'Lux', title: '光の才女' },
   103: { id: 103, name: 'アーリ', alias: 'Ahri', title: '九尾の狐' },
+  117: { id: 117, name: 'ルル', alias: 'Lulu', title: '森の妖精使い' },
+  127: { id: 127, name: 'リサンドラ', alias: 'Lissandra', title: '氷の魔女' },
   134: { id: 134, name: 'シンドラ', alias: 'Syndra', title: '暗黒の女王' },
-  238: { id: 238, name: 'ゼド', alias: 'Zed', title: '影の頭領' }
+  157: { id: 157, name: 'ヤスオ', alias: 'Yasuo', title: '赦されざる者' },
+  142: { id: 142, name: 'ゾーイ', alias: 'Zoe', title: '超常の遊び' },
+  238: { id: 238, name: 'ゼド', alias: 'Zed', title: '影の頭領' },
+  245: { id: 245, name: 'エコー', alias: 'Ekko', title: '砕けた時を渡る少年' },
+  518: { id: 518, name: 'ニーコ', alias: 'Neeko', title: '不思議のカメレオン' }
 };
 
 const CAPTURE_SETTINGS = {
@@ -50,6 +63,75 @@ function createCaptureState(themeMode = 'light') {
     error: null,
     updatedAt: new Date().toISOString()
   };
+}
+
+/** @param {'ban' | 'pick'} phase */
+function createDraftCaptureState(phase) {
+  const state = /** @type {any} */ (createCaptureState('light'));
+  const isBan = phase === 'ban';
+  state.gameflowPhase = 'ChampSelect';
+  state.lobby = { gameConfig: { mapId: 11, gameMode: 'CLASSIC', queueId: 420, isRanked: true } };
+  state.championPool = { top: [], jungle: [], middle: [103, 61, 1, 84, 157, 7, 55, 99, 127, 134, 142, 518], bottom: [], utility: [] };
+  state.matchHistoryChampionStats = [
+    { championId: 1, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 8, wins: 5, winRate: 0.625 },
+    { championId: 61, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 12, wins: 7, winRate: 0.583 },
+    { championId: 84, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 9, wins: 5, winRate: 0.556 },
+    { championId: 103, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 30, wins: 16, winRate: 0.533 },
+    { championId: 157, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 20, wins: 9, winRate: 0.45 },
+    { championId: 7, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 16, wins: 8, winRate: 0.5 },
+    { championId: 55, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 14, wins: 7, winRate: 0.5 },
+    { championId: 99, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 10, wins: 5, winRate: 0.5 },
+    { championId: 127, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 18, wins: 9, winRate: 0.5 },
+    { championId: 134, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 11, wins: 5, winRate: 0.455 },
+    { championId: 142, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 6, wins: 3, winRate: 0.5 },
+    { championId: 518, position: 'MIDDLE', queueGroup: 'all_sr_5v5', games: 13, wins: 6, winRate: 0.462 }
+  ];
+  state.matchHistoryLaneOpponentStats = [
+    { championId: 134, position: 'MIDDLE', games: 11, wins: 3, winRate: 0.273 },
+    { championId: 238, position: 'MIDDLE', games: 9, wins: 3, winRate: 0.333 },
+    { championId: 84, position: 'MIDDLE', games: 7, wins: 3, winRate: 0.429 }
+  ];
+  state.matchHistorySelfVsLaneOpponentStats = [
+    { championId: 1, opponentChampionId: 238, position: 'MIDDLE', games: 5, wins: 3, winRate: 0.6 },
+    { championId: 61, opponentChampionId: 238, position: 'MIDDLE', games: 9, wins: 5, winRate: 0.556 },
+    { championId: 103, opponentChampionId: 238, position: 'MIDDLE', games: 8, wins: 4, winRate: 0.5 },
+    { championId: 7, opponentChampionId: 238, position: 'MIDDLE', games: 7, wins: 3, winRate: 0.429 },
+    { championId: 55, opponentChampionId: 238, position: 'MIDDLE', games: 6, wins: 2, winRate: 0.333 },
+    { championId: 84, opponentChampionId: 238, position: 'MIDDLE', games: 7, wins: 2, winRate: 0.286 },
+    { championId: 99, opponentChampionId: 238, position: 'MIDDLE', games: 4, wins: 2, winRate: 0.5 },
+    { championId: 127, opponentChampionId: 238, position: 'MIDDLE', games: 5, wins: 2, winRate: 0.4 },
+    { championId: 134, opponentChampionId: 238, position: 'MIDDLE', games: 3, wins: 2, winRate: 0.667 },
+    { championId: 142, opponentChampionId: 238, position: 'MIDDLE', games: 3, wins: 1, winRate: 0.333 },
+    { championId: 157, opponentChampionId: 238, position: 'MIDDLE', games: 10, wins: 4, winRate: 0.4 }
+  ];
+  state.champSelect = {
+    localPlayerCellId: 0,
+    timer: { phase: 'BAN_PICK' },
+    actions: [[{
+      id: 1,
+      actorCellId: 0,
+      championId: 0,
+      completed: false,
+      isInProgress: true,
+      type: isBan ? 'ban' : 'pick'
+    }]],
+    bans: { myTeamBans: isBan ? [] : [25], theirTeamBans: isBan ? [] : [157] },
+    myTeam: [
+      { cellId: 0, championId: 0, championPickIntent: isBan ? 103 : 0, assignedPosition: 'MIDDLE' },
+      { cellId: 1, championId: 117, assignedPosition: 'UTILITY' },
+      { cellId: 2, championId: 0, championPickIntent: 134, assignedPosition: 'TOP' },
+      { cellId: 3, championId: 0, assignedPosition: 'JUNGLE' },
+      { cellId: 4, championId: 18, assignedPosition: 'BOTTOM' }
+    ],
+    theirTeam: [
+      { cellId: 5, championId: 238, assignedPosition: 'MIDDLE' },
+      { cellId: 6, championId: 245, assignedPosition: 'JUNGLE' },
+      { cellId: 7, championId: 0, assignedPosition: 'TOP' },
+      { cellId: 8, championId: 0, assignedPosition: 'BOTTOM' },
+      { cellId: 9, championId: 0, assignedPosition: 'UTILITY' }
+    ]
+  };
+  return state;
 }
 
 /**
@@ -211,7 +293,27 @@ function createStatsFixtureResponse(pathOrUrl) {
           { opponentChampionId: 238, games: 420, wins: 206, winRateVsOpponent: 0.49 },
           { opponentChampionId: 134, games: 388, wins: 217, winRateVsOpponent: 0.559 },
           { opponentChampionId: 61, games: 344, wins: 172, winRateVsOpponent: 0.5 },
-          { opponentChampionId: 4, games: 305, wins: 174, winRateVsOpponent: 0.57 }
+          { opponentChampionId: 4, games: 305, wins: 174, winRateVsOpponent: 0.57 },
+          { opponentChampionId: 84, games: 284, wins: 130, winRateVsOpponent: 0.458 },
+          { opponentChampionId: 157, games: 260, wins: 113, winRateVsOpponent: 0.435 },
+          { opponentChampionId: 245, games: 240, wins: 109, winRateVsOpponent: 0.454 }
+        ]
+      }
+    };
+  }
+  if (/\/champions\/238\/matchups$/.test(path)) {
+    return {
+      data: {
+        championId: 238,
+        baselineWinRate: 0.5,
+        matchups: [
+          { opponentChampionId: 1, games: 220, wins: 94, winRateVsOpponent: 0.427 },
+          { opponentChampionId: 4, games: 198, wins: 91, winRateVsOpponent: 0.46 },
+          { opponentChampionId: 61, games: 310, wins: 140, winRateVsOpponent: 0.452 },
+          { opponentChampionId: 84, games: 286, wins: 151, winRateVsOpponent: 0.528 },
+          { opponentChampionId: 103, games: 420, wins: 206, winRateVsOpponent: 0.49 },
+          { opponentChampionId: 134, games: 250, wins: 113, winRateVsOpponent: 0.452 },
+          { opponentChampionId: 157, games: 275, wins: 139, winRateVsOpponent: 0.505 }
         ]
       }
     };
@@ -257,6 +359,7 @@ module.exports = {
   CAPTURE_CHAMPIONS,
   CAPTURE_SETTINGS,
   createCaptureState,
+  createDraftCaptureState,
   createChampionIconDataUrl,
   createStatsFixtureResponse,
   createTimeline
