@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
     };
   },
   collectRiotMatchHistory: (options) => ipcRenderer.invoke('riot-match-history:collect', options),
+  respondToSeasonMatchHistoryDialog: (confirmed) => ipcRenderer.send('season-match-history-dialog:response', Boolean(confirmed)),
   requestStatsApiJson: (pathOrUrl) => ipcRenderer.invoke('stats-api:request', pathOrUrl),
   requestPickPhaseAnalysis: (draftContext) => ipcRenderer.invoke('openai:pick-phase', draftContext),
   requestFinalCompositionAnalysis: (draftContext) => ipcRenderer.invoke('openai:final-composition', draftContext),

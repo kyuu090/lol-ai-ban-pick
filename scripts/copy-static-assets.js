@@ -35,6 +35,7 @@ if (require.main === module) {
       copyEntry('img'),
       copyEntry('index.html'),
       copyEntry('package-lock.json'),
+      copyEntry('season-match-history-dialog.html'),
       copyEntry('splash.html'),
       copyEntry('styles')
     ]).catch((error) => {

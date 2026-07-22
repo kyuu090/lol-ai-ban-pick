@@ -85,6 +85,10 @@ export interface IpcInvokeChannelMap {
 }
 
 export interface IpcSendChannelMap {
+  'season-match-history-dialog:response': {
+    args: [confirmed: boolean];
+    result: void;
+  };
   'log:renderer': {
     args: [level: string, message: string, details?: unknown];
     result: void;

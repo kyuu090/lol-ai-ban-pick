@@ -51,6 +51,7 @@ const {
 const { createStatePublisher } = require('./state-publisher');
 const { createLaneMatchupController } = require('./lane-matchup-controller');
 const { createMatchHistoryController } = require('./match-history-controller');
+const { showSeasonMatchHistoryDialog } = require('./season-match-history-dialog');
 const { createLcuController } = require('./lcu-controller');
 
 import type { BrowserWindow, IpcMain } from 'electron';
@@ -85,6 +86,7 @@ const LANE_MATCHUP_RETRY_DELAY_MS = 3000;
 const APP_ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
 const MAIN_HTML_PATH = path.join(__dirname, '..', 'index.html');
 const SPLASH_HTML_PATH = path.join(__dirname, '..', 'splash.html');
+const SEASON_MATCH_HISTORY_DIALOG_HTML_PATH = path.join(__dirname, '..', 'season-match-history-dialog.html');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
 const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
@@ -145,8 +147,24 @@ function bootstrap(): void {
   });
 
   const matchHistoryController = createMatchHistoryController({
-    dialog,
-    getMainWindow: () => mainWindow,
+    confirmSeasonMatchHistoryCollection: ({
+      totalMatches,
+      missingMatches,
+      estimateText
+    }: {
+      totalMatches: number;
+      missingMatches: number;
+      estimateText: string;
+    }) => showSeasonMatchHistoryDialog({
+      parent: mainWindow,
+      iconPath: APP_ICON_PATH,
+      htmlPath: SEASON_MATCH_HISTORY_DIALOG_HTML_PATH,
+      preloadPath: path.join(__dirname, '..', 'preload.js'),
+      themeMode: settings.themeMode,
+      totalMatches,
+      missingMatches,
+      estimateText
+    }),
     getState: statePublisher.getState,
     updateState: statePublisher.updateState,
     createMatchHistoryStatus,
