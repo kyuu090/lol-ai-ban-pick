@@ -17,6 +17,8 @@ const {
   getStatsApiLaneFightIndicator,
   getStatsApiLeadRateScale,
   getStatsApiLaneLabel,
+  getStatsApiRanksAtOrAbove,
+  getStatsApiRanksForSelection,
   getStatsApiShardRowIndex,
   normalizeStatsApiSearchText,
   normalizeStatsApiRuneCatalog,
@@ -26,6 +28,26 @@ const {
   sortStatsApiMatchupRows,
   sortStatsApiChampionRows
 } = require('../ui/champions-view');
+
+test('champions view rank threshold includes the selected rank and higher available ranks', () => {
+  const availableRanks = ['IRON', 'GOLD', 'EMERALD', 'DIAMOND', 'MASTER', 'CHALLENGER'];
+
+  assert.deepEqual(
+    getStatsApiRanksAtOrAbove('EMERALD', availableRanks),
+    ['EMERALD', 'DIAMOND', 'MASTER', 'CHALLENGER']
+  );
+  assert.deepEqual(getStatsApiRanksAtOrAbove('', availableRanks), []);
+});
+
+test('champions view rank selection supports exact and rank-or-higher filters', () => {
+  const availableRanks = ['GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'CHALLENGER'];
+
+  assert.deepEqual(getStatsApiRanksForSelection('exact:EMERALD', availableRanks), ['EMERALD']);
+  assert.deepEqual(
+    getStatsApiRanksForSelection('plus:EMERALD', availableRanks),
+    ['EMERALD', 'DIAMOND', 'MASTER', 'CHALLENGER']
+  );
+});
 
 test('champions view stats api URL includes selected filters and fixed min pick rate', () => {
   const url = new URL(buildStatsApiChampionsUrl({

@@ -42,7 +42,7 @@ renderer/
 - `renderer` 関連型が明示されている。
 - `npm run typecheck` が通る。
 - `npm test` が通る。
-- Electron 起動で Draft / ChampionPool / Stats / Settings / Debug を確認する。
+- Electron 起動で Draft / ChampionPool / Champions / Stats / Settings を確認する。
 
 ## 作業証跡
 

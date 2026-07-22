@@ -29,7 +29,7 @@ main/
 - LCU lockfile retry と websocket reconnect timer の動作を変えない。
 - ChampSelect 中に重い Riot API 自動取得を走らせない制約を維持する。
 - Riot API 429 時の partial save / UI reflection を維持する。
-- raw match detail を Debug state やログへ常時表示しない。
+- raw match detail を Rendererやログへ常時表示しない。
 - LCU password / Basic auth header をログへ出さない。
 
 ## 完了条件

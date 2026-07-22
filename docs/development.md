@@ -324,7 +324,7 @@ riot-match-cache/<account-puuid>.json
 match-history/<account-puuid>.json
 ```
 
-`settings.json` には LoL インストールディレクトリに加えて、Riot API 連携用の開発者トークンと Region を保存できます。トークン本文は Debug 画面の state 表示やログには出しません。
+`settings.json` には LoL インストールディレクトリに加えて、Riot API 連携用の開発者トークンと Region を保存できます。トークン本文は Rendererやログには出しません。
 
 ## Riot API / Match History
 
@@ -369,7 +369,7 @@ LCU match history はページングやキャッシュ挙動が不安定だっ�
 - ロビー未参加やチャンピオン選択外の `404/null` は正常系として扱うこと。
 - gameflow phase が `ChampSelect` 以外になったら古い `champSelect` state を残さないこと。
 - LCU への画像取得を一気に大量実行しないこと。
-- Riot API token、LCU password、Basic 認証ヘッダをログ、Renderer、Debug state に出さないこと。
+- Riot API token、LCU password、Basic 認証ヘッダをログやRendererに出さないこと。
 - 配布する Electron クライアントに開発者側の Riot API key / OpenAI API key を同梱しないこと。外部 API は BFF 経由にする。
 - recent 自動取得で season 取得済みの `match-history/<account-puuid>.json` を 90 件に縮めないこと。
 - match history の ID 結合は重複排除し、同一 matchId を二重集計しないこと。

@@ -17,7 +17,6 @@
     <link rel="stylesheet" href="./styles/draft-state.css" />
     <link rel="stylesheet" href="./styles/in-game.css" />
     <link rel="stylesheet" href="./styles/draft.css" />
-    <link rel="stylesheet" href="./styles/debug.css" />
     <link rel="stylesheet" href="./styles/theme.css" />
     <link rel="stylesheet" href="./styles/responsive.css" />
   </head>
@@ -62,7 +61,6 @@
             <button class="tab-button" id="championsTabButton" type="button" data-view="champions">Champions</button>
             <button class="tab-button" id="statsTabButton" type="button" data-view="stats">Stats</button>
             <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
-            <button class="tab-button" id="debugTabButton" type="button" data-view="debug">Debug</button>
           </nav>
         </div>
       </header>
@@ -152,69 +150,12 @@
         </section>
       </section>
 
-      <section id="debugView" class="view-panel" hidden>
-        <section class="debug-toolbar">
-          <button id="refreshButton" type="button">手動再取得</button>
-        </section>
-
-        <section class="status-grid" aria-label="connection status">
-          <article class="status-card">
-            <span class="label">LCU接続状態</span>
-            <strong id="lcuStatus">-</strong>
-          </article>
-          <article class="status-card">
-            <span class="label">WebSocket接続状態</span>
-            <strong id="websocketStatus">-</strong>
-          </article>
-          <article class="status-card">
-            <span class="label">gameflow phase</span>
-            <strong id="gameflowPhase">-</strong>
-          </article>
-          <article class="status-card">
-            <span class="label">最終更新</span>
-            <strong id="updatedAt">-</strong>
-          </article>
-        </section>
-
-        <p id="errorMessage" class="error-message" role="status"></p>
-
-        <section class="content-grid">
-          <article class="panel">
-            <h2>現在のサモナー情報</h2>
-            <pre id="summonerJson">{}</pre>
-          </article>
-          <article class="panel">
-            <h2>ロビー情報</h2>
-            <pre id="lobbyJson">{}</pre>
-          </article>
-          <article class="panel">
-            <h2>チャンピオン選択情報</h2>
-            <pre id="champSelectJson">{}</pre>
-          </article>
-          <article class="panel">
-            <h2>最後に受信したWebSocketイベント</h2>
-            <pre id="lastEventJson">{}</pre>
-          </article>
-        </section>
-
-        <section class="panel full-width">
-          <h2>JSON表示エリア</h2>
-          <pre id="stateJson">{}</pre>
-        </section>
-      </section>
-
       <section id="championPoolView" class="view-panel" hidden>
         <section class="champion-pool-panel">
-          <div class="champion-pool-header">
-            <div>
-              <p class="eyebrow">Champion Pool</p>
-              <h2>得意チャンピオン登録</h2>
-              <p>レーンごとに、普段使うチャンピオンを登録します。</p>
-            </div>
+          <div class="champion-pool-toolbar">
+            <nav id="laneTabs" class="lane-tabs" aria-label="lane switcher"></nav>
             <button id="saveChampionPoolButton" type="button">保存</button>
           </div>
-
-          <nav id="laneTabs" class="lane-tabs" aria-label="lane switcher"></nav>
 
           <section class="pool-editor">
             <section class="selected-pool">
@@ -248,7 +189,7 @@
               <div class="stats-api-rank-dropdown">
                 <span class="stats-api-rank-label">Rank</span>
                 <button id="statsApiRankDropdownButton" class="stats-api-rank-dropdown-button" type="button" aria-expanded="false" aria-controls="statsApiRankDropdown">
-                  <span id="statsApiRankSummary">All rank</span>
+                  <span id="statsApiRankSummary">All ranks</span>
                 </button>
                 <div id="statsApiRankDropdown" class="stats-api-rank-dropdown-panel" hidden>
                   <div id="statsApiRankOptions" class="stats-api-rank-options"></div>

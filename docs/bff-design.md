@@ -78,7 +78,7 @@ OPENAI_API_KEY
 - 例外 message に混ざらないよう sanitize する
 - 漏洩が疑わしい場合は key を rotate する
 
-Electron クライアント、Renderer、Debug state には BFF の秘密鍵を返さない。
+Electron クライアントやRendererには BFF の秘密鍵を返さない。
 
 ## OpenAI 課金防御
 
@@ -215,7 +215,6 @@ latency
 - LCU password
 - raw prompt 全文
 - raw match detail
-- debug state 全体
 
 prompt や context の全文保存が必要な場合は、明示的な開発モードに限定し、個人情報と秘密情報の sanitize を通す。
 

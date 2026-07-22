@@ -14,8 +14,6 @@
     justify-content: flex-start;
   }
 
-  .status-grid,
-  .content-grid,
   .stats-api-filters,
   .stats-api-details-top,
   .draft-header,
@@ -75,11 +73,6 @@
     border-top: 1px solid rgba(154, 167, 184, 0.14);
     padding-left: 0;
     padding-top: 7px;
-  }
-
-  .champion-pool-header {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .stats-toolbar {

@@ -4,7 +4,6 @@
     state: any;
     getDraftPanelState(state: any): any;
     normalizeChampionPool(pool: any): any;
-    renderStatus(state: any): void;
     renderMatchHistoryStatus(status: any): void;
     renderMatchDataSummary(summary: any, settings: any): void;
     renderSettings(settings: any): void;
@@ -13,7 +12,6 @@
     renderLaneOpponentStats(): void;
     renderDraft(state: any): void;
     setActiveView(viewName: string): void;
-    stringify(value: any): string;
     resetFinalCompositionAnalysis(): void;
   }
 
@@ -36,7 +34,6 @@
       if (!state.championPoolDirty) {
         state.championPool = deps.normalizeChampionPool(nextState.championPool);
       }
-      deps.renderStatus(nextState);
       deps.renderMatchHistoryStatus(nextState.matchHistoryStatus);
       deps.renderMatchDataSummary(nextState.matchHistorySummary, nextState.settings);
       deps.renderSettings({
@@ -48,7 +45,6 @@
       deps.renderPlayedChampionStats();
       deps.renderLaneOpponentStats();
       deps.renderDraft(nextState);
-      renderDebug(nextState);
     }
 
     function syncDraftAutoFocus(nextState: any): void {
@@ -67,16 +63,7 @@
       state.wasInChampSelect = shouldAutoFocusDraft;
     }
 
-    function renderDebug(nextState: any): void {
-      elements.summonerJson.textContent = deps.stringify(nextState.summoner);
-      elements.lobbyJson.textContent = deps.stringify(nextState.lobby);
-      elements.champSelectJson.textContent = deps.stringify(nextState.champSelect);
-      elements.lastEventJson.textContent = deps.stringify(nextState.lastEvent);
-      elements.stateJson.textContent = deps.stringify(nextState);
-    }
-
     return {
-      renderDebug,
       renderState,
       syncDraftAutoFocus
     };

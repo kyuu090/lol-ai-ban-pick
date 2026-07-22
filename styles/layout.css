@@ -1,24 +1,7 @@
-.app-header p,
-.label {
+.app-header p {
   color: var(--muted);
 }
 
-.status-grid,
-.content-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.status-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.content-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.status-card,
-.panel,
 .center-state,
 .draft-board {
   background: var(--panel);
@@ -26,20 +9,6 @@
   border-radius: 8px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
-}
-
-.status-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding: 13px 14px;
-}
-
-.status-card strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .view-panel {
@@ -63,12 +32,6 @@
 #championsView {
   flex: 1 1 auto;
   overflow: hidden;
-}
-
-.debug-toolbar {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
 }
 
 .settings-panel,

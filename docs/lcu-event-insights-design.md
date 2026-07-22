@@ -168,7 +168,7 @@ ChampSelect 中の各プレイヤー情報。
 
 注意:
 
-- 個人情報に近い情報を含む可能性があるため、Debug state やログに常時出さない。
+- 個人情報に近い情報を含む可能性があるため、Rendererやログに常時出さない。
 
 ### `/lol-matchmaking/v1/search`
 

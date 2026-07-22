@@ -10,6 +10,10 @@
     { id: 'BOTTOM', label: 'BOT' },
     { id: 'UTILITY', label: 'SUP' }
   ] as const;
+  const STATS_API_RANK_ORDER = [
+    'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'
+  ];
+  const STATS_API_MINIMUM_RANK_FOR_THRESHOLD = 'GOLD';
   const KEYSTONE_LABELS: Record<number, string> = {
     8005: 'プレスアタック',
     8008: 'リーサルテンポ',
@@ -674,6 +678,24 @@
     return url.toString();
   }
 
+  function getStatsApiRanksAtOrAbove(selectedRank: string, availableRanks: string[]): string[] {
+    const normalizedSelectedRank = String(selectedRank || '').trim().toUpperCase();
+    const selectedRankIndex = STATS_API_RANK_ORDER.indexOf(normalizedSelectedRank);
+    if (selectedRankIndex < 0) return [];
+
+    const availableRankSet = new Set(availableRanks.map((rank) => String(rank || '').trim().toUpperCase()));
+    return STATS_API_RANK_ORDER.slice(selectedRankIndex).filter((rank) => availableRankSet.has(rank));
+  }
+
+  function getStatsApiRanksForSelection(selection: string, availableRanks: string[]): string[] {
+    const [mode, rawRank] = String(selection || '').split(':', 2);
+    const rank = String(rawRank || '').trim().toUpperCase();
+    const availableRankSet = new Set(availableRanks.map((item) => String(item || '').trim().toUpperCase()));
+    if (mode === 'exact') return availableRankSet.has(rank) ? [rank] : [];
+    if (mode === 'plus') return getStatsApiRanksAtOrAbove(rank, availableRanks);
+    return [];
+  }
+
   function buildStatsApiChampionDetailsUrl(filters: StatsApiChampionDetailsFilters, baseUrl = STATS_API_BASE_URL): string {
     const position = normalizeStatsApiPosition(filters.position);
     const championId = normalizeChampionId(filters.championId);
@@ -912,7 +934,7 @@
     let statsApiMeta: StatsApiMetaData | null = null;
     let statsApiSelectedPatch = '';
     let statsApiSelectedPosition = '';
-    let statsApiSelectedRanks = new Set<string>();
+    let statsApiSelectedRank = '';
     let statsApiRequestId = 0;
     let statsApiDetailsRequestId = 0;
     let statsApiRankDropdownInitialized = false;
@@ -920,7 +942,6 @@
     let statsApiSortButtonsInitialized = false;
     let statsApiSortKey: StatsApiSortKey = 'tierScore';
     let statsApiSortDirection: UiSortDirection = 'desc';
-    let statsApiRankSelectionDirty = false;
     let selectedChampionId = 0;
     let selectedChampionStats: StatsApiChampionStats | null = null;
     let selectedOpponentChampionId = 0;
@@ -2044,22 +2065,6 @@
       return card;
     }
 
-    function initializeStatsApiRankDropdown(): void {
-      if (statsApiRankDropdownInitialized || !elements.statsApiRankDropdownButton || !elements.statsApiRankDropdown) return;
-      statsApiRankDropdownInitialized = true;
-
-      elements.statsApiRankDropdownButton.addEventListener('click', () => {
-        setStatsApiRankDropdownOpen(Boolean(elements.statsApiRankDropdown.hidden));
-      });
-
-      doc.addEventListener('click', (event: MouseEvent) => {
-        const target = event.target as Node | null;
-        if (!target) return;
-        if (elements.statsApiRankDropdownButton.contains(target) || elements.statsApiRankDropdown.contains(target)) return;
-        setStatsApiRankDropdownOpen(false);
-      });
-    }
-
     function initializeStatsApiSortButtons(): void {
       if (statsApiSortButtonsInitialized) return;
       statsApiSortButtonsInitialized = true;
@@ -2072,6 +2077,20 @@
           statsApiSortKey = sortKey;
           refreshStatsApiChampionList();
         });
+      });
+    }
+
+    function initializeStatsApiRankDropdown(): void {
+      if (statsApiRankDropdownInitialized || !elements.statsApiRankDropdownButton || !elements.statsApiRankDropdown) return;
+      statsApiRankDropdownInitialized = true;
+      elements.statsApiRankDropdownButton.addEventListener('click', () => {
+        setStatsApiRankDropdownOpen(Boolean(elements.statsApiRankDropdown.hidden));
+      });
+      doc.addEventListener('click', (event: MouseEvent) => {
+        const target = event.target as Node | null;
+        if (!target) return;
+        if (elements.statsApiRankDropdownButton.contains(target) || elements.statsApiRankDropdown.contains(target)) return;
+        setStatsApiRankDropdownOpen(false);
       });
     }
 
@@ -2107,47 +2126,28 @@
 
     function setStatsApiRankDropdownOpen(isOpen: boolean): void {
       if (!elements.statsApiRankDropdown || !elements.statsApiRankDropdownButton) return;
-      const wasOpen = !elements.statsApiRankDropdown.hidden;
       elements.statsApiRankDropdown.hidden = !isOpen;
       elements.statsApiRankDropdownButton.setAttribute('aria-expanded', String(isOpen));
-      if (wasOpen && !isOpen && statsApiRankSelectionDirty) {
-        statsApiRankSelectionDirty = false;
-        refreshStatsApiChampionList();
-      }
     }
 
     function updateStatsApiRankSummary(): void {
       if (!elements.statsApiRankSummary) return;
-      const allRanks = statsApiMeta?.ranks || [];
-      const selectedRanks = getStatsApiSelectedRanks();
-      if (selectedRanks.length === 0) {
-        elements.statsApiRankSummary.textContent = 'No rank';
-      } else if (selectedRanks.length >= allRanks.length) {
-        elements.statsApiRankSummary.textContent = 'All rank';
-      } else if (selectedRanks.length <= 2) {
-        elements.statsApiRankSummary.textContent = selectedRanks.join(', ');
-      } else {
-        elements.statsApiRankSummary.textContent = `${selectedRanks.length} ranks`;
-      }
-    }
-
-    function getStatsApiSelectedRanks(): string[] {
-      if (!elements.statsApiRankOptions) return Array.from(statsApiSelectedRanks);
-      const rankOptions = elements.statsApiRankOptions as HTMLElement;
-      return Array.from(rankOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
-        .map((input: HTMLInputElement) => input.value)
-        .filter(Boolean);
+      const [mode, rank] = statsApiSelectedRank.split(':', 2);
+      elements.statsApiRankSummary.textContent = mode === 'plus'
+        ? `${rank} +`
+        : mode === 'exact' && rank
+          ? rank
+          : 'All ranks';
     }
 
     function getStatsApiSelectedFilters(): StatsApiFilters {
-      const allRanks = statsApiMeta?.ranks || [];
-      const selectedRanks = getStatsApiSelectedRanks();
+      const selectedRanks = getStatsApiRanksForSelection(statsApiSelectedRank, statsApiMeta?.ranks || []);
       const availableLanes = getAvailableStatsApiLanes(statsApiMeta?.positions);
       const fallbackPosition = availableLanes[0]?.id || '';
       return {
         patch: elements.statsApiPatchSelect?.value || statsApiSelectedPatch || statsApiMeta?.latestPatch || undefined,
         position: statsApiSelectedPosition || fallbackPosition || undefined,
-        ranks: selectedRanks.length < allRanks.length ? selectedRanks : undefined
+        ranks: statsApiSelectedRank ? selectedRanks : undefined
       };
     }
 
@@ -2193,9 +2193,7 @@
         statsApiMeta = response?.data || {};
         statsApiSelectedPatch = statsApiMeta?.latestPatch || statsApiMeta?.patches?.[0] || '';
         statsApiSelectedPosition = getAvailableStatsApiLanes(statsApiMeta?.positions)[0]?.id || '';
-        statsApiSelectedRanks = new Set(statsApiMeta?.ranks || []);
         renderStatsApiFilters();
-        updateStatsApiRankSummary();
         await refreshStatsApiChampionList();
       } catch (error: any) {
         if (!scheduleStatsApiRetry('meta', error)) {
@@ -2356,26 +2354,53 @@
 
     function renderStatsApiRankOptions(ranks: string[]): void {
       if (!elements.statsApiRankOptions) return;
-      const options = ranks.map((rank) => {
-        const label = doc.createElement('label');
-        label.className = 'stats-api-rank-option';
+      const availableRanks = STATS_API_RANK_ORDER.filter((rank) => ranks.includes(rank)).reverse();
+      const selectedRank = String(statsApiSelectedRank.split(':', 2)[1] || '');
+      if (statsApiSelectedRank && !availableRanks.includes(selectedRank)) {
+        statsApiSelectedRank = '';
+      }
+      const selectRank = (selection: string) => {
+        statsApiSelectedRank = selection;
+        renderStatsApiRankOptions(statsApiMeta?.ranks || []);
+        setStatsApiRankDropdownOpen(false);
+        refreshStatsApiChampionList();
+      };
+      const allRanksButton = doc.createElement('button');
+      allRanksButton.type = 'button';
+      allRanksButton.className = 'stats-api-rank-all-option';
+      allRanksButton.textContent = 'All ranks';
+      allRanksButton.classList.toggle('active', !statsApiSelectedRank);
+      allRanksButton.addEventListener('click', () => selectRank(''));
 
-        const checkbox = doc.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = rank;
-        checkbox.checked = statsApiSelectedRanks.has(rank);
-        checkbox.addEventListener('change', () => {
-          statsApiSelectedRanks = new Set(getStatsApiSelectedRanks());
-          statsApiRankSelectionDirty = true;
-          updateStatsApiRankSummary();
-        });
+      const options = doc.createElement('div');
+      options.className = 'stats-api-rank-options-grid';
+      const minimumThresholdIndex = STATS_API_RANK_ORDER.indexOf(STATS_API_MINIMUM_RANK_FOR_THRESHOLD);
+      availableRanks.forEach((rank) => {
+        const canonicalRankIndex = STATS_API_RANK_ORDER.indexOf(rank);
+        if (canonicalRankIndex >= minimumThresholdIndex && rank !== 'CHALLENGER') {
+          const thresholdButton = doc.createElement('button');
+          thresholdButton.type = 'button';
+          thresholdButton.className = 'stats-api-rank-option';
+          thresholdButton.textContent = `${rank} +`;
+          thresholdButton.classList.toggle('active', statsApiSelectedRank === `plus:${rank}`);
+          thresholdButton.addEventListener('click', () => selectRank(`plus:${rank}`));
+          options.append(thresholdButton);
+        } else {
+          const spacer = doc.createElement('span');
+          spacer.className = 'stats-api-rank-option-spacer';
+          spacer.setAttribute('aria-hidden', 'true');
+          options.append(spacer);
+        }
 
-        const text = doc.createElement('span');
-        text.textContent = rank;
-        label.append(checkbox, text);
-        return label;
+        const exactButton = doc.createElement('button');
+        exactButton.type = 'button';
+        exactButton.className = 'stats-api-rank-option';
+        exactButton.textContent = rank;
+        exactButton.classList.toggle('active', statsApiSelectedRank === `exact:${rank}`);
+        exactButton.addEventListener('click', () => selectRank(`exact:${rank}`));
+        options.append(exactButton);
       });
-      elements.statsApiRankOptions.replaceChildren(...options);
+      elements.statsApiRankOptions.replaceChildren(allRanksButton, options);
       updateStatsApiRankSummary();
     }
 
@@ -2387,12 +2412,6 @@
         clearStatsApiChampionRows();
         setStatsApiLoading(false);
         setStatsApiStatus('利用可能なLaneが取得できませんでした。');
-        return;
-      }
-      if (filters.ranks && filters.ranks.length === 0) {
-        clearStatsApiChampionRows();
-        setStatsApiLoading(false);
-        setStatsApiStatus('Rankを1つ以上選択してください。');
         return;
       }
       const requestId = ++statsApiRequestId;
@@ -3966,6 +3985,8 @@
     getStatsApiOpponentChampionOptions,
     getStatsApiLaneFightIndicator,
     getStatsApiLeadRateScale,
+    getStatsApiRanksAtOrAbove,
+    getStatsApiRanksForSelection,
     normalizeStatsApiSearchText,
     sortStatsApiMatchupRows,
     sortStatsApiChampionRows

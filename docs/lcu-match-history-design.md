@@ -142,7 +142,7 @@ match-history/{localPuuid}.json
 - LCU match history を本線の自己戦績取得に使わない
 - LCU match history の大量自動取得は避ける
 - ChampSelect 中に重い取得処理を走らせない
-- raw response を Debug state に常時出さない
+- raw response を Renderer に常時出さない
 - LCU password や Basic 認証ヘッダをログに出さない
 - 自動ピック、自動BAN、自動ドッジには使わない
 

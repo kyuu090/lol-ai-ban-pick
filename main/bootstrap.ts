@@ -507,7 +507,6 @@ function bootstrap(): void {
         logRendererMessage,
         handlers: {
           getState: statePublisher.getState,
-          refreshLcuState: lcuController.refreshLcuState,
           getChampionIcon: lcuController.getClient().getChampionIcon,
           getChampionPool: () => championPool,
           saveChampionPool,
