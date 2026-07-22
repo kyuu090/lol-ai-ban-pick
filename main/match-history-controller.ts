@@ -42,10 +42,6 @@ interface PublishedMatchHistorySnapshot {
   updatedAt: string;
 }
 
-interface DialogLike {
-  showMessageBox: (window: unknown, options: unknown) => Promise<{ response: number }>;
-}
-
 interface MatchHistoryPaths {
   getMatchHistoryPath: (puuid: string) => string;
   getRiotMatchCachePath: (puuid: string) => string;
@@ -60,8 +56,11 @@ interface RiotMatchHistoryServiceLike {
 }
 
 interface MatchHistoryControllerDeps {
-  dialog: DialogLike;
-  getMainWindow: () => unknown;
+  confirmSeasonMatchHistoryCollection: (options: {
+    totalMatches: number;
+    missingMatches: number;
+    estimateText: string;
+  }) => Promise<boolean>;
   getState: () => AppState;
   updateState: (patch: Partial<AppState>) => void;
   createMatchHistoryStatus: (patch?: Partial<MatchHistoryStatus>) => MatchHistoryStatus;
@@ -110,8 +109,7 @@ interface MatchHistoryController {
 }
 
 function createMatchHistoryController({
-  dialog,
-  getMainWindow,
+  confirmSeasonMatchHistoryCollection: showSeasonMatchHistoryCollectionDialog,
   getState,
   updateState,
   createMatchHistoryStatus,
@@ -459,17 +457,11 @@ function createMatchHistoryController({
   }): Promise<boolean> {
     const estimateMinutes = estimateSeasonCollectionMinutes(missingMatches);
     const estimateText = estimateMinutes > 0 ? `${estimateMinutes}分程度` : '1分未満';
-    const result = await dialog.showMessageBox(getMainWindow(), {
-      type: 'question',
-      buttons: ['取得する', 'キャンセル'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'シーズン中の全試合データ取得',
-      message: 'シーズン中の全試合データを取得します。',
-      detail: `この処理は試合数によって時間がかかるケースがあります。\nあなたの場合、${estimateText}かかります。\n\n対象試合: ${totalMatches}試合\n未取得試合: ${missingMatches}試合`
+    return showSeasonMatchHistoryCollectionDialog({
+      totalMatches,
+      missingMatches,
+      estimateText
     });
-
-    return result.response === 0;
   }
 
   async function collectRiotMatchHistory(
@@ -567,25 +559,32 @@ function createMatchHistoryController({
       const missingTimelineMatchIds = analysisMatchIds.filter((matchId: MatchId) => !timelineMatchIds.has(String(matchId)));
       const missingMatchIds = collectMissingMatchIds(normalizedMatchIds, matchesById);
       if (mode === 'season' && source === 'manual') {
-        const confirmed = await confirmSeasonMatchHistoryCollection({
-          totalMatches: normalizedMatchIds.length,
-          missingMatches: missingMatchIds.length
-        });
-        if (!confirmed) {
+        if (missingMatchIds.length === 0) {
           updateMatchHistoryStatus({
-            phase: 'idle',
-            mode,
-            requestedMatches: normalizedMatchIds.length,
-            fetchedMatches: 0,
-            normalizedMatches: 0,
-            updatedMatches: 0,
-            failedRequests: 0,
-            retryAttempt: 0,
-            nextRetryAt: null,
-            message: '',
-            error: null
+            phase: 'collecting',
+            message: '未取得な試合は0件です'
           });
-          return { canceled: true, requestedMatches: normalizedMatchIds.length, updatedMatches: 0 };
+        } else {
+          const confirmed = await confirmSeasonMatchHistoryCollection({
+            totalMatches: normalizedMatchIds.length,
+            missingMatches: missingMatchIds.length
+          });
+          if (!confirmed) {
+            updateMatchHistoryStatus({
+              phase: 'idle',
+              mode,
+              requestedMatches: normalizedMatchIds.length,
+              fetchedMatches: 0,
+              normalizedMatches: 0,
+              updatedMatches: 0,
+              failedRequests: 0,
+              retryAttempt: 0,
+              nextRetryAt: null,
+              message: '',
+              error: null
+            });
+            return { canceled: true, requestedMatches: normalizedMatchIds.length, updatedMatches: 0 };
+          }
         }
       }
       const detailBatchDelayMs = mode === 'season' ? constants.seasonDetailBatchDelayMs : constants.detailBatchDelayMs;
@@ -703,7 +702,9 @@ function createMatchHistoryController({
           retryAttempt: 0,
           nextRetryAt: null,
           message: phase === 'completed'
-            ? `試合データ収集完了 ${fetchedMatches}試合を更新しました`
+            ? (mode === 'season' && source === 'manual' && missingMatchIds.length === 0
+              ? '未取得な試合は0件です'
+              : `試合データ収集完了 ${fetchedMatches}試合を更新しました`)
             : `一部の試合データを収集しました ${fetchedMatches}試合を更新 / ${failedRequests}件失敗`,
           error: null
         });

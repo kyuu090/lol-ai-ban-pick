@@ -1,0 +1,172 @@
+html,
+body {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.season-dialog {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  overflow: hidden;
+  padding: 30px;
+  position: relative;
+}
+
+.season-dialog-accent {
+  background: linear-gradient(135deg, rgba(79, 145, 255, 0.46), rgba(155, 124, 255, 0.5));
+  border-radius: 50%;
+  filter: blur(12px);
+  height: 240px;
+  opacity: 0.34;
+  position: absolute;
+  right: -76px;
+  top: -128px;
+  width: 240px;
+}
+
+.season-dialog-panel {
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 34px 32px 30px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.season-dialog-icon {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(80, 75, 220, 0.28);
+  color: #fff;
+  display: inline-flex;
+  font-size: 25px;
+  font-weight: 800;
+  height: 48px;
+  justify-content: center;
+  line-height: 1;
+  width: 48px;
+}
+
+.season-dialog-eyebrow {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  margin: 16px 0 6px;
+}
+
+.season-dialog h1 {
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.season-dialog-description,
+.season-dialog-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.season-dialog-description {
+  margin: 12px auto 18px;
+  max-width: 360px;
+}
+
+.season-dialog-estimate {
+  align-items: baseline;
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 14px;
+}
+
+.season-dialog-estimate span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.season-dialog-estimate strong {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.season-dialog-stats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  margin: 14px 0;
+}
+
+.season-dialog-stats div {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px;
+}
+
+.season-dialog-stats dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.season-dialog-stats dd {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  margin: 2px 0 0;
+}
+
+.season-dialog-note {
+  margin: 0 0 22px;
+}
+
+.season-dialog-actions {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+}
+
+.season-dialog-button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 16px;
+}
+
+.season-dialog-button.secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.season-dialog-button.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 8px 18px rgba(73, 90, 224, 0.26);
+  color: #fff;
+}
+
+.season-dialog-button:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.season-dialog-button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
