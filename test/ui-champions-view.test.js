@@ -53,16 +53,37 @@ test('champions view stats api URL includes selected filters and fixed min pick 
   const url = new URL(buildStatsApiChampionsUrl({
     patch: '15.12',
     position: 'BOTTOM',
-    ranks: ['DIAMOND', 'MASTER']
+    ranks: ['DIAMOND', 'MASTER'],
+    regions: ['JP1']
   }));
 
   assert.equal(url.origin, 'https://db.banpick-ai.lol');
   assert.equal(url.pathname, '/v1/stats/positions/BOTTOM/champions');
   assert.equal(url.searchParams.get('patch'), '15.12');
   assert.equal(url.searchParams.get('ranks'), 'DIAMOND,MASTER');
+  assert.equal(url.searchParams.get('regions'), 'JP1');
   assert.equal(url.searchParams.get('minPickRate'), '0.005');
   assert.equal(url.searchParams.get('limit'), '200');
   assert.equal(url.searchParams.get('sort'), 'tierScore:desc');
+});
+
+test('champions view omits the Region query when ALL is selected', () => {
+  const url = new URL(buildStatsApiChampionsUrl({
+    patch: '15.12',
+    position: 'BOTTOM'
+  }));
+
+  assert.equal(url.searchParams.has('regions'), false);
+});
+
+test('champions view joins Region names for the StatsAPI query', () => {
+  const url = new URL(buildStatsApiChampionsUrl({
+    patch: '15.12',
+    position: 'BOTTOM',
+    regions: ['KR', 'JP1']
+  }));
+
+  assert.equal(url.searchParams.get('regions'), 'KR,JP1');
 });
 
 test('champions view detail URL keeps current filters and selected champion id', () => {
@@ -72,6 +93,7 @@ test('champions view detail URL keeps current filters and selected champion id',
     championId: 103,
     keystoneId: 8112,
     ranks: ['MASTER', 'GRANDMASTER'],
+    regions: ['JP1'],
     opponentChampionId: 238
   }));
 
@@ -79,6 +101,7 @@ test('champions view detail URL keeps current filters and selected champion id',
   assert.equal(url.pathname, '/v1/stats/positions/MIDDLE/champions/103/details');
   assert.equal(url.searchParams.get('patch'), '16.13');
   assert.equal(url.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(url.searchParams.get('regions'), 'JP1');
   assert.equal(url.searchParams.get('keystoneId'), '8112');
   assert.equal(url.searchParams.get('opponentChampionId'), '238');
 });
@@ -88,12 +111,14 @@ test('champions view analysis URLs keep the selected champion, opponent, and com
     patch: '16.13',
     position: 'MIDDLE',
     championId: 103,
-    ranks: ['MASTER', 'GRANDMASTER']
+    ranks: ['MASTER', 'GRANDMASTER'],
+    regions: ['JP1']
   };
   const matchupsUrl = new URL(buildStatsApiMatchupsUrl({ ...filters, minGames: 50 }));
   assert.equal(matchupsUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups');
   assert.equal(matchupsUrl.searchParams.get('patch'), '16.13');
   assert.equal(matchupsUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(matchupsUrl.searchParams.get('regions'), 'JP1');
   assert.equal(matchupsUrl.searchParams.get('minGames'), '50');
 
   const matchupTimelineUrl = new URL(buildStatsApiMatchupTimelineUrl({
@@ -102,10 +127,12 @@ test('champions view analysis URLs keep the selected champion, opponent, and com
   }));
   assert.equal(matchupTimelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/matchups/238');
   assert.equal(matchupTimelineUrl.searchParams.get('patch'), '16.13');
+  assert.equal(matchupTimelineUrl.searchParams.get('regions'), 'JP1');
 
   const timelineUrl = new URL(buildStatsApiTimelineUrl(filters));
   assert.equal(timelineUrl.pathname, '/v1/stats/positions/MIDDLE/champions/103/timeline');
   assert.equal(timelineUrl.searchParams.get('ranks'), 'MASTER,GRANDMASTER');
+  assert.equal(timelineUrl.searchParams.get('regions'), 'JP1');
 });
 
 test('champions view builds official Data Dragon rune data URLs', () => {

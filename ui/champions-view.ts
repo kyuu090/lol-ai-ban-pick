@@ -98,6 +98,7 @@
     patches?: string[];
     positions?: string[];
     ranks?: string[];
+    regions?: string[];
   }
 
   interface StatsApiChampionStats {
@@ -115,6 +116,7 @@
     patch?: string;
     position?: string;
     ranks?: string[];
+    regions?: string[];
   }
 
   interface StatsApiChampionDetailsFilters extends StatsApiFilters {
@@ -672,6 +674,9 @@
     if (filters.ranks && filters.ranks.length > 0) {
       url.searchParams.set('ranks', filters.ranks.join(','));
     }
+    if (filters.regions && filters.regions.length > 0) {
+      url.searchParams.set('regions', filters.regions.join(','));
+    }
     url.searchParams.set('minPickRate', String(STATS_API_MIN_PICK_RATE));
     url.searchParams.set('limit', '200');
     url.searchParams.set('sort', 'tierScore:desc');
@@ -716,6 +721,9 @@
     if (filters.ranks && filters.ranks.length > 0) {
       url.searchParams.set('ranks', filters.ranks.join(','));
     }
+    if (filters.regions && filters.regions.length > 0) {
+      url.searchParams.set('regions', filters.regions.join(','));
+    }
     const opponentChampionId = normalizeChampionId(filters.opponentChampionId);
     if (opponentChampionId) {
       url.searchParams.set('opponentChampionId', String(opponentChampionId));
@@ -733,6 +741,9 @@
     }
     if (filters.ranks && filters.ranks.length > 0) {
       url.searchParams.set('ranks', filters.ranks.join(','));
+    }
+    if (filters.regions && filters.regions.length > 0) {
+      url.searchParams.set('regions', filters.regions.join(','));
     }
   }
 
@@ -2144,10 +2155,12 @@
       const selectedRanks = getStatsApiRanksForSelection(statsApiSelectedRank, statsApiMeta?.ranks || []);
       const availableLanes = getAvailableStatsApiLanes(statsApiMeta?.positions);
       const fallbackPosition = availableLanes[0]?.id || '';
+      const selectedRegion = String(elements.statsApiRegionSelect?.value || '').trim();
       return {
         patch: elements.statsApiPatchSelect?.value || statsApiSelectedPatch || statsApiMeta?.latestPatch || undefined,
         position: statsApiSelectedPosition || fallbackPosition || undefined,
-        ranks: statsApiSelectedRank ? selectedRanks : undefined
+        ranks: statsApiSelectedRank ? selectedRanks : undefined,
+        regions: selectedRegion ? [selectedRegion] : undefined
       };
     }
 
@@ -2208,6 +2221,7 @@
       renderStatsApiPatchOptions(statsApiMeta?.patches || []);
       renderStatsApiLaneTabs(statsApiMeta?.positions || []);
       renderStatsApiRankOptions(statsApiMeta?.ranks || []);
+      renderStatsApiRegionOptions(statsApiMeta?.regions || []);
       renderStatsApiSortButtons();
     }
 
@@ -2221,6 +2235,31 @@
         return option;
       });
       elements.statsApiPatchSelect.replaceChildren(...options);
+    }
+
+    function getAvailableStatsApiRegions(regions: string[] | null | undefined): string[] {
+      return Array.from(new Set((regions || [])
+        .map((region) => String(region || '').trim())
+        .filter(Boolean)
+      ));
+    }
+
+    function renderStatsApiRegionOptions(regions: string[]): void {
+      if (!elements.statsApiRegionSelect) return;
+      const availableRegions = getAvailableStatsApiRegions(regions);
+      const selectedRegion = elements.statsApiRegionSelect.value || '';
+      const normalizedSelectedRegion = availableRegions.includes(selectedRegion) ? selectedRegion : '';
+      const options = [
+        { label: 'ALL', value: '' },
+        ...availableRegions.map((region) => ({ label: region, value: region }))
+      ].map(({ label, value }) => {
+        const option = doc.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        option.selected = value === normalizedSelectedRegion;
+        return option;
+      });
+      elements.statsApiRegionSelect.replaceChildren(...options);
     }
 
     function renderStatsApiLaneTabs(positions: string[]): void {

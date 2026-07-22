@@ -37,6 +37,7 @@ test('UI capture StatsAPI fixtures cover analysis navigation', () => {
   const timeline = createStatsFixtureResponse('/v1/stats/positions/MIDDLE/champions/103/timeline');
 
   assert.deepEqual(meta.data.positions, ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']);
+  assert.deepEqual(meta.data.regions, ['JP1', 'KR']);
   assert.equal(champions.data[0].championId, 103);
   assert.equal(matchups.data.matchups[0].opponentChampionId, 238);
   assert.equal(matchup.data.timeline.length, 8);

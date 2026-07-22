@@ -652,7 +652,7 @@ BAN表示:
 
 StatsAPI ベースの Champions 画面を実装している。
 
-- 上部に `Patch / Rank / Lane` フィルターを表示する。Rankは単一選択のプルダウンで、左の`範囲指定`と右の`単一指定`を同じランクごとに並べる。`EMERALD` はそのランクだけ、`EMERALD +` はそのランク以上を対象にする。範囲指定は `GOLD +` から `GRANDMASTER +` までを表示する
+- 上部に `Patch / Region / Rank / Lane` フィルターを表示する。Regionは StatsAPI の meta エンドポイントで返された Region のみを表示し、`ALL` または単一 Region を選択できる。選択した Region 名（例: `JP1`）は `regions` クエリへそのまま渡す。Rankは単一選択のプルダウンで、左の`範囲指定`と右の`単一指定`を同じランクごとに並べる。`EMERALD` はそのランクだけ、`EMERALD +` はそのランク以上を対象にする。範囲指定は `GOLD +` から `GRANDMASTER +` までを表示する
 - 一覧は `/v1/stats/positions/{position}/champions` を使う
 - 一覧のチャンピオン行を選ぶと、同じフィルター条件のまま `/v1/stats/positions/{position}/champions/{championId}/details` を再取得して詳細画面へ切り替える
 - 詳細画面ではキーストーン、ルーンセット、サモナースペル、開始アイテム、ブーツ、コアアイテム、3rd-6th アイテム、スキルオーダーを表示する
