@@ -68,14 +68,33 @@
       <section id="draftView" class="view-panel">
         <section id="loggedOutView" class="center-state">
           <p class="eyebrow">League Client</p>
-          <h2>ログインしてません</h2>
-          <p>LoLクライアントを起動してログインすると、ドラフト情報を表示します。</p>
+          <h2>League of Legendsを起動してください</h2>
+          <p>ログインすると、ここにドラフトの使い方を表示します。</p>
+          <p class="draft-connection-help">League of Legendsを起動しても画面が切り替わらない場合は、Settings画面でゲームの<strong>インストールディレクトリ</strong>設定を確認してください。</p>
         </section>
 
-        <section id="loggedInView" class="center-state" hidden>
+        <section id="loggedInView" class="center-state draft-guide-state" hidden>
           <p class="eyebrow">Ready</p>
           <h2 id="helloMessage">こんにちは</h2>
-          <p>ロビーまたはチャンピオン選択に入ると、ドラフト画面に切り替わります。</p>
+          <p>ドラフトを始める準備ができました。</p>
+          <ol class="draft-guide-list">
+            <li><strong>ChampionPool</strong> で、ロールごとの使用候補を登録します。</li>
+            <li>サモナーズリフトのドラフトを開始します。</li>
+            <li>チャンピオン選択が始まると、この画面が自動で切り替わり、BAN・Pickの候補、推奨ビルドの確認ができます。</li>
+          </ol>
+          <section class="draft-other-features" aria-labelledby="draftOtherFeaturesTitle">
+            <h3 id="draftOtherFeaturesTitle">そのほかの機能</h3>
+            <dl>
+              <div>
+                <dt>Champions</dt>
+                <dd>チャンピオンごとのビルド、ルーン、スキル優先度、対面データを確認できます。</dd>
+              </div>
+              <div>
+                <dt>Stats</dt>
+                <dd>自分がプレイしたチャンピオンと、レーンで対面したチャンピオンの戦績を確認できます。</dd>
+              </div>
+            </dl>
+          </section>
         </section>
 
         <section id="unsupportedGameModeView" class="center-state" hidden>

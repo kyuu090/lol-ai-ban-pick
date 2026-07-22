@@ -17,3 +17,70 @@
   color: var(--muted);
 }
 
+.center-state .draft-connection-help {
+  font-size: 13px;
+  margin-top: 8px;
+  max-width: 540px;
+}
+
+.draft-connection-help strong {
+  color: var(--text);
+}
+
+.draft-guide-state {
+  gap: 8px;
+}
+
+.draft-guide-list {
+  color: var(--muted);
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  max-width: 620px;
+  padding-left: 24px;
+  text-align: left;
+}
+
+.draft-guide-list li {
+  padding-left: 4px;
+}
+
+.draft-guide-list strong {
+  color: var(--text);
+}
+
+.draft-other-features {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  max-width: 620px;
+  padding-top: 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.draft-other-features h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.draft-other-features dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.draft-other-features dl > div {
+  display: grid;
+  gap: 2px;
+}
+
+.draft-other-features dt {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.draft-other-features dd {
+  color: var(--muted);
+  margin: 0;
+}
+
