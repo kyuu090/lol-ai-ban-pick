@@ -785,6 +785,9 @@ elements.opponentStatsSortWinRateButton.addEventListener('click', () => {
 elements.statsApiPatchSelect.addEventListener('change', () => {
     refreshStatsApiChampionList();
 });
+elements.statsApiRegionSelect.addEventListener('change', () => {
+    refreshStatsApiChampionList();
+});
 setActiveView(rendererState.activeView);
 initializeStatsApiChampionList();
 renderClientVersion();
