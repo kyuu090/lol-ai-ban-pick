@@ -1,3 +1,19 @@
+.champion-pool-toolbar {
+  align-items: flex-start;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 14px;
+}
+
+.champion-pool-toolbar .lane-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.champion-pool-toolbar #saveChampionPoolButton {
+  flex: 0 0 auto;
+}
+
 .pool-editor {
   display: grid;
   flex: 1 1 auto;

@@ -10,7 +10,6 @@ import type {
 
 export interface LcuApi {
   getState(): Promise<AppState>;
-  refresh(): Promise<AppState>;
   getChampionIcon(championId: number): Promise<string | null>;
   getChampionPool(): Promise<ChampionPool>;
   saveChampionPool(championPool: ChampionPool): Promise<ChampionPool>;

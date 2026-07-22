@@ -19,7 +19,7 @@ LCU match history は API キー不要で便利だが、ローカル調査では
 
 - Riot API token が必要
 - Settings で Riot API token と platform region を保存する
-- token 本文は Renderer、Debug state、ログに出さない
+- token 本文は Rendererやログに出さない
 - Match-V5 は regional routing value を使う
 - 日本ユーザーでは基本的に `ASIA` routing を使う
 - 429 が返った場合は `Retry-After` ヘッダを優先して待つ
@@ -213,7 +213,7 @@ GET /lol/match/v5/matches/{matchId}
 
 初期実装では、LCU current summoner から `gameName` と `tagLine` を取得できる場合はそれを使う。
 
-取得できない場合や手動で別アカウントを指定したい場合は、将来 Settings または Debug に Riot ID 入力欄を追加する。
+取得できない場合や手動で別アカウントを指定したい場合は、将来 Settings に Riot ID 入力欄を追加する。
 
 LCU current summoner は Riot ID / Tagline の取得と、同一PCで複数アカウントを使う場合のローカル保存キーに使う。Match-V5 の `by-puuid` と正規化時の participant 特定には Account-V1 から取得した PUUID を使う。
 
@@ -571,7 +571,7 @@ OpenAI API は Electron クライアントから直接呼ばず、BFF 経由で�
 
 AIの出力では、サンプル不足や予定pickの不確実性を明示する。
 
-アプリ側で候補を絞り、集計済みの小さな context だけを渡す。raw match detail、Riot API token、LCU password、Basic認証ヘッダ、Debug state全体は渡さない。
+アプリ側で候補を絞り、集計済みの小さな context だけを渡す。raw match detail、Riot API token、LCU password、Basic認証ヘッダは渡さない。
 
 ```js
 {
@@ -819,7 +819,7 @@ ChampSelect 中の LCU WebSocket event、hover、pick intent、pick確定など�
 ## 注意点
 
 - Riot API token をログに出さない
-- Riot API token を Renderer や Debug state に返さない
+- Riot API token を Renderer に返さない
 - 取得済み match detail は再取得しない
 - recent の取得対象は90試合にする
 - season では今シーズンの全match idを取得対象にする

@@ -198,7 +198,7 @@ app.getPath('userData')/settings.json
 }
 ```
 
-RendererやDebug画面へ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions` だけを含める。BFF Base URL や Riot API key は公開しない。
+Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions` だけを含める。BFF Base URL や Riot API key は公開しない。
 
 ### Riot Match History
 
@@ -244,7 +244,7 @@ RendererやDebug画面へ返す公開settingsは、`lolInstallDir`, `riotPlatfor
 - 起動時、アプリ起動後のLoLログイン時、region保存後、試合終了後に自動取得を試みる
 - ChampSelect中に重い自動取得を走らせない
 - BFF疎通失敗や単発取得endpointの5XXでは `試合データ取得サービスへの接続を確認してください。` を進捗行に表示する
-- raw responseはファイル保存してもログやDebug stateへ常時表示しない
+- raw responseはファイル保存してもログやRendererへ常時表示しない
 - 取得中は同じ取得ボタンを押せない状態にする
 - Riot API rate limit 時は retrying として扱う
 - 取得状態はヘッダーの進捗行に表示し、ボタン内テキストも短く切り替える
@@ -575,7 +575,7 @@ Rendererは `window.lcuApi.onState(callback)` で状態更新を受け取る。
 画面切り替えタブは以下の順番。
 
 ```text
-Draft / ChampionPool / Stats / Settings / Debug
+Draft / ChampionPool / Champions / Stats / Settings
 ```
 
 ### Draft
@@ -638,7 +638,7 @@ BAN表示:
 
 ユーザーの得意チャンピオンをレーン別に登録する画面。
 
-- 上部: レーンタブ
+- 上部: レーンタブと保存ボタンを横並びで表示
 - 中段: 選択中レーンの登録済みチャンピオン
 - 下段: 検索欄とチャンピオンギャラリー
 - ギャラリーはチャンピオン画像 + 名前のカード
@@ -701,24 +701,6 @@ LoLインストールディレクトリとログイン先サーバ設定の画�
 - Riot API platform region の選択欄と保存ボタン（UI上はログイン先サーバ）
 - 保存メッセージ
 
-### Debug
-
-開発者向け画面。
-
-Debug画面にのみ表示するもの:
-
-- 手動再取得ボタン
-- LCU接続状態
-- WebSocket接続状態
-- gameflow phase
-- 最終更新
-- エラーメッセージ
-- 現在のサモナー情報JSON
-- ロビー情報JSON
-- チャンピオン選択情報JSON
-- 最後に受信したWebSocketイベントJSON
-- 全体state JSON
-
 ## Manual LCU API Check
 
 READMEにPowerShell/curlでの手動確認手順を記載済み。
@@ -758,7 +740,7 @@ BFF用の薄いクライアント基盤は `riot-api.js` に置く。
 - `champSelect` の古いstateに引っ張られて、試合終了後にバンピック画面へ戻らないよう注意すること。
 - 危険な操作系LCU APIは実装しないこと。
 - LCUへの画像取得を一気に大量実行しないこと。ChampionPoolギャラリーではIntersectionObserverと少数並列キューを使う。
-- Riot API key と BFF Base URL をログ、Renderer、Debug stateに出さないこと。
+- Riot API key と BFF Base URL をログやRendererに出さないこと。
 - Riot API match detail はキャッシュし、取得済み matchId を再取得しないこと。
 - recent 自動取得で season 取得済みの `match-history/{localPuuid}.json` を90件に縮めないこと。
 - match history のID結合は重複排除し、同一matchIdを二重集計しないこと。
@@ -767,7 +749,7 @@ BFF用の薄いクライアント基盤は `riot-api.js` に置く。
 - 自己戦績取得中は二重起動させないこと。初期実装では取得ボタンをdisabledにする。
 - Riot API 429では `Retry-After` を優先して待つこと。
 - Riot API 429待機に入ったら、取得済みdetailで途中正規化・集計・保存・UI反映すること。
-- raw match detail はログや常時表示のDebug stateに出さないこと。
+- raw match detail はログや常時表示のRendererに出さないこと。
 - LCU match history は本線にしないこと。使う場合は fallback / 調査用に限定する。
 - ログにはLCU password、Basic認証ヘッダ、秘密情報を出さないこと。
 

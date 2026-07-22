@@ -6,7 +6,6 @@
       windowMinimizeButton: doc.querySelector('#windowMinimizeButton'),
       windowMaximizeButton: doc.querySelector('#windowMaximizeButton'),
       windowCloseButton: doc.querySelector('#windowCloseButton'),
-      refreshButton: doc.querySelector('#refreshButton'),
       collectRiotMatchesButton: doc.querySelector('#collectRiotMatchesButton'),
       matchDataMenuButton: doc.querySelector('#matchDataMenuButton'),
       matchDataMenu: doc.querySelector('#matchDataMenu'),
@@ -24,7 +23,6 @@
       statsSubtabButtons: doc.querySelectorAll('.stats-subtab'),
       playedStatsView: doc.querySelector('#playedStatsView'),
       opponentStatsView: doc.querySelector('#opponentStatsView'),
-      debugView: doc.querySelector('#debugView'),
       settingsView: doc.querySelector('#settingsView'),
       laneTabs: doc.querySelector('#laneTabs'),
       playedStatsLaneTabs: doc.querySelector('#playedStatsLaneTabs'),
@@ -90,17 +88,7 @@
       currentPick: doc.querySelector('#currentPick'),
       draftSelfSummary: doc.querySelector('#draftSelfSummary'),
       banInsightPanel: doc.querySelector('#banInsightPanel'),
-      draftAiAnalysisPanel: doc.querySelector('#draftAiAnalysisPanel'),
-      lcuStatus: doc.querySelector('#lcuStatus'),
-      websocketStatus: doc.querySelector('#websocketStatus'),
-      gameflowPhase: doc.querySelector('#gameflowPhase'),
-      updatedAt: doc.querySelector('#updatedAt'),
-      errorMessage: doc.querySelector('#errorMessage'),
-      summonerJson: doc.querySelector('#summonerJson'),
-      lobbyJson: doc.querySelector('#lobbyJson'),
-      champSelectJson: doc.querySelector('#champSelectJson'),
-      lastEventJson: doc.querySelector('#lastEventJson'),
-      stateJson: doc.querySelector('#stateJson')
+      draftAiAnalysisPanel: doc.querySelector('#draftAiAnalysisPanel')
     };
   }
 

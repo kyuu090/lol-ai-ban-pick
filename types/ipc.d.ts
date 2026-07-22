@@ -26,10 +26,6 @@ export interface IpcInvokeChannelMap {
     args: [];
     result: AppState;
   };
-  'lcu:refresh': {
-    args: [];
-    result: AppState;
-  };
   'lcu:get-champion-icon': {
     args: [championId: number];
     result: string | null;

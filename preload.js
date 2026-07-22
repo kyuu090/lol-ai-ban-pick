@@ -2,7 +2,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lcuApi', {
   getState: () => ipcRenderer.invoke('lcu:get-state'),
-  refresh: () => ipcRenderer.invoke('lcu:refresh'),
   getChampionIcon: (championId) => ipcRenderer.invoke('lcu:get-champion-icon', championId),
   getChampionPool: () => ipcRenderer.invoke('champion-pool:get'),
   saveChampionPool: (championPool) => ipcRenderer.invoke('champion-pool:save', championPool),

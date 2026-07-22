@@ -7,7 +7,6 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
   const listened = [];
   const handlers = {
     getState: () => {},
-    refreshLcuState: () => {},
     getChampionIcon: () => {},
     getChampionPool: () => {},
     saveChampionPool: () => {},
@@ -39,7 +38,6 @@ test('registerIpcHandlers wires renderer channels to provided handlers', () => {
 
   assert.deepEqual(handled.map(([channel]) => channel), [
     'lcu:get-state',
-    'lcu:refresh',
     'lcu:get-champion-icon',
     'champion-pool:get',
     'champion-pool:save',

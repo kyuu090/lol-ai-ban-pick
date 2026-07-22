@@ -6,7 +6,7 @@ let aiAnalysisController = null;
 let championPoolController = null;
 let matchHistoryController = null;
 let draftController = null;
-const { collectBans, createFinalCompositionDraftContext, createInGameContext, createPickPhaseDraftContext, getActiveAction, getBestIntoOpponentStats, getDraftPanelState, getMemberChampionId, getPhase, getPendingLabel, getPlannedPickThreatStats, getSummonerName, isChampSelectFinalization, normalizePosition, normalizeChampionPool, positionLabel, collectUnavailableChampionReasons, sortPickPoolCandidates, sortBestWinRateStats, sortWorstWinRateStats } = window.DraftLogic;
+const { collectBans, createFinalCompositionDraftContext, createInGameContext, createPickPhaseDraftContext, getActiveAction, getBestIntoOpponentStats, getDraftPanelState, getMemberChampionId, getPendingLabel, getPlannedPickThreatStats, getSummonerName, isChampSelectFinalization, normalizePosition, normalizeChampionPool, positionLabel, collectUnavailableChampionReasons, sortPickPoolCandidates, sortBestWinRateStats, sortWorstWinRateStats } = window.DraftLogic;
 const { CHAMPION_POOL_LANES } = window.DraftLogic;
 const CHAMPION_POOL_LANE_TO_POSITION = {
     top: 'TOP',
@@ -18,7 +18,7 @@ const CHAMPION_POOL_LANE_TO_POSITION = {
 const RELIABLE_SAMPLE_GAMES = 5;
 const BAN_INSIGHT_LIMIT = 5;
 const BAN_INSIGHT_SAMPLE_OPTIONS = [0, 3, 5, 10, 20];
-const { formatAverageKda, formatDate, formatMatchDataDate, formatNumber, formatPercent } = window.UiFormatters;
+const { formatAverageKda, formatMatchDataDate, formatNumber, formatPercent } = window.UiFormatters;
 const { loadChampionIcon, loadChampionIconEager } = window.UiChampionIcons;
 const { normalizeThemeMode, renderSettings } = window.UiSettingsView;
 const { createChampionPoolView } = window.UiChampionPoolView;
@@ -245,10 +245,7 @@ draftController = window.RendererDraftController.createDraftController({
     elements,
     state: rendererState,
     getDraftPanelState,
-    getPhase,
     getSummonerName,
-    stringify,
-    formatDate,
     renderChampSelect,
     renderInGame,
     resetDraftRecommendationState,
@@ -256,9 +253,6 @@ draftController = window.RendererDraftController.createDraftController({
     resetFinalCompositionAnalysis,
     logDebug
 });
-function stringify(value) {
-    return JSON.stringify(value ?? null, null, 2);
-}
 function logDebug(message, details) {
     window.lcuApi?.log?.('debug', message, details);
 }
@@ -355,12 +349,11 @@ function getOpponentStatsMinGames() {
     const selectedGames = Number(elements.opponentStatsSampleSelect?.value);
     return Number.isInteger(selectedGames) && selectedGames > 0 ? selectedGames : rendererState.opponentStatsMinGames;
 }
-const { renderDebug, renderState, syncDraftAutoFocus } = window.RendererStateSync.createStateSyncController({
+const { renderState, syncDraftAutoFocus } = window.RendererStateSync.createStateSyncController({
     elements,
     state: rendererState,
     getDraftPanelState,
     normalizeChampionPool,
-    renderStatus,
     renderMatchHistoryStatus,
     renderMatchDataSummary,
     renderSettings,
@@ -369,7 +362,6 @@ const { renderDebug, renderState, syncDraftAutoFocus } = window.RendererStateSyn
     renderLaneOpponentStats,
     renderDraft,
     setActiveView,
-    stringify,
     resetFinalCompositionAnalysis
 });
 function renderCounters() {
@@ -596,9 +588,6 @@ function createStrongLaneMatchupItem(stats) {
     item.append(main, opponent);
     return item;
 }
-function renderStatus(state) {
-    draftController?.renderStatus(state);
-}
 function renderDraft(state) {
     draftController?.renderDraft(state);
 }
@@ -730,25 +719,10 @@ async function saveThemeMode() {
         elements.saveThemeModeButton.disabled = false;
     }
 }
-async function refresh() {
-    elements.refreshButton.disabled = true;
-    elements.refreshButton.textContent = '取得中...';
-    try {
-        logDebug('Manual LCU refresh requested');
-        const state = await window.lcuApi.refresh();
-        renderState(state);
-        logDebug('Manual LCU refresh completed', { lcuStatus: state.lcuStatus, websocketStatus: state.websocketStatus });
-    }
-    finally {
-        elements.refreshButton.disabled = false;
-        elements.refreshButton.textContent = '手動再取得';
-    }
-}
 async function collectRiotMatchHistory(mode = 'recent') {
     await matchHistoryController?.collectRiotMatchHistory(mode);
 }
 window.lcuApi.onState(renderState);
-elements.refreshButton.addEventListener('click', refresh);
 elements.windowMinimizeButton.addEventListener('click', () => window.lcuApi.minimizeWindow());
 elements.windowMaximizeButton.addEventListener('click', async () => {
     const isMaximized = await window.lcuApi.toggleMaximizeWindow();

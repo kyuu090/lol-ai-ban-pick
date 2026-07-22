@@ -22,7 +22,7 @@ test('createDomElements keeps known renderer element keys', () => {
   assert.equal(elements.windowTitlebar.selector, '#windowTitlebar');
   assert.equal(elements.draftView.selector, '#draftView');
   assert.equal(elements.championsView.selector, '#championsView');
-  assert.equal(elements.stateJson.selector, '#stateJson');
+  assert.equal(elements.settingsView.selector, '#settingsView');
   assert.deepEqual(elements.tabButtons, [{ selector: '.tab-button' }]);
   assert.deepEqual(elements.statsSubtabButtons, [{ selector: '.stats-subtab' }]);
   assert.ok(queriedSelectors.includes('#championPoolPickerGrid'));

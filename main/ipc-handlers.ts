@@ -4,7 +4,6 @@ function registerIpcHandlers({
   logRendererMessage
 }: IpcHandlersDeps): void {
   ipcMain.handle('lcu:get-state', handlers.getState);
-  ipcMain.handle('lcu:refresh', handlers.refreshLcuState);
   ipcMain.handle('lcu:get-champion-icon', handlers.getChampionIcon);
   ipcMain.handle('champion-pool:get', handlers.getChampionPool);
   ipcMain.handle('champion-pool:save', handlers.saveChampionPool);
@@ -32,7 +31,6 @@ interface IpcMainLike {
 
 interface IpcHandlerMap {
   getState: (...args: any[]) => unknown;
-  refreshLcuState: (...args: any[]) => unknown;
   getChampionIcon: (...args: any[]) => unknown;
   getChampionPool: (...args: any[]) => unknown;
   saveChampionPool: (...args: any[]) => unknown;

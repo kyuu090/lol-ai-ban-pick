@@ -37,14 +37,6 @@
   --stats-api-icon-border: rgba(154, 167, 184, 0.14);
 }
 
-.champion-pool-header {
-  align-items: start;
-  display: flex;
-  flex: 0 0 auto;
-  gap: 14px;
-  justify-content: space-between;
-}
-
 .stats-toolbar {
   align-items: center;
   display: flex;

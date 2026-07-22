@@ -3,10 +3,7 @@
     elements: UiDomElements;
     state: any;
     getDraftPanelState(state: any): any;
-    getPhase(state: any): string | null | undefined;
     getSummonerName(summoner: any): string;
-    stringify(value: any): string;
-    formatDate(value: any): string;
     renderChampSelect(champSelect: any, gameflowPhase: any): void;
     renderInGame(state: any): void;
     resetDraftRecommendationState(): void;
@@ -17,14 +14,6 @@
 
   function createDraftController(deps: DraftControllerDeps) {
     const { elements, state } = deps;
-
-    function renderStatus(nextState: any): void {
-      elements.lcuStatus.textContent = nextState.lcuStatus ?? '-';
-      elements.websocketStatus.textContent = nextState.websocketStatus ?? '-';
-      elements.gameflowPhase.textContent = deps.getPhase(nextState) ?? (deps.stringify(nextState.gameflowPhase).replace(/^"|"$/g, '') || '-');
-      elements.updatedAt.textContent = deps.formatDate(nextState.updatedAt);
-      elements.errorMessage.textContent = nextState.error ?? '';
-    }
 
     function renderDraft(nextState: any): void {
       const { champSelect, loggedIn, inGame, inChampSelect, unsupportedGameMode } = deps.getDraftPanelState(nextState);
@@ -75,7 +64,6 @@
 
     return {
       renderDraft,
-      renderStatus,
       showOnlyDraftPanel,
       toggleMarkedLaneOpponent
     };
