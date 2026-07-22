@@ -52,13 +52,13 @@ euw1
 取得モードは2つ持つ。
 
 ```text
-recent: 直近90試合
+recent: 今シーズン内の直近90試合
 season: 今シーズン開始日時以降の全試合
 ```
 
 `recent` は起動時・試合終了後の自動取得と、ヘッダーの `Download recent match` ボタンで使う。
 
-`season` は `Download recent match` 右側のプルダウン、または取得済み正規化match数が1〜90件のときに表示されるヘッダー導線から手動実行する。match id 一覧を `count=100` でページングし、現在年の `1/1 00:00 JST` を `startTime` として使う。
+どちらのモードでも、現在年の `1/1 00:00 JST` を `startTime` として指定し、今シーズンの試合だけを取得する。`season` は `Download recent match` 右側のプルダウン、または取得済み正規化match数が1〜90件のときに表示されるヘッダー導線から手動実行する。match id 一覧を `count=100` でページングする。
 
 season手動取得では、match id 一覧の取得までは自動で行い、対象試合数と未取得detail数が分かった時点で確認モーダルを表示する。モーダルでは「シーズン中の全試合データを取得します。この処理は試合数によって時間がかかるケースがあります。あなたの場合、N分程度かかります」という趣旨を表示する。概算時間は未取得detail数を `100 requests / 2 minutes` として粗く計算する。ユーザーがキャンセルした場合、match detail取得には進まず、取得状態はidleへ戻す。
 
@@ -303,7 +303,7 @@ match-history/{localPuuid}.json
 
 ログインしていない状態では試合データをロードしない。LCU接続時または `current-summoner` の更新時に、ログイン中アカウントの `{localPuuid}` に対応する history だけをロードする。LCU切断・ログアウト時は表示中の試合統計をリセットする。
 
-recent 更新では、Riot APIへ問い合わせる match id は直近90件に限定する。ただし正規化・分析対象は「新しく確認した直近90ID + 既存 history の matchId」を重複排除して使う。これにより、一度 season で91件以上を取得した後に起動時の recent 自動取得が走っても、分析対象が90件へ縮まない。
+recent 更新では、Riot APIへ問い合わせる match id を今シーズン内の直近90件に限定する。正規化・分析対象には、その90IDと今シーズン内の既存 history の matchIdだけを重複排除して使う。これにより、一度 season で91件以上を取得した後に起動時の recent 自動取得が走っても、分析対象が90件へ縮まらず、過去シーズンの試合も混入しない。
 
 season 更新では、シーズンの match id 全体を正規化・分析対象にする。
 
@@ -803,7 +803,7 @@ ChampSelect 中の LCU WebSocket event、hover、pick intent、pick確定など�
 
 1. `riot-api.js` の request/retry 基盤を使う
 2. Riot ID / tagLine から PUUID を取得する
-3. recent では match id を90件取得し、season ではシーズン開始以降の match id をページング取得する
+3. recent では今シーズン内の match id を90件取得し、season ではシーズン開始以降の match id をページング取得する
 4. `riot-match-cache/{localPuuid}.json` を読み込む
 5. 未キャッシュ match detail だけを抽出する
 6. season手動取得では、ID一覧取得後に対象試合数・未取得detail数・概算所要時間をモーダル表示して確認する
@@ -821,9 +821,9 @@ ChampSelect 中の LCU WebSocket event、hover、pick intent、pick確定など�
 - Riot API token をログに出さない
 - Riot API token を Renderer に返さない
 - 取得済み match detail は再取得しない
-- recent の取得対象は90試合にする
+- recent の取得対象は今シーズン内の90試合にする
 - season では今シーズンの全match idを取得対象にする
-- recent 自動取得で season 取得済みの history を90件へ縮めない
+- recent 自動取得で season 取得済みの今シーズンの history を90件へ縮めない
 - 統計に使う試合は5v5 Summoner's Riftに限定する
 - Ranked と Normal は別の `queueType` として集計する
 - queueId は保持し、`queueGroup` で Ranked Solo/Duo、Ranked Flex、Normal Draft、Normal Blind、Quickplay などを分ける

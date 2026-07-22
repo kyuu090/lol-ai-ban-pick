@@ -333,11 +333,11 @@ match-history/<account-puuid>.json
 取得モード:
 
 ```text
-recent: 直近90試合
+recent: 今シーズン内の直近90試合
 season: 今シーズン開始日時以降の全試合
 ```
 
-取得済み match detail はアカウント別にローカルキャッシュし、再取得しません。統計に使う試合は 5v5 Summoner's Rift の Ranked / Normal 系 queue に絞り、Ranked と Normal の自己戦績は分けて扱います。
+取得済み match detail はアカウント別にローカルキャッシュし、再取得しません。統計に使う試合は今シーズンの 5v5 Summoner's Rift の Ranked / Normal 系 queue に絞り、Ranked と Normal の自己戦績は分けて扱います。
 
 season 手動取得では、match id 一覧を取得したあと、未取得 detail 数から概算所要時間を出して確認モーダルを表示します。取得済み正規化 match 数が 1〜90 件の場合は、ヘッダーに season 全取得でサンプル数を増やせる可能性がある旨の導線を表示します。
 
@@ -371,5 +371,5 @@ LCU match history はページングやキャッシュ挙動が不安定だっ�
 - LCU への画像取得を一気に大量実行しないこと。
 - Riot API token、LCU password、Basic 認証ヘッダをログやRendererに出さないこと。
 - 配布する Electron クライアントに開発者側の Riot API key / OpenAI API key を同梱しないこと。外部 API は BFF 経由にする。
-- recent 自動取得で season 取得済みの `match-history/<account-puuid>.json` を 90 件に縮めないこと。
+- recent 自動取得で season 取得済みの今シーズンの `match-history/<account-puuid>.json` を 90 件に縮めないこと。
 - match history の ID 結合は重複排除し、同一 matchId を二重集計しないこと。

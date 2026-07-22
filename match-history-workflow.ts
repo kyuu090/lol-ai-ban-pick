@@ -5,7 +5,7 @@ type MatchId = string | number;
 type StoredMatchHistory = {
   source?: 'riot-api' | string;
   puuid?: string;
-  matches?: { matchId?: MatchId }[];
+  matches?: { matchId?: MatchId; gameCreation?: number | string | null }[];
 };
 
 type RiotMatchDetailCandidate = {
@@ -18,12 +18,19 @@ function hasCachedRiotMatchDetail(matchesById: Record<string, unknown>, matchId:
   return Boolean(detail && typeof detail === 'object' && detail.metadata && detail.info);
 }
 
-function collectHistoryMatchIds(history: StoredMatchHistory | null | undefined): MatchId[] {
+function collectHistoryMatchIds(
+  history: StoredMatchHistory | null | undefined,
+  seasonStartTime: number | null = null
+): MatchId[] {
   if (!history || history.source !== 'riot-api' || !Array.isArray(history.matches)) return [];
 
   return history.matches.reduce<MatchId[]>((matchIds, match) => {
     const matchId = match?.matchId;
-    if (matchId) matchIds.push(matchId);
+    const gameCreation = Number(match?.gameCreation);
+    const isInSeason = seasonStartTime === null || (
+      Number.isFinite(gameCreation) && gameCreation >= seasonStartTime
+    );
+    if (matchId && isInSeason) matchIds.push(matchId);
     return matchIds;
   }, []);
 }
@@ -45,17 +52,19 @@ function createAnalysisMatchIds({
   mode,
   normalizedMatchIds,
   existingHistory,
-  storagePuuid
+  storagePuuid,
+  seasonStartTime
 }: {
   mode: MatchHistoryMode;
   normalizedMatchIds: MatchId[];
   existingHistory: StoredMatchHistory | null | undefined;
   storagePuuid: string;
+  seasonStartTime: number;
 }): MatchId[] {
   if (mode === 'season') return normalizedMatchIds;
 
   const existingHistoryMatchIds = existingHistory?.puuid === storagePuuid
-    ? collectHistoryMatchIds(existingHistory)
+    ? collectHistoryMatchIds(existingHistory, seasonStartTime)
     : [];
   return mergeMatchIds(normalizedMatchIds, existingHistoryMatchIds);
 }

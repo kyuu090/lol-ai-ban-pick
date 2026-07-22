@@ -20,6 +20,7 @@ const {
   collectMissingMatchIds,
   createAnalysisMatchIds
 } = require('../match-history-workflow');
+const { getDefaultSeasonStartAt } = require('./riot-match-history-service');
 const {
   createMatchHistorySummary
 } = require('./app-state');
@@ -189,18 +190,19 @@ function createMatchHistoryController({
       return null;
     }
 
-    const matches = Array.isArray(history.matches) ? history.matches : [];
-    matchHistoryChampionStats = Array.isArray(history.championStats) ? history.championStats : [];
-    matchHistoryEnemyChampionStats = Array.isArray(history.enemyChampionStats)
-      ? history.enemyChampionStats
-      : aggregateEnemyChampionStats(matches);
-    matchHistoryLaneOpponentStats = Array.isArray(history.laneOpponentStats)
-      ? history.laneOpponentStats
-      : aggregateLaneOpponentStats(matches);
-    matchHistorySelfVsLaneOpponentStats = Array.isArray(history.selfVsLaneOpponentStats)
-      ? history.selfVsLaneOpponentStats
-      : aggregateSelfChampionVsLaneOpponentStats(matches);
-    matchHistoryLaneMatchupTimeline = Array.isArray(history.laneMatchupTimeline) ? history.laneMatchupTimeline : [];
+    const seasonStartTime = getDefaultSeasonStartAt().getTime();
+    const matches = Array.isArray(history.matches)
+      ? history.matches.filter((match: any) => Number(match?.gameCreation) >= seasonStartTime)
+      : [];
+    const seasonMatchIds = new Set(matches.map((match: any) => String(match?.matchId)));
+    // 保存済みの集計値には過去シーズンのデータが含まれる可能性があるため、今シーズンの試合から再集計する。
+    matchHistoryChampionStats = aggregateChampionStats(matches);
+    matchHistoryEnemyChampionStats = aggregateEnemyChampionStats(matches);
+    matchHistoryLaneOpponentStats = aggregateLaneOpponentStats(matches);
+    matchHistorySelfVsLaneOpponentStats = aggregateSelfChampionVsLaneOpponentStats(matches);
+    matchHistoryLaneMatchupTimeline = Array.isArray(history.laneMatchupTimeline)
+      ? history.laneMatchupTimeline.filter((point: any) => seasonMatchIds.has(String(point?.matchId)))
+      : [];
     const summary = createMatchHistorySummary({
       updatedAt: history.updatedAt || null,
       requestedMatches: matches.length,
@@ -550,7 +552,8 @@ function createMatchHistoryController({
         mode,
         normalizedMatchIds,
         existingHistory,
-        storagePuuid
+        storagePuuid,
+        seasonStartTime: getDefaultSeasonStartAt().getTime()
       });
       const analysisMatchIdSet = new Set(analysisMatchIds.map(String));
       // Timeline の生データは保持せず、前回保存した 5 分集計だけを再利用する。

@@ -178,12 +178,16 @@ function createRiotMatchHistoryService({
     mode,
     onRetry
   }: CollectMatchIdsByModeOptions): Promise<MatchId[]> {
+    const seasonStartAt = getDefaultSeasonStartAt();
+    const startTime = Math.floor(seasonStartAt.getTime() / 1000);
+
     if (mode !== 'season') {
       const body = await requestBffMatchIds({
         region,
         puuid,
         start: 0,
         count: requestedMatches,
+        startTime,
         onRetry
       });
       clearRiotRateLimitCountdown();
@@ -191,8 +195,6 @@ function createRiotMatchHistoryService({
       return normalizeBffMatchIdsResponse(body).slice(0, requestedMatches);
     }
 
-    const seasonStartAt = getDefaultSeasonStartAt();
-    const startTime = Math.floor(seasonStartAt.getTime() / 1000);
     const allMatchIds: MatchId[] = [];
 
     for (let start = 0; ; start += matchIdsPageSize) {

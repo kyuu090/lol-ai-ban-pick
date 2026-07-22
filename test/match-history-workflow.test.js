@@ -11,7 +11,7 @@ function createHistory(matchIds, puuid = 'storage-puuid') {
   return {
     source: 'riot-api',
     puuid,
-    matches: matchIds.map((matchId) => ({ matchId }))
+    matches: matchIds.map((match) => typeof match === 'string' ? { matchId: match } : match)
   };
 }
 
@@ -22,18 +22,25 @@ test('mergeMatchIds keeps first occurrence and removes duplicates', () => {
   );
 });
 
-test('recent analysis keeps existing history matches without duplicating recent ids', () => {
+test('recent analysis keeps only current-season existing history matches without duplicating recent ids', () => {
   const recentIds = ['match-1', 'match-2', 'match-3'];
-  const existingHistory = createHistory(['match-2', 'match-3', 'match-4', 'match-5']);
+  const existingHistory = createHistory([
+    { matchId: 'match-2', gameCreation: 200 },
+    { matchId: 'match-3', gameCreation: 200 },
+    { matchId: 'match-4', gameCreation: 200 },
+    { matchId: 'previous-season-match', gameCreation: 99 },
+    { matchId: 'missing-timestamp' }
+  ]);
 
   const analysisMatchIds = createAnalysisMatchIds({
     mode: 'recent',
     normalizedMatchIds: recentIds,
     existingHistory,
-    storagePuuid: 'storage-puuid'
+    storagePuuid: 'storage-puuid',
+    seasonStartTime: 100
   });
 
-  assert.deepEqual(analysisMatchIds, ['match-1', 'match-2', 'match-3', 'match-4', 'match-5']);
+  assert.deepEqual(analysisMatchIds, ['match-1', 'match-2', 'match-3', 'match-4']);
 });
 
 test('recent analysis ignores another account history', () => {
@@ -41,7 +48,8 @@ test('recent analysis ignores another account history', () => {
     mode: 'recent',
     normalizedMatchIds: ['match-1', 'match-2'],
     existingHistory: createHistory(['other-account-match'], 'other-puuid'),
-    storagePuuid: 'storage-puuid'
+    storagePuuid: 'storage-puuid',
+    seasonStartTime: 100
   });
 
   assert.deepEqual(analysisMatchIds, ['match-1', 'match-2']);
@@ -52,7 +60,8 @@ test('season analysis uses only season ids', () => {
     mode: 'season',
     normalizedMatchIds: ['season-1', 'season-2'],
     existingHistory: createHistory(['old-history-1']),
-    storagePuuid: 'storage-puuid'
+    storagePuuid: 'storage-puuid',
+    seasonStartTime: 100
   });
 
   assert.deepEqual(analysisMatchIds, ['season-1', 'season-2']);

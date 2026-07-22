@@ -219,7 +219,7 @@ Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `rio
 現在の取得方針:
 
 - 取得モードは `recent` と `season`
-- `recent` は直近90試合を取得対象にする
+- `recent` は今シーズン内の直近90試合を取得対象にする
 - `season` は現在年の `1/1 00:00 JST` 以降のmatch idを、`count=100` でページング取得する
 - LCU current summoner の PUUID はローカル保存キーとして使う
 - Match-V5 の `by-puuid` と正規化時の自分participant特定には、Riot Account-V1で得た PUUID を使う
@@ -230,7 +230,7 @@ Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `rio
 - RateLimit待機に入るタイミングで、すでに取得済みのdetailを正規化・集計・保存・UI反映する
 - detail 5件ごとの途中正規化は行わず、RateLimit時と最終完了時に正規化する
 - 取得済み match detail はキャッシュし、再取得しない
-- recent 更新では、Riotに問い合わせるmatch idは直近90件だけだが、正規化対象は「直近90ID + 既存historyのmatchId」を重複排除したものにする
+- どの取得モードでも今シーズンの試合だけを正規化・分析対象にする。recent 更新時は今シーズン内の保存済みhistoryだけを重複排除して引き継ぐ
 - season 更新では、シーズンのmatch id全体を正規化対象にする
 - 統計に使う試合は5v5 Summoner's Riftに限定する
 - 初期統計対象は 5v5 Summoner's Rift の Ranked / Normal 系 queue
@@ -742,7 +742,7 @@ BFF用の薄いクライアント基盤は `riot-api.js` に置く。
 - LCUへの画像取得を一気に大量実行しないこと。ChampionPoolギャラリーではIntersectionObserverと少数並列キューを使う。
 - Riot API key と BFF Base URL をログやRendererに出さないこと。
 - Riot API match detail はキャッシュし、取得済み matchId を再取得しないこと。
-- recent 自動取得で season 取得済みの `match-history/{localPuuid}.json` を90件に縮めないこと。
+- recent 自動取得で season 取得済みの今シーズンの `match-history/{localPuuid}.json` を90件に縮めないこと。
 - match history のID結合は重複排除し、同一matchIdを二重集計しないこと。
 - 統計に使う試合は5v5 Summoner's Riftに限定すること。
 - Ranked と Normal を同じ自己戦績として混ぜないこと。
