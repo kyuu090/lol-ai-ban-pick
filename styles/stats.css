@@ -319,7 +319,7 @@
 
 .stats-api-rank-dropdown {
   display: grid;
-  flex: 0 1 240px;
+  flex: 0 1 280px;
   gap: 5px;
   min-width: 0;
   position: relative;
@@ -337,7 +337,6 @@
   color: var(--text);
   font: inherit;
   font-weight: 700;
-  justify-content: space-between;
   min-height: 36px;
   padding: 0 32px 0 12px;
   position: relative;
@@ -383,19 +382,6 @@
   width: 22px;
 }
 
-.stats-api-rank-dropdown-button::after {
-  border-bottom: 2px solid currentColor;
-  border-right: 2px solid currentColor;
-  color: var(--muted);
-  content: "";
-  height: 7px;
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-65%) rotate(45deg);
-  width: 7px;
-}
-
 .stats-api-opponent-dropdown-button::after {
   border-bottom: 2px solid currentColor;
   border-right: 2px solid currentColor;
@@ -409,11 +395,24 @@
   width: 7px;
 }
 
-.stats-api-rank-dropdown-button[aria-expanded="true"]::after {
-  transform: translateY(-35%) rotate(225deg);
+.stats-api-rank-dropdown-button::after {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  color: var(--muted);
+  content: "";
+  height: 7px;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-65%) rotate(45deg);
+  width: 7px;
 }
 
 .stats-api-opponent-dropdown-button[aria-expanded="true"]::after {
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.stats-api-rank-dropdown-button[aria-expanded="true"]::after {
   transform: translateY(-35%) rotate(225deg);
 }
 
@@ -423,9 +422,7 @@
   border-radius: 8px;
   box-shadow: 0 16px 34px rgba(32, 38, 56, 0.16);
   left: 0;
-  max-height: 220px;
-  overflow: auto;
-  padding: 6px;
+  padding: 8px;
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
@@ -499,33 +496,43 @@
 
 .stats-api-rank-options {
   display: grid;
-  gap: 4px;
+  gap: 8px;
 }
 
+.stats-api-rank-all-option,
 .stats-api-rank-option {
-  align-items: center;
   background: var(--panel-soft);
   border: 1px solid var(--border);
   border-radius: 6px;
-  display: inline-flex;
-  gap: 6px;
-  min-height: 24px;
-  padding: 2px 7px;
-}
-
-.stats-api-rank-option input {
-  accent-color: var(--accent-strong);
-  height: 13px;
-  margin: 0;
-  min-height: 0;
-  width: 13px;
-}
-
-.stats-api-rank-option span {
+  box-shadow: none;
   color: var(--text);
-  font-size: 10px;
+  font: inherit;
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1;
+  min-height: 30px;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.stats-api-rank-all-option {
+  width: 100%;
+}
+
+.stats-api-rank-option.active,
+.stats-api-rank-all-option.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-strong);
+}
+
+.stats-api-rank-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+
+.stats-api-rank-option-spacer {
+  min-height: 30px;
 }
 
 .stats-api-status {
