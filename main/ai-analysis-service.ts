@@ -4,6 +4,7 @@ const {
 } = require('../riot-api');
 
 type HttpMethod = 'GET' | 'POST';
+type AnalysisLanguage = 'en' | 'jp' | 'kr';
 type RetryCallback = (context: unknown) => void | Promise<void>;
 type RequestFn = (...args: unknown[]) => unknown;
 
@@ -19,6 +20,7 @@ interface RequestBffJsonOptions {
 
 interface AiAnalysisService {
   createRiotBffPath: typeof createRiotBffPath;
+  normalizeAnalysisLanguage: typeof normalizeAnalysisLanguage;
   requestBffJson: typeof requestBffJson;
   requestFinalCompositionAnalysis: typeof requestFinalCompositionAnalysis;
   requestLaneMatchupAnalysis: typeof requestLaneMatchupAnalysis;
@@ -72,31 +74,44 @@ function requestBffJson({
   });
 }
 
-function requestPickPhaseAnalysis(_event: unknown, draftContext: unknown): Promise<unknown> {
+function normalizeAnalysisLanguage(language: unknown): AnalysisLanguage {
+  if (language === 'ja' || language === 'jp') return 'jp';
+  if (language === 'kr') return 'kr';
+  return 'en';
+}
+
+function withAnalysisLanguage(payload: unknown, language: unknown): Record<string, unknown> {
+  const body = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+  return { ...body, lang: normalizeAnalysisLanguage(language) };
+}
+
+function requestPickPhaseAnalysis(_event: unknown, draftContext: unknown, language: unknown = 'en'): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/pick-phase',
     method: 'POST',
-    body: draftContext,
+    body: withAnalysisLanguage(draftContext, language),
     timeoutMs: 30000,
     maxRetries: 0
   });
 }
 
-function requestFinalCompositionAnalysis(_event: unknown, draftContext: unknown): Promise<unknown> {
+function requestFinalCompositionAnalysis(_event: unknown, draftContext: unknown, language: unknown = 'en'): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/final-composition',
     method: 'POST',
-    body: draftContext,
+    body: withAnalysisLanguage(draftContext, language),
     timeoutMs: 30000,
     maxRetries: 0
   });
 }
 
-function requestLaneMatchupAnalysis(laneMatchupPayload: unknown): Promise<unknown> {
+function requestLaneMatchupAnalysis(laneMatchupPayload: unknown, language: unknown = 'en'): Promise<unknown> {
   return requestBffJson({
     path: '/api/openai/lane-matchup',
     method: 'POST',
-    body: laneMatchupPayload,
+    body: withAnalysisLanguage(laneMatchupPayload, language),
     timeoutMs: 30000,
     maxRetries: 0
   });
@@ -104,6 +119,7 @@ function requestLaneMatchupAnalysis(laneMatchupPayload: unknown): Promise<unknow
 
 const service: AiAnalysisService = {
   createRiotBffPath,
+  normalizeAnalysisLanguage,
   requestBffJson,
   requestFinalCompositionAnalysis,
   requestLaneMatchupAnalysis,

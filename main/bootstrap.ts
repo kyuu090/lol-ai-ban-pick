@@ -205,7 +205,7 @@ function bootstrap(): void {
     },
     gameflowSessionEndpoint: LCU_ENDPOINTS.gameflowSession,
     retryDelayMs: LANE_MATCHUP_RETRY_DELAY_MS,
-    requestLaneMatchupAnalysis,
+    requestLaneMatchupAnalysis: (payload: unknown) => requestLaneMatchupAnalysis(payload, settings.language),
     log,
     serializeForLog
   });
@@ -555,8 +555,8 @@ function bootstrap(): void {
             collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
             resolveInGameStatsOpponent,
             requestStatsApiJson,
-            requestPickPhaseAnalysis,
-            requestFinalCompositionAnalysis
+            requestPickPhaseAnalysis: (event: unknown, context: unknown) => requestPickPhaseAnalysis(event, context, settings.language),
+            requestFinalCompositionAnalysis: (event: unknown, context: unknown) => requestFinalCompositionAnalysis(event, context, settings.language)
           }
       });
 

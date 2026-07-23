@@ -38,8 +38,8 @@
           <img class="app-logo" src="./assets/icon.png" alt="BanPick.AI" />
           <div class="match-data-summary">
             <span class="label" data-i18n="header.matchData">5v5 SR match data</span>
-            <strong id="matchDataCount" data-i18n="static.noData">No data</strong>
-            <span id="matchDataRange" data-i18n="static.noMatchData">No match data has been downloaded.</span>
+            <strong id="matchDataCount">No data</strong>
+            <span id="matchDataRange">No match data has been downloaded.</span>
             <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>Downloading all matches this season may increase the sample size.</button>
             <span id="matchDataProgress" class="match-data-progress" role="status" hidden></span>
           </div>
@@ -72,7 +72,7 @@
 
         <section id="loggedInView" class="center-state draft-guide-state" hidden>
           <p class="eyebrow" data-i18n="home.ready">Ready</p>
-          <h2 id="helloMessage" data-i18n="static.hello">Hello</h2>
+          <h2 id="helloMessage">Hello</h2>
           <p data-i18n="home.readyToDraft">You are ready to start a draft.</p>
           <ol class="draft-guide-list">
             <li data-i18n="home.addPool">Add champions for each role in ChampionPool.</li><li data-i18n="home.startDraft">Start a Summoner's Rift draft.</li><li data-i18n="home.draftHelp">When champion select starts, this screen switches automatically and shows ban/pick candidates and recommended builds.</li>
@@ -103,7 +103,7 @@
               <p class="eyebrow" data-i18n="home.currentGame">Current Game</p>
               <div class="in-game-champion-row">
                 <div id="inGameKeystone" class="in-game-keystone"></div>
-                <h2 id="inGameChampionName" data-i18n="inGame.title">In game</h2>
+                <h2 id="inGameChampionName">In game</h2>
               </div>
               <p id="inGameChampionDetail" data-i18n="home.nextDraft">The next draft will be monitored when this game ends.</p>
               <div id="inGameSelfStats" class="in-game-stat-row"></div>
@@ -145,7 +145,7 @@
               <div id="draftSelfSummary" class="draft-self-summary" hidden></div>
               <div class="champion-focus">
                 <p class="eyebrow" data-i18n="draft.currentState">CURRENT STATE</p>
-                <h3 id="currentAction" data-i18n="static.waiting">Waiting</h3>
+                <h3 id="currentAction">Waiting</h3>
                 <p id="currentPick" hidden></p>
                 <div id="banInsightPanel" class="ban-insight-panel" hidden></div>
               </div>

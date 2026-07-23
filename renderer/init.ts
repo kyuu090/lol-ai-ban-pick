@@ -176,7 +176,12 @@ const { renderChampSelect, renderDraftAiAnalysis, resetDraftRecommendationState 
     championLabel,
     championTitle,
     positionLabel,
-    getPendingLabel,
+    getPendingLabel: (member, label) => {
+        const championId = Number(member?.championPickIntent) || 0;
+        return championId
+            ? window.UiI18n.translate('draft.plannedPick', { champion: label(championId) })
+            : window.UiI18n.translate('draft.pickPending');
+    },
     getMemberChampionId,
     getChampionsById: () => rendererState.championsById,
     fetch: window.fetch?.bind(window),
