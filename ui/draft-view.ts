@@ -3,7 +3,7 @@
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
     const t = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
-    const getDataDragonLocale = (): 'en_US' | 'ja_JP' => root.UiI18n?.getDataDragonLocale() || 'en_US';
+    const getDataDragonLocale = (): 'en_US' | 'ja_JP' | 'ko_KR' => root.UiI18n?.getDataDragonLocale() || 'en_US';
     const statsApiHelpers = (root.UiChampionsView || {}) as any;
     const buildStatsApiChampionDetailsUrl = typeof statsApiHelpers.buildStatsApiChampionDetailsUrl === 'function'
       ? statsApiHelpers.buildStatsApiChampionDetailsUrl

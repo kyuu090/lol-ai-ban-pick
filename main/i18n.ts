@@ -130,11 +130,39 @@ const messages: Record<AppLanguage, Record<string, string>> = {
     , 'laneAnalysis.rateLimited': 'AI対面分析のリクエストが混み合っています。少し待ってから再度お試しください。'
     , 'laneAnalysis.insufficientContext': 'AI対面分析に必要なチャンピオンまたはレーン情報が不足しています。'
     , 'laneAnalysis.unavailable': 'AI対面分析を取得できませんでした。'
-  }
+  },
+  kr: {}
 };
 
+Object.assign(messages.kr, messages.en, {
+  'matchHistory.collecting': '경기 데이터를 수집하는 중... 0/{requestedMatches}게임',
+  'matchHistory.fetchingDetails': '경기 상세를 가져오는 중... {completed}/{total}게임',
+  'matchHistory.fetchingTimeline': '타임라인을 가져오는 중... {completed}/{total}게임',
+  'matchHistory.normalizing': '경기 데이터를 정규화하는 중',
+  'matchHistory.noneMissing': '다운로드하지 않은 경기가 없습니다.',
+  'matchHistory.rateLimited': 'Riot API 요청 제한을 기다리는 중… ({seconds}초 후 재시도)',
+  'matchHistory.estimateMinutes': '약 {minutes}분', 'matchHistory.estimateUnderMinute': '1분 미만',
+  'matchHistory.inProgress': '경기 데이터를 이미 다운로드하고 있습니다.',
+  'matchHistory.loginRequired': '경기 데이터를 다운로드하려면 League Client에 로그인하세요.',
+  'matchHistory.regionUnavailable': 'League Client에서 로그인 서버를 감지할 수 없습니다.',
+  'matchHistory.puuidUnavailable': 'Riot API에서 PUUID를 가져올 수 없습니다.',
+  'matchHistory.complete': '경기 데이터 수집 완료. {matches}게임을 업데이트했습니다.',
+  'matchHistory.partial': '경기 데이터를 일부 수집했습니다. {matches}게임 업데이트 / {failed}건 실패.',
+  'matchHistory.fetchingIds': '경기 ID 목록을 불러오는 중… {matches}게임',
+  'matchHistory.serviceUnavailable': '경기 데이터 서비스 연결을 확인하세요.',
+  'app.selectInstallDirectory': 'League of Legends 설치 디렉터리 선택', 'app.installDirectoryRequired': 'League of Legends 설치 디렉터리가 필요합니다.', 'app.clientVersionUnavailable': '클라이언트 버전을 확인할 수 없습니다.',
+  'app.startupErrorTitle': '시작 오류', 'app.startupErrorMessage': '앱을 시작하는 중 오류가 발생했습니다. 자세한 내용은 debug.log를 확인하세요.',
+  'app.splash.checkingVersion': '버전 정보를 확인하는 중…', 'app.splash.loadingSettings': '설정을 불러오는 중…', 'app.splash.loadingChampionPool': '챔피언 풀을 불러오는 중…', 'app.splash.preparing': '앱을 준비하는 중…', 'app.splash.showingWindow': '창을 여는 중…', 'app.splash.starting': '시작하는 중…',
+  'app.riotIdLoginRequired': 'Riot ID를 가져오려면 League Client에 로그인하세요.', 'app.riotIdUnavailable': 'LCU current summoner에서 Riot ID와 태그라인을 가져올 수 없습니다.',
+  'season.title': '시즌 전체 경기 데이터 다운로드', 'season.eyebrow': '경기 데이터', 'season.description': '이번 시즌 경기 데이터를 다운로드하여 밴/픽 분석의 표본 수를 늘립니다.', 'season.estimatedTime': '예상 시간', 'season.totalMatches': '전체 경기', 'season.notDownloaded': '다운로드하지 않음', 'season.note': '경기 수에 따라 시간이 걸릴 수 있습니다. 다운로드 중에도 앱을 계속 사용할 수 있습니다.', 'season.cancel': '취소', 'season.startDownload': '다운로드 시작', 'season.matches': '게임',
+  'update.install': '업데이트 설치', 'update.quitWithoutInstalling': '업데이트 없이 종료', 'update.availableTitle': '업데이트 가능', 'update.availableMessage': '지금 업데이트를 설치할까요?', 'update.availableDetail': '버전 {version}을 사용할 수 있습니다.', 'update.failedTitle': '업데이트 실패', 'update.failedMessage': '업데이트를 다운로드할 수 없습니다.', 'update.tryAgainLater': '잠시 후 다시 시도하세요.', 'update.quit': '종료', 'update.status.skipped': '업데이트 확인을 건너뛰는 중…', 'update.status.checking': '업데이트를 확인하는 중…', 'update.status.none': '업데이트가 없습니다. 시작을 계속합니다…', 'update.status.checkFailed': '업데이트 확인에 실패했습니다. 시작을 계속합니다…', 'update.status.available': '업데이트를 찾았습니다. 선택을 기다리는 중…', 'update.status.quit': '업데이트 없이 종료하는 중…', 'update.status.downloading': '업데이트를 다운로드하는 중…', 'update.status.installing': '업데이트를 설치하는 중…', 'update.status.failed': '업데이트 실패…',
+  'lcu.clientNotRunning': 'League Client가 실행 중이 아니거나 로그인하지 않았습니다: {path}', 'lcu.connectionUnavailable': 'LCU 연결 정보를 사용할 수 없습니다.',
+  'laneAnalysis.rateLimited': '라인 상성 분석 요청이 많습니다. 잠시 후 다시 시도하세요.', 'laneAnalysis.insufficientContext': '라인 상성 분석에 필요한 챔피언 또는 라인 정보가 없습니다.', 'laneAnalysis.unavailable': '라인 상성 분석을 불러올 수 없습니다.'
+});
+
 function translate(language: AppLanguage | string | undefined, key: string, values: Values = {}): string {
-  const template = messages[language === 'ja' ? 'ja' : 'en'][key] || messages.en[key] || key;
+  const selectedLanguage: AppLanguage = language === 'ja' || language === 'kr' ? language : 'en';
+  const template = messages[selectedLanguage][key] || messages.en[key] || key;
   return template.replace(/\{(\w+)\}/g, (_match, name) => String(values[name] ?? `{${name}}`));
 }
 

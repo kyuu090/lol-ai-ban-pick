@@ -29,7 +29,7 @@ const CAPTURE_SETTINGS = {
   themeMode: 'light',
   themeModes: ['system', 'light', 'dark'],
   language: 'en',
-  languages: ['en', 'ja']
+  languages: ['en', 'ja', 'kr']
 };
 
 /** @param {string} [themeMode] */

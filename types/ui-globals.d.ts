@@ -70,7 +70,8 @@ declare global {
   interface UiI18nApi {
     DEFAULT_LANGUAGE: 'en';
     getLanguage(): import('./domain/settings').AppLanguage;
-    getDataDragonLocale(): 'en_US' | 'ja_JP';
+    getMissingTranslationKeys(language: import('./domain/settings').AppLanguage, referenceLanguage?: import('./domain/settings').AppLanguage): string[];
+    getDataDragonLocale(): 'en_US' | 'ja_JP' | 'ko_KR';
     normalizeLanguage(language: unknown): import('./domain/settings').AppLanguage;
     setLanguage(language: unknown, doc?: Document): import('./domain/settings').AppLanguage;
     translate(key: string, values?: Record<string, string | number>): string;

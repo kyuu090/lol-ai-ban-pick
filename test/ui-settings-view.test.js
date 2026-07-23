@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getDataDragonLocale, setLanguage, translate } = require('../ui/i18n');
+const { getDataDragonLocale, getMissingTranslationKeys, setLanguage, translate } = require('../ui/i18n');
 
 const {
   applyThemeMode,
@@ -25,6 +25,8 @@ test('language selection maps to the corresponding Data Dragon locale', () => {
   assert.equal(getDataDragonLocale(), 'en_US');
   setLanguage('ja', doc);
   assert.equal(getDataDragonLocale(), 'ja_JP');
+  setLanguage('kr', doc);
+  assert.equal(getDataDragonLocale(), 'ko_KR');
   setLanguage('en', doc);
 });
 
@@ -35,6 +37,11 @@ test('translations use stable keys without legacy text replacement helpers', () 
   assert.equal(translate('season.startDownload'), 'Start download');
   setLanguage('ja', doc);
   assert.equal(translate('season.startDownload'), '取得を開始');
+  setLanguage('kr', doc);
+  assert.equal(translate('season.startDownload'), '다운로드 시작');
+  assert.equal(translate('champions.chart.global'), '전체');
+  assert.equal(translate('rune.keystone.8112'), '감전');
+  assert.deepEqual(getMissingTranslationKeys('kr', 'ja'), []);
   assert.equal('translateLegacyText' in i18n, false);
   assert.equal('localizeLegacyContent' in i18n, false);
   setLanguage('en', doc);

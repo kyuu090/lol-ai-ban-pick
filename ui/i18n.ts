@@ -1,5 +1,5 @@
 (function attachUiI18n(root: UiRoot) {
-  type Language = 'en' | 'ja';
+  type Language = 'en' | 'ja' | 'kr';
   type TranslationValues = Record<string, string | number>;
 
   const DEFAULT_LANGUAGE: Language = 'en';
@@ -345,26 +345,67 @@
       , 'champions.jungleParticipationDescription': '全Kill + Assist: 自JG − 相手JG', 'champions.jungleParticipationDetail': '自JG K+A {champion} / 相手JG K+A {opponent}', 'champions.jungleParticipation': 'JGキル関与数差', 'champions.duoCombat': '2v2キル収支', 'champions.soloCombatDescription': 'ソロKill − ソロDeath', 'champions.soloCombat': 'ソロキル収支'
       , 'champions.rateLimitRetry': '{seconds}秒後に再試行できます。', 'champions.retryLater': '少し待ってから再試行してください。', 'champions.rateLimitReached': 'レート制限に達しました。{retry}', 'champions.serverError': 'StatsAPIサーバーでエラーが発生しました ({status})。', 'champions.seconds': '{value}秒'
       , 'timeline.goldDifference': 'ゴールド差', 'timeline.xpDifference': '経験値差', 'timeline.csDifference': 'CS差', 'timeline.overallDifference': '全体の差分', 'timeline.overallLeadRate': '全体のリード率', 'timeline.yourDifference': 'あなたの差分', 'timeline.yourAverage': 'あなたの平均', 'timeline.leadRate': 'リード率 {value}', 'timeline.through20': '{label}（20分まで）', 'timeline.combatImpact': '戦闘インパクト', 'timeline.champion': '対象チャンピオン', 'timeline.opponent': '対面チャンピオン', 'timeline.advantageDirection': '+ 対象チャンピオン優勢 / − 対面チャンピオン優勢', 'timeline.championDamage': 'チャンピオンへの与ダメージ', 'timeline.damageTaken': '被ダメージ', 'timeline.enemyCcDuration': '敵へのCC時間', 'timeline.plateDifference': 'レーンプレート収支（20分まで）', 'timeline.goldLead': 'ゴールドリード', 'timeline.xpLead': '経験値リード', 'timeline.csLead': 'CSリード', 'timeline.laneCombatDifference': 'レーン戦闘差'
-    }
+    },
+    get kr(): Record<string, string> { return koreanMessages; }
+  };
+
+  const koreanMessages: Record<string, string> = {
+    'settings.installDirectory': '설치 디렉터리', 'window.controls': '창 제어', 'window.minimize': '최소화', 'window.close': '닫기', 'window.viewSwitcher': '화면 전환',
+    'header.matchData': '5v5 SR 경기 데이터', 'header.downloadRecent': '최근 경기 다운로드', 'header.downloadSeason': '이번 시즌 경기 다운로드',
+    'nav.draft': 'Draft', 'nav.pool': 'ChampionPool', 'nav.champions': 'Champions', 'nav.stats': 'Stats', 'nav.settings': 'Settings',
+    'home.client': '리그 클라이언트', 'home.launch': 'League of Legends를 실행하세요', 'home.loginHelp': '로그인하면 이 화면에 드래프트 도우미 사용 방법이 표시됩니다.', 'home.connectionHelp': '게임 실행 후에도 화면이 바뀌지 않으면 설정에서 설치 디렉터리를 확인하세요.',
+    'home.ready': '준비 완료', 'home.readyToDraft': '드래프트를 시작할 준비가 되었습니다.', 'home.addPool': 'ChampionPool에 역할별 챔피언을 추가하세요.', 'home.startDraft': '소환사의 협곡 드래프트를 시작하세요.', 'home.draftHelp': '챔피언 선택이 시작되면 이 화면이 자동으로 전환되어 밴/픽 후보와 추천 빌드를 표시합니다.', 'home.otherFeatures': '기타 기능', 'home.championsHelp': '챔피언별 빌드, 룬, 스킬 우선순위, 상성 데이터를 확인하세요.', 'home.statsHelp': '플레이한 챔피언과 라인 상대 전적을 확인하세요.',
+    'home.unsupported': '지원하지 않는 모드', 'home.unsupportedTitle': '지원하지 않는 게임 모드가 활성화되어 있습니다', 'home.unsupportedHelp': '드래프트 지원은 소환사의 협곡 드래프트, 랭크, 사용자 설정 드래프트 및 토너먼트 드래프트에서 사용할 수 있습니다.', 'home.currentGame': '현재 게임', 'home.nextDraft': '이 게임이 끝나면 다음 드래프트를 모니터링합니다.',
+    'draft.allyBans': '아군 밴', 'draft.pick': '드래프트 픽', 'draft.championSelect': '챔피언 선택', 'draft.enemyBans': '적 밴', 'draft.yourTeam': '우리 팀', 'draft.currentState': '현재 상태', 'draft.enemyTeam': '적 팀',
+    'static.patch': '패치', 'static.region': '지역', 'static.rank': '티어', 'static.lane': '라인', 'static.allRanks': '모든 티어', 'static.loadingMetadata': 'Stats API 메타데이터를 불러오는 중입니다.', 'static.tier': '티어', 'static.champion': '챔피언', 'static.games': '게임', 'static.pickRate': '픽률', 'static.banRate': '밴률', 'static.championDetails': '챔피언 상세', 'static.playedChampions': '플레이한 챔피언', 'static.laneOpponents': '라인 상대', 'static.minGames': '최소 게임', 'static.playedStatistics': '플레이한 챔피언 통계', 'static.winRate': '승률', 'static.laneOpponentStatistics': '라인 상대 통계', 'static.matchups': '상성', 'static.yourKda': '내 K/D/A',
+    'static.noData': '데이터 없음', 'static.noMatchData': '다운로드한 경기 데이터가 없습니다.', 'static.hello': '안녕하세요', 'static.waiting': '대기 중',
+    'settings.matchV5Route': 'Match-V5 리전 경로', 'champions.boots': '신발',
+    'settings.browse': '찾아보기', 'settings.save': '저장', 'settings.routeHelp': 'League of Legends 로그인 후 LCU에서 자동으로 감지됩니다.', 'settings.theme': '테마', 'settings.theme.system': '시스템', 'settings.theme.light': '라이트', 'settings.theme.dark': '다크', 'settings.theme.systemHelp': '운영체제 모양에 맞춥니다.', 'settings.language': '언어', 'settings.savedAndReconnecting': '저장되었습니다. 연결 상태를 다시 확인합니다.', 'settings.saveFailed': '저장할 수 없습니다: {message}', 'settings.themeSaved': '테마 설정이 저장되었습니다.', 'settings.languageSaved': '언어 설정이 저장되었습니다.', 'settings.detectedRoute': 'LCU에서 감지한 서버: {platformRegion} / Match-V5 경로: {regionalRoute}', 'settings.waitingForRoute': 'League of Legends 로그인 후 LCU에서 자동으로 감지됩니다.',
+    'champions.search': '챔피언 검색', 'champions.none': '없음', 'champions.opponent': '라인 상대', 'champions.opponentSearch': '라인 상대 검색', 'champions.build': '빌드', 'champions.timeline': '시간대 분석', 'champions.matchups': '상성 분석', 'champions.keystone': '핵심 룬', 'champions.selectKeystone': '핵심 룬 선택', 'champions.runeSets': '룬 세트', 'champions.summonerSpells': '소환사 주문', 'champions.runeShards': '룬 파편', 'champions.startingItems': '시작 아이템', 'champions.itemBuild': '아이템 빌드', 'champions.skillOrder': '스킬 순서', 'champions.skillPriority': '스킬 우선순위', 'champions.start': '시작',
+    'draft.noRunes': '추천 룬이 없습니다.', 'draft.noSummonerSpells': '추천 소환사 주문이 없습니다.', 'draft.runeSets': '룬 세트', 'draft.summonerSpells': '소환사 주문', 'draft.loadingRecommendations': 'Stats API에서 추천을 불러오는 중입니다.', 'draft.recommendationsUnavailable': '추천을 불러올 수 없습니다.', 'draft.noRecommendations': '추천 데이터가 없습니다.', 'draft.analysis.title': '밴/픽 분석', 'draft.analysis.finalTitle': '최종 조합 분석', 'draft.analysis.loading': 'AI 분석을 요청하는 중…', 'draft.analysis.finalLoading': '최종 조합 분석을 요청하는 중…', 'draft.analysis.waiting': 'AI 분석을 기다리는 중…', 'draft.analysis.unavailable': 'AI 분석을 표시할 수 없습니다.', 'draft.analysis.noBans': '밴 없음', 'draft.action.yourBan': '내 밴', 'draft.action.yourPick': '내 픽', 'draft.action.waiting': '대기 중', 'draft.plannedPick': '{champion} 선택 예정', 'draft.pickPending': '픽 대기 중',
+    'draft.matchup.loadingCounters': 'Stats API에서 카운터 추천을 불러오는 중입니다.', 'draft.matchup.loadingAdvantage': 'Stats API에서 유리한 추천을 불러오는 중입니다.', 'draft.matchup.unavailable': '상성 추천을 불러올 수 없습니다.', 'draft.matchup.noData': '사용 가능한 데이터가 없습니다 ({minGames}게임 이상)', 'draft.matchup.winRate': 'WR',
+    'inGame.noCandidates': '추천 없음', 'inGame.recommendationPending': '챔피언과 역할이 확정되면 추천 빌드와 스킬 순서가 표시됩니다.', 'inGame.skillPending': '챔피언과 역할이 확정되면 스킬 순서가 표시됩니다.', 'inGame.matchupPending': '상대 라인 챔피언이 확정되면 사용할 수 있습니다.', 'inGame.loadingRecommendations': 'Stats API에서 추천을 불러오는 중입니다.', 'inGame.recommendationsUnavailable': '추천을 불러올 수 없습니다.', 'inGame.noRecommendationData': '추천 데이터가 없습니다.', 'inGame.recommendationTabs': '추천 보기 전환', 'inGame.skillPriority': '스킬 우선순위', 'inGame.title': '게임 중', 'inGame.opponent': '상대', 'inGame.pickMemo': '드래프트 정보를 사용할 수 있으면 내 픽 메모가 여기에 표시됩니다.', 'inGame.final.loading': '최종 조합 분석을 요청하는 중…', 'inGame.final.waiting': '최종 조합 분석을 기다리는 중…', 'inGame.final.unavailable': 'AI 분석을 표시할 수 없습니다.', 'inGame.lane.loading': '라인 상성 분석을 요청하는 중…', 'inGame.lane.waiting': 'GameStart / InProgress의 라인 상성 정보를 기다리는 중입니다.', 'inGame.lane.unavailable': '라인 상성 분석을 불러올 수 없습니다.',
+    'pool.empty': '아직 추가한 챔피언이 없습니다.', 'pool.noMatchingChampions': '일치하는 챔피언을 찾을 수 없습니다.', 'pool.waitingForChampions': 'League Client에 연결하면 챔피언 목록을 불러옵니다.', 'pool.saved': '챔피언 풀이 저장되었습니다.', 'pool.saveFailed': '저장할 수 없습니다: {message}', 'pool.alreadySelected': '{champion}은(는) 이미 챔피언 풀에 있습니다.', 'pool.removeChampion': '{champion} 제거',
+    'stats.noOpponentData': '선택한 필터에 맞는 라인 상대 데이터가 없습니다.', 'stats.noPlayedData': '선택한 필터에 맞는 플레이한 챔피언 결과가 없습니다.', 'stats.noMatchingPicks': '일치하는 픽이 없습니다.', 'stats.winningPicks': '승리한 픽', 'stats.losingPicks': '패배한 픽', 'stats.strongMatchups': '강한 상성', 'stats.weakMatchups': '약한 상성',
+    'common.statsApiUnavailable': 'Stats API 요청 도우미를 사용할 수 없습니다.', 'common.statsApiLoadFailed': 'Stats API 데이터를 불러올 수 없습니다.', 'common.noSkillRecommendations': '추천 스킬이 없습니다.',
+    'season.title': '시즌 전체 경기 데이터 다운로드', 'season.eyebrow': '경기 데이터', 'season.description': '이번 시즌 경기 데이터를 다운로드하여 밴/픽 분석의 표본 수를 늘립니다.', 'season.estimatedTime': '예상 시간', 'season.totalMatches': '전체 경기', 'season.notDownloaded': '다운로드하지 않음', 'season.note': '경기 수에 따라 시간이 걸릴 수 있습니다. 다운로드 중에도 앱을 계속 사용할 수 있습니다.', 'season.cancel': '취소', 'season.startDownload': '다운로드 시작', 'season.matches': '게임',
+    'timeline.goldDifference': '골드 차이', 'timeline.xpDifference': '경험치 차이', 'timeline.csDifference': 'CS 차이', 'timeline.overallDifference': '전체 차이', 'timeline.overallLeadRate': '전체 리드율', 'timeline.yourDifference': '내 차이', 'timeline.yourAverage': '내 평균', 'timeline.leadRate': '리드율 {value}', 'timeline.through20': '{label} (20분까지)', 'timeline.combatImpact': '전투 영향', 'timeline.champion': '챔피언', 'timeline.opponent': '상대', 'timeline.advantageDirection': '+ 챔피언 우세 / − 상대 우세', 'timeline.championDamage': '챔피언 피해량', 'timeline.damageTaken': '받은 피해량', 'timeline.enemyCcDuration': '적 CC 지속 시간', 'timeline.plateDifference': '플레이트 차이 (20분까지)', 'timeline.goldLead': '골드 리드', 'timeline.xpLead': '경험치 리드', 'timeline.csLead': 'CS 리드', 'timeline.laneCombatDifference': '라인 전투 차이',
+    'window.laneSwitcher': '라인 전환', 'window.statsSwitcher': '통계 전환', 'window.backToChampions': '챔피언 목록으로 돌아가기', 'window.restore': '창 복원', 'window.maximize': '창 최대화',
+    'matchData.none': '다운로드한 경기 데이터가 없습니다.', 'matchData.unknownPeriod': '알 수 없는 기간',
+    'home.unselected': '선택되지 않음', 'home.noMatchData': '일치하는 경기 데이터가 없습니다.', 'home.noLaneData': '일치하는 라인 데이터가 없습니다.', 'home.noChampionResults': '일치하는 챔피언 결과가 없습니다.', 'home.noPickResults': '픽 결과가 없습니다.', 'home.weakPicks': '약한 픽', 'home.strongPicks': '강한 픽', 'home.aiUnavailable': 'AI 분석을 불러올 수 없습니다.',
+    'stats.showPicksAgainst': '{champion} 상대 픽 보기', 'stats.showMatchupsFor': '{champion} 상성 결과 보기',
+    'champions.noMatchingChampions': '선택한 필터에 맞는 챔피언이 없습니다.', 'champions.noSearchResults': '검색어와 일치하는 챔피언이 없습니다.', 'champions.noMatchupData': '이 필터에 맞는 상성 데이터가 없습니다.', 'champions.noMinimumMatchups': '최소 게임 수를 충족하는 상성이 없습니다.', 'champions.noTimelineData': '이 필터에 맞는 시간대 데이터가 없습니다.', 'champions.noSnapshots': '일반 타임라인 스냅샷이 있는 경기가 없습니다.', 'champions.analysisMenu': '챔피언 분석 메뉴', 'champions.sortBy': '{label} 기준 정렬', 'champions.refresh': '새로고침', 'champions.loading': '불러오는 중', 'champions.details': '상세', 'champions.noRecommendations': '추천이 없습니다.', 'champions.noKeystoneDetails': '핵심 룬 상세가 없습니다.', 'champions.noKeystoneOptions': '핵심 룬 선택지가 없습니다.', 'champions.noBuildData': '이 필터에 맞는 빌드 데이터가 없습니다.',
+    'champions.noCandidates': '{title} 추천이 없습니다.', 'champions.runeSetCandidates': '룬 세트 추천', 'champions.summonerSpellCandidates': '소환사 주문 추천', 'champions.fetchUnavailable': '이 환경에서는 Fetch를 사용할 수 없습니다.', 'champions.statsApiFailed': 'Stats API 데이터를 불러올 수 없습니다: {message}', 'champions.lanesUnavailable': '사용 가능한 라인을 불러올 수 없습니다.', 'champions.championListFailed': '챔피언 목록을 불러올 수 없습니다: {message}', 'champions.analysisRefreshFailed': '분석 데이터를 새로고침할 수 없습니다: {message}', 'champions.matchupFailed': '상성 데이터를 불러올 수 없습니다: {message}', 'champions.matchupTimelineFailed': '상성 타임라인을 불러올 수 없습니다: {message}', 'champions.timelineFailed': '시간대 분석을 불러올 수 없습니다: {message}', 'champions.detailsFailed': '챔피언 상세를 불러올 수 없습니다: {message}',
+    'champions.chart.globalVsUser': '{label}의 전체 평균과 내 평균 비교', 'champions.chart.through20': '{label} (20분까지). 양수는 챔피언 우세, 음수는 상대 우세입니다.', 'champions.chart.minute': '{minute}분', 'champions.chart.you': '나 {value}', 'champions.chart.games': '게임 {games}', 'champions.chart.champion': '챔피언 {value}', 'champions.chart.opponent': '상대 {value}', 'champions.chart.timelineAria': '챔피언과 상대의 {label} 타임라인', 'champions.chart.global': '전체', 'champions.chart.yourAverage': '내 평균', 'champions.chart.plateTimeline': '20분까지 라인 플레이트 차이', 'champions.chart.plateCount': '플레이트 {value}', 'champions.chart.plateNet': '플레이트 차이 {value}', 'champions.detailsTable': '상세 데이터 (표)', 'champions.clickToShow': '클릭하여 표시', 'champions.clickToHide': '클릭하여 숨기기', 'champions.timelineNote': '리드율은 해당 시점에 챔피언이 상대보다 앞선 경기의 비율입니다. 게임 수에는 해당 시점까지 진행된 경기만 포함됩니다.', 'champions.backToMatchups': '← 상성 목록으로 돌아가기',
+    'champions.vsOpponent': '{champion} 대 {opponent}', 'champions.firstSecondCore': '1·2코어', 'champions.core': '코어', 'champions.thirdItem': '3코어', 'champions.fourthItem': '4코어', 'champions.fifthItem': '5코어', 'champions.sixthItem': '6코어', 'champions.activeKeystoneRunes': '선택한 핵심 룬의 일반적인 세팅', 'champions.keystoneSummoners': '이 핵심 룬과 함께 쓰는 소환사 주문 조합', 'champions.itemBuildDescription': '시작 아이템부터 6코어까지의 대표 선택지', 'champions.skillOrderDescription': '레벨 1–6 스킬 순서와 우선 마스터 스킬', 'champions.rateLimitedRetry': '{target} 요청이 제한되었습니다. {seconds}초 후 자동으로 재시도합니다.', 'champions.metaInfo': 'Stats API 메타데이터', 'champions.championList': '챔피언 목록',
+    'champions.matrix.avgKa': '평균 K+A 챔피언 / 상대', 'champions.matrix.avgKda': '평균 K / D / A', 'champions.matrix.damageDealt': '가한 피해량 챔피언 / 상대', 'champions.matrix.damageTaken': '받은 피해량 챔피언 / 상대', 'champions.matrix.ccTime': 'CC 시간(초) 챔피언 / 상대', 'champions.matrix.plates': '플레이트 획득 / 상실', 'champions.matrix.outerTower': '외곽 포탑 획득 / 상실', 'champions.jungleParticipationDescription': '총 킬 + 어시스트: 아군 정글 − 적 정글', 'champions.jungleParticipationDetail': '아군 정글 K+A {champion} / 적 정글 K+A {opponent}', 'champions.jungleParticipation': '정글 킬 관여 차이', 'champions.duoCombat': '2대2 전투 차이', 'champions.soloCombatDescription': '솔로 킬 − 솔로 데스', 'champions.soloCombat': '솔로 전투 차이', 'champions.rateLimitRetry': '{seconds}초 후 재시도할 수 있습니다.', 'champions.retryLater': '잠시 후 다시 시도하세요.', 'champions.rateLimitReached': '요청 제한에 도달했습니다. {retry}', 'champions.serverError': 'Stats API 서버 오류 ({status}).', 'champions.seconds': '{value}초',
+    'ai.noDisplay': 'AI 분석을 표시할 수 없습니다.', 'ai.rateLimited': 'AI 분석 요청이 많습니다. 잠시 후 다시 시도하세요.', 'ai.insufficientDraft': 'AI 분석에 필요한 드래프트 정보가 부족합니다.', 'ai.unavailable': 'AI 분석을 불러올 수 없습니다.', 'draft.greeting': '안녕하세요, {name}',
+    'rune.keystone.8005': '집중 공격', 'rune.keystone.8008': '치명적 속도', 'rune.keystone.8010': '정복자', 'rune.keystone.8021': '기민한 발놀림', 'rune.keystone.8112': '감전', 'rune.keystone.8124': '포식자', 'rune.keystone.8128': '어둠의 수확', 'rune.keystone.8214': '콩콩이 소환', 'rune.keystone.8229': '신비로운 유성', 'rune.keystone.8230': '난입', 'rune.keystone.8437': '착취의 손아귀', 'rune.keystone.8439': '여진', 'rune.keystone.8465': '수호자', 'rune.keystone.9923': '칼날비', 'rune.style.8000': '정밀', 'rune.style.8100': '지배', 'rune.style.8200': '마법', 'rune.style.8300': '영감', 'rune.style.8400': '결의', 'rune.style.8500': '정밀', 'rune.shard.5001': '체력 증가', 'rune.shard.5005': '공격 속도', 'rune.shard.5007': '스킬 가속', 'rune.shard.5008': '적응형 능력치', 'rune.shard.5010': '이동 속도', 'rune.shard.5011': '체력', 'rune.shard.5013': '강인함'
   };
 
   let currentLanguage: Language = DEFAULT_LANGUAGE;
 
   function normalizeLanguage(language: unknown): Language {
-    return language === 'ja' || language === 'en' ? language : DEFAULT_LANGUAGE;
+    return language === 'ja' || language === 'kr' || language === 'en' ? language : DEFAULT_LANGUAGE;
   }
 
   function getLanguage(): Language {
     return currentLanguage;
   }
 
-  function getDataDragonLocale(): 'en_US' | 'ja_JP' {
-    return currentLanguage === 'ja' ? 'ja_JP' : 'en_US';
+  function getDataDragonLocale(): 'en_US' | 'ja_JP' | 'ko_KR' {
+    if (currentLanguage === 'ja') return 'ja_JP';
+    if (currentLanguage === 'kr') return 'ko_KR';
+    return 'en_US';
   }
 
   function translate(key: string, values: TranslationValues = {}): string {
     const template = messages[currentLanguage][key] || messages[DEFAULT_LANGUAGE][key] || key;
     return template.replace(/\{(\w+)\}/g, (_match, name) => String(values[name] ?? `{${name}}`));
+  }
+
+  function getMissingTranslationKeys(language: Language, referenceLanguage: Language = DEFAULT_LANGUAGE): string[] {
+    return Object.keys(messages[referenceLanguage]).filter((key) => !Object.prototype.hasOwnProperty.call(messages[language], key));
   }
 
   function applyStaticTranslations(doc: Document = root.document as Document): void {
@@ -387,7 +428,7 @@
     return currentLanguage;
   }
 
-  const api = { DEFAULT_LANGUAGE, applyStaticTranslations, getDataDragonLocale, getLanguage, normalizeLanguage, setLanguage, translate };
+  const api = { DEFAULT_LANGUAGE, applyStaticTranslations, getDataDragonLocale, getLanguage, getMissingTranslationKeys, normalizeLanguage, setLanguage, translate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.UiI18n = api;
 })(typeof window !== 'undefined' ? window : globalThis);

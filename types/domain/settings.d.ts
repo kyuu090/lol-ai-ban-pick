@@ -1,5 +1,5 @@
 export type ThemeMode = 'system' | 'light' | 'dark';
-export type AppLanguage = 'en' | 'ja';
+export type AppLanguage = 'en' | 'ja' | 'kr';
 
 export type RiotPlatformRegion =
   | 'BR1'

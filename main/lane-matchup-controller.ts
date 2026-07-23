@@ -239,7 +239,7 @@ function createLaneMatchupController({
   };
 }
 
-function createLaneMatchupAnalysisErrorMessage(error: unknown, language: 'en' | 'ja' = 'en'): string {
+function createLaneMatchupAnalysisErrorMessage(error: unknown, language: 'en' | 'ja' | 'kr' = 'en'): string {
   const message = String((error as { message?: string } | null | undefined)?.message || '');
   if (message.includes('429')) return translate(language, 'laneAnalysis.rateLimited');
   if (message.includes('400')) return translate(language, 'laneAnalysis.insufficientContext');

@@ -32,7 +32,7 @@ interface RiotId {
 }
 
 interface RiotMatchHistoryServiceDeps {
-  getLanguage?: () => 'en' | 'ja';
+  getLanguage?: () => 'en' | 'ja' | 'kr';
   matchIdsPageSize: number;
   updateMatchHistoryStatus: (patch: Partial<MatchHistoryStatus>) => void;
   clearRiotRateLimitCountdown: () => void;

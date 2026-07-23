@@ -12,7 +12,7 @@ import type { AppLanguage, PublicSettings, RiotPlatformRegion, RiotRegionalRoute
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const THEME_MODES: readonly ThemeMode[] = ['system', 'light', 'dark'];
-const APP_LANGUAGES: readonly AppLanguage[] = ['en', 'ja'];
+const APP_LANGUAGES: readonly AppLanguage[] = ['en', 'ja', 'kr'];
 
 interface StoredSettings {
   lolInstallDir: string;

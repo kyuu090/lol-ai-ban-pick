@@ -199,7 +199,7 @@ app.getPath('userData')/settings.json
 }
 ```
 
-`language` はアプリの表示言語で、既定値は `en`。設定画面から英語と日本語を選択できる。Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions`, `themeMode`, `language` と選択肢を含む。BFF Base URL や Riot API key は公開しない。
+`language` はアプリの表示言語で、既定値は `en`。設定画面から英語（`en`）、日本語（`ja`）、韓国語（`kr`）を選択できる。Data Dragon はそれぞれ `en_US`、`ja_JP`、`ko_KR` を使用し、AI分析BFFへはそれぞれ `en`、`jp`、`kr` を送信する。Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions`, `themeMode`, `language` と選択肢を含む。BFF Base URL や Riot API key は公開しない。
 
 ### Riot Match History
 

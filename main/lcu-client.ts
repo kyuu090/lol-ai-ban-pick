@@ -70,8 +70,10 @@ function createLcuClient({
   let dataDragonChampionCatalogPromise: Promise<Record<number, { id: number; name: string; alias?: string; title?: string }> | null> | null = null;
   let dataDragonChampionCatalogLocale: string | null = null;
 
-  function getDataDragonLocale(): 'en_US' | 'ja_JP' {
-    return getSettings().language === 'ja' ? 'ja_JP' : 'en_US';
+  function getDataDragonLocale(): 'en_US' | 'ja_JP' | 'ko_KR' {
+    if (getSettings().language === 'ja') return 'ja_JP';
+    if (getSettings().language === 'kr') return 'ko_KR';
+    return 'en_US';
   }
 
   async function readLockfile(): Promise<LcuConnection> {

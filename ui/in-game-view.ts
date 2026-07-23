@@ -3,7 +3,7 @@
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
     const t = (key: string): string => root.UiI18n?.translate(key) || key;
-    const getDataDragonLocale = (): 'en_US' | 'ja_JP' => root.UiI18n?.getDataDragonLocale() || 'en_US';
+    const getDataDragonLocale = (): 'en_US' | 'ja_JP' | 'ko_KR' => root.UiI18n?.getDataDragonLocale() || 'en_US';
     const rendererLog = (root as any).lcuApi?.log;
     const statsApiHelpers = (root.UiChampionsView || {}) as any;
     const buildStatsApiChampionDetailsUrl = typeof statsApiHelpers.buildStatsApiChampionDetailsUrl === 'function'
