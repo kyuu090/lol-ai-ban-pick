@@ -4,6 +4,8 @@ const path = require('node:path');
 
 import type { BrowserWindow } from 'electron';
 import type { AppUpdater, UpdateDownloadedEvent, UpdateInfo } from 'electron-updater';
+import type { AppLanguage } from '../types/domain/settings';
+const { translate } = require('./i18n');
 
 const { autoUpdater }: { autoUpdater?: AppUpdater } = (() => {
   try {
@@ -18,6 +20,7 @@ const UPDATE_CHECK_TIMEOUT_MS = 10000;
 const UPDATE_BASE_URL = 'https://update.banpick-ai.lol/app';
 
 type StartupUpdateDeps = {
+  language?: AppLanguage;
   currentVersion: string;
   splashWindow: BrowserWindow;
   setSplashStatus?: (message: string) => Promise<void> | void;
@@ -178,37 +181,38 @@ async function downloadAndInstallUpdate(updater: AppUpdater): Promise<void> {
   });
 }
 
-async function askToUpdate(splashWindow: BrowserWindow, version: string): Promise<boolean> {
+async function askToUpdate(splashWindow: BrowserWindow, version: string, language: AppLanguage): Promise<boolean> {
   const result = await dialog.showMessageBox(splashWindow, {
     type: 'question',
-    buttons: ['アップデートする', 'アップデートせずに終了する'],
+    buttons: [translate(language, 'update.install'), translate(language, 'update.quitWithoutInstalling')],
     defaultId: 0,
     cancelId: 1,
     noLink: true,
-    title: 'アップデートがあります',
-    message: 'アップデートしますか？',
-    detail: `新しいバージョン ${version} が利用できます。`
+    title: translate(language, 'update.availableTitle'),
+    message: translate(language, 'update.availableMessage'),
+    detail: translate(language, 'update.availableDetail', { version })
   });
 
   return result.response === 0;
 }
 
-async function showUpdateFailedAndQuit(splashWindow: BrowserWindow): Promise<void> {
+async function showUpdateFailedAndQuit(splashWindow: BrowserWindow, language: AppLanguage): Promise<void> {
   await dialog.showMessageBox(splashWindow, {
     type: 'error',
-    buttons: ['終了する'],
+    buttons: [translate(language, 'update.quit')],
     defaultId: 0,
     cancelId: 0,
     noLink: true,
-    title: 'アップデートに失敗しました',
-    message: 'アップデートのダウンロードに失敗しました。',
-    detail: '時間をおいて再度お試しください。'
+    title: translate(language, 'update.failedTitle'),
+    message: translate(language, 'update.failedMessage'),
+    detail: translate(language, 'update.tryAgainLater')
   });
   app.quit();
 }
 
 async function runStartupUpdateFlow({
   currentVersion,
+  language = 'en',
   splashWindow,
   setSplashStatus,
   log,
@@ -217,7 +221,7 @@ async function runStartupUpdateFlow({
   const minimumVisible = delay(SPLASH_MINIMUM_VISIBLE_MS);
 
   if (!isStartupUpdateSupported()) {
-    await setSplashStatus?.('アップデート確認をスキップしています...');
+    await setSplashStatus?.(translate(language, 'update.status.skipped'));
     log?.info?.('Startup auto update is disabled', {
       isPackaged: app.isPackaged,
       updateBaseUrl: UPDATE_BASE_URL,
@@ -238,7 +242,7 @@ async function runStartupUpdateFlow({
     url: UPDATE_BASE_URL
   });
 
-  await setSplashStatus?.('アップデートを確認しています...');
+  await setSplashStatus?.(translate(language, 'update.status.checking'));
   log?.info?.('Checking for startup update', {
     currentVersion,
     updateBaseUrl: UPDATE_BASE_URL,
@@ -249,13 +253,13 @@ async function runStartupUpdateFlow({
   await minimumVisible;
 
   if (checkResult.status === 'not-available') {
-    await setSplashStatus?.('アップデートはありません。起動を続けます...');
+    await setSplashStatus?.(translate(language, 'update.status.none'));
     log?.info?.('No startup update available', { currentVersion });
     return { action: 'continue' };
   }
 
   if (checkResult.status === 'error') {
-    await setSplashStatus?.('アップデート確認に失敗したため通常起動します...');
+    await setSplashStatus?.(translate(language, 'update.status.checkFailed'));
     const serializedError = serializeForLog ? serializeForLog(checkResult.error) : checkResult.error;
     if (isIgnorableUpdateCheckError(checkResult.error)) {
       log?.warn?.('Startup update check failed. Continuing without update.', serializedError);
@@ -272,8 +276,8 @@ async function runStartupUpdateFlow({
     nextVersion
   });
 
-  await setSplashStatus?.('アップデートが見つかりました。選択を待っています...');
-  const shouldUpdate = await askToUpdate(splashWindow, nextVersion);
+  await setSplashStatus?.(translate(language, 'update.status.available'));
+  const shouldUpdate = await askToUpdate(splashWindow, nextVersion, language);
   log?.info?.('Startup update dialog resolved', {
     currentVersion,
     nextVersion,
@@ -281,15 +285,15 @@ async function runStartupUpdateFlow({
   });
 
   if (!shouldUpdate) {
-    await setSplashStatus?.('アップデートせずに終了します...');
+    await setSplashStatus?.(translate(language, 'update.status.quit'));
     app.quit();
     return { action: 'quit' };
   }
 
   try {
-    await setSplashStatus?.('アップデートをダウンロードしています...');
+    await setSplashStatus?.(translate(language, 'update.status.downloading'));
     await downloadAndInstallUpdate(updater);
-    await setSplashStatus?.('アップデートを適用しています...');
+    await setSplashStatus?.(translate(language, 'update.status.installing'));
     log?.info?.('Startup update downloaded. Installing now.', {
       currentVersion,
       nextVersion
@@ -297,12 +301,12 @@ async function runStartupUpdateFlow({
     updater.quitAndInstall(false, true);
     return { action: 'quit' };
   } catch (error) {
-    await setSplashStatus?.('アップデートに失敗しました...');
+    await setSplashStatus?.(translate(language, 'update.status.failed'));
     log?.error?.(
       'Startup update download failed',
       serializeForLog ? serializeForLog(error) : normalizeError(error)
     );
-    await showUpdateFailedAndQuit(splashWindow);
+    await showUpdateFailedAndQuit(splashWindow, language);
     return { action: 'quit' };
   }
 }

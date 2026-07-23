@@ -8,6 +8,7 @@ const {
 } = require('../lcu-logic');
 
 import type { PublicSettings } from '../types/domain/settings';
+const { translate } = require('./i18n');
 
 interface LcuConnection {
   processName?: string;
@@ -77,7 +78,7 @@ function createLcuClient({
     try {
       raw = await fs.readFile(lockfilePath, 'utf8');
     } catch (error) {
-      throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
+      throw new Error(translate(getSettings().language, 'lcu.clientNotRunning', { path: lockfilePath }));
     }
 
     const { processName, pid, port, password, protocol } = parseLockfile(raw);
@@ -89,7 +90,7 @@ function createLcuClient({
   async function fetchJson(endpoint: string): Promise<unknown> {
     const connection = getConnection();
     if (!connection) {
-      throw new Error('LCU接続情報がありません');
+      throw new Error(translate(getSettings().language, 'lcu.connectionUnavailable'));
     }
 
     const startedAt = Date.now();
@@ -117,7 +118,7 @@ function createLcuClient({
   async function fetchBuffer(endpoint: string): Promise<Buffer> {
     const connection = getConnection();
     if (!connection) {
-      throw new Error('LCU接続情報がありません');
+      throw new Error(translate(getSettings().language, 'lcu.connectionUnavailable'));
     }
 
     const startedAt = Date.now();

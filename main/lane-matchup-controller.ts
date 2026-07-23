@@ -10,6 +10,7 @@ const {
   describeLaneMatchupAnalysisReadiness
 } = require('../lcu-logic');
 const { createLaneMatchupAnalysisState } = require('./app-state');
+const { translate } = require('./i18n');
 
 type Timer = ReturnType<typeof setTimeout>;
 type StatePatch = Partial<AppState>;
@@ -199,7 +200,7 @@ function createLaneMatchupController({
             status: 'error',
             requestKey: request.requestKey,
             request,
-            error: createLaneMatchupAnalysisErrorMessage(error),
+            error: createLaneMatchupAnalysisErrorMessage(error, getState().settings.language),
             updatedAt: new Date().toISOString()
           })
         });
@@ -238,11 +239,11 @@ function createLaneMatchupController({
   };
 }
 
-function createLaneMatchupAnalysisErrorMessage(error: unknown): string {
+function createLaneMatchupAnalysisErrorMessage(error: unknown, language: 'en' | 'ja' = 'en'): string {
   const message = String((error as { message?: string } | null | undefined)?.message || '');
-  if (message.includes('429')) return 'AI対面分析のリクエストが混み合っています。少し待ってから再度お試しください。';
-  if (message.includes('400')) return 'AI対面分析に必要なチャンピオンまたはレーン情報が不足しています。';
-  return 'AI対面分析を取得できませんでした。';
+  if (message.includes('429')) return translate(language, 'laneAnalysis.rateLimited');
+  if (message.includes('400')) return translate(language, 'laneAnalysis.insufficientContext');
+  return translate(language, 'laneAnalysis.unavailable');
 }
 
 export = {

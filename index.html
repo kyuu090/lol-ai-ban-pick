@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,10 +25,10 @@
       <div class="window-titlebar-brand">
         <span>BanPick.AI</span>
       </div>
-      <div class="window-titlebar-controls" aria-label="window controls">
-        <button id="windowMinimizeButton" class="window-control-button" type="button" aria-label="最小化">−</button>
-        <button id="windowMaximizeButton" class="window-control-button" type="button" aria-label="最大化">□</button>
-        <button id="windowCloseButton" class="window-control-button close" type="button" aria-label="閉じる">×</button>
+      <div class="window-titlebar-controls" aria-label="window controls" data-i18n-aria-label="window.controls">
+        <button id="windowMinimizeButton" class="window-control-button" type="button" aria-label="Minimize" data-i18n-aria-label="window.minimize">−</button>
+        <button id="windowMaximizeButton" class="window-control-button" type="button" aria-label="Maximize" data-i18n-aria-label="window.maximize">□</button>
+        <button id="windowCloseButton" class="window-control-button close" type="button" aria-label="Close" data-i18n-aria-label="window.close">×</button>
       </div>
     </header>
 
@@ -37,17 +37,17 @@
         <div class="match-data-header">
           <img class="app-logo" src="./assets/icon.png" alt="BanPick.AI" />
           <div class="match-data-summary">
-            <span class="label">5v5 SR match data</span>
-            <strong id="matchDataCount">No data</strong>
-            <span id="matchDataRange">試合データが取得されていません</span>
-            <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>シーズン中データの全取得でサンプル数を増やせる可能性があります</button>
+            <span class="label" data-i18n="header.matchData">5v5 SR match data</span>
+            <strong id="matchDataCount" data-i18n="static.noData">No data</strong>
+            <span id="matchDataRange" data-i18n="static.noMatchData">No match data has been downloaded.</span>
+            <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>Downloading all matches this season may increase the sample size.</button>
             <span id="matchDataProgress" class="match-data-progress" role="status" hidden></span>
           </div>
           <div class="match-data-download">
-            <button id="collectRiotMatchesButton" class="match-data-update-button" type="button">Download recent match</button>
+            <button id="collectRiotMatchesButton" class="match-data-update-button" type="button" data-i18n="header.downloadRecent">Download recent match</button>
             <button id="matchDataMenuButton" class="match-data-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">▾</button>
             <div id="matchDataMenu" class="match-data-menu" role="menu" hidden>
-              <button id="collectSeasonRiotMatchesButton" type="button" role="menuitem">Download current season matches</button>
+              <button id="collectSeasonRiotMatchesButton" type="button" role="menuitem" data-i18n="header.downloadSeason">Download current season matches</button>
             </div>
           </div>
         </div>
@@ -55,64 +55,57 @@
           <div class="header-meta" aria-live="polite">
             <span id="clientVersionLabel" class="header-version-badge" hidden>Client v-</span>
           </div>
-          <nav class="view-tabs" aria-label="view switcher">
-            <button class="tab-button active" id="draftTabButton" type="button" data-view="draft">Draft</button>
-            <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool">ChampionPool</button>
-            <button class="tab-button" id="championsTabButton" type="button" data-view="champions">Champions</button>
-            <button class="tab-button" id="statsTabButton" type="button" data-view="stats">Stats</button>
-            <button class="tab-button" id="settingsTabButton" type="button" data-view="settings">Settings</button>
+          <nav class="view-tabs" aria-label="view switcher" data-i18n-aria-label="window.viewSwitcher">
+            <button class="tab-button active" id="draftTabButton" type="button" data-view="draft" data-i18n="nav.draft">Draft</button>
+            <button class="tab-button" id="championPoolTabButton" type="button" data-view="championPool" data-i18n="nav.pool">ChampionPool</button>
+            <button class="tab-button" id="championsTabButton" type="button" data-view="champions" data-i18n="nav.champions">Champions</button>
+            <button class="tab-button" id="statsTabButton" type="button" data-view="stats" data-i18n="nav.stats">Stats</button>
+            <button class="tab-button" id="settingsTabButton" type="button" data-view="settings" data-i18n="nav.settings">Settings</button>
           </nav>
         </div>
       </header>
 
       <section id="draftView" class="view-panel">
         <section id="loggedOutView" class="center-state">
-          <p class="eyebrow">League Client</p>
-          <h2>League of Legendsを起動してください</h2>
-          <p>ログインすると、ここにドラフトの使い方を表示します。</p>
-          <p class="draft-connection-help">League of Legendsを起動しても画面が切り替わらない場合は、Settings画面でゲームの<strong>インストールディレクトリ</strong>設定を確認してください。</p>
+          <p class="eyebrow" data-i18n="home.client">League Client</p><h2 data-i18n="home.launch">Launch League of Legends</h2><p data-i18n="home.loginHelp">Once you log in, this screen will show how to use draft assistance.</p><p class="draft-connection-help" data-i18n="home.connectionHelp">If this screen does not change after launching League of Legends, check the game's installation directory in Settings.</p>
         </section>
 
         <section id="loggedInView" class="center-state draft-guide-state" hidden>
-          <p class="eyebrow">Ready</p>
-          <h2 id="helloMessage">こんにちは</h2>
-          <p>ドラフトを始める準備ができました。</p>
+          <p class="eyebrow" data-i18n="home.ready">Ready</p>
+          <h2 id="helloMessage" data-i18n="static.hello">Hello</h2>
+          <p data-i18n="home.readyToDraft">You are ready to start a draft.</p>
           <ol class="draft-guide-list">
-            <li><strong>ChampionPool</strong> で、ロールごとの使用候補を登録します。</li>
-            <li>サモナーズリフトのドラフトを開始します。</li>
-            <li>チャンピオン選択が始まると、この画面が自動で切り替わり、BAN・Pickの候補、推奨ビルドの確認ができます。</li>
+            <li data-i18n="home.addPool">Add champions for each role in ChampionPool.</li><li data-i18n="home.startDraft">Start a Summoner's Rift draft.</li><li data-i18n="home.draftHelp">When champion select starts, this screen switches automatically and shows ban/pick candidates and recommended builds.</li>
           </ol>
           <section class="draft-other-features" aria-labelledby="draftOtherFeaturesTitle">
-            <h3 id="draftOtherFeaturesTitle">そのほかの機能</h3>
+            <h3 id="draftOtherFeaturesTitle" data-i18n="home.otherFeatures">Other features</h3>
             <dl>
               <div>
-                <dt>Champions</dt>
-                <dd>チャンピオンごとのビルド、ルーン、スキル優先度、対面データを確認できます。</dd>
+                <dt data-i18n="nav.champions">Champions</dt>
+                <dd data-i18n="home.championsHelp">View builds, runes, skill priorities, and matchup data for each champion.</dd>
               </div>
               <div>
-                <dt>Stats</dt>
-                <dd>自分がプレイしたチャンピオンと、レーンで対面したチャンピオンの戦績を確認できます。</dd>
+                <dt data-i18n="nav.stats">Stats</dt>
+                <dd data-i18n="home.statsHelp">Review your results on played champions and against lane opponents.</dd>
               </div>
             </dl>
           </section>
         </section>
 
         <section id="unsupportedGameModeView" class="center-state" hidden>
-          <p class="eyebrow">Unsupported Mode</p>
-          <h2>未対応のゲームモードが実行されています</h2>
-          <p>バンピック補助は、サモナーズリフトのドラフトピック、ランクマッチ、カスタムドラフト、トーナメントドラフトで利用できます。</p>
+          <p class="eyebrow" data-i18n="home.unsupported">Unsupported Mode</p><h2 data-i18n="home.unsupportedTitle">An unsupported game mode is active</h2><p data-i18n="home.unsupportedHelp">Draft assistance is available in Summoner's Rift draft pick, ranked, custom draft, and tournament draft games.</p>
         </section>
 
         <section id="inGameView" class="in-game-view" hidden>
           <section class="in-game-hero">
             <div class="in-game-portrait" id="inGameSelfPortrait">?</div>
             <div class="in-game-main">
-              <p class="eyebrow">Current Game</p>
+              <p class="eyebrow" data-i18n="home.currentGame">Current Game</p>
               <div class="in-game-champion-row">
                 <div id="inGameKeystone" class="in-game-keystone"></div>
-                <h2 id="inGameChampionName">試合中です</h2>
+                <h2 id="inGameChampionName" data-i18n="inGame.title">In game</h2>
               </div>
-              <p id="inGameChampionDetail">試合が終了したら、次のドラフトを監視します。</p>
+              <p id="inGameChampionDetail" data-i18n="home.nextDraft">The next draft will be monitored when this game ends.</p>
               <div id="inGameSelfStats" class="in-game-stat-row"></div>
             </div>
             <div id="inGameSkillOrder" class="in-game-skill-order" aria-live="polite"></div>
@@ -130,37 +123,36 @@
         <section id="champSelectView" class="draft-board" hidden>
           <header class="draft-header">
             <section class="ban-strip">
-              <span>ALLY BANS</span>
+              <span data-i18n="draft.allyBans">ALLY BANS</span>
               <div id="allyBans" class="ban-list"></div>
             </section>
             <section class="draft-title">
-              <p class="eyebrow">Draft Pick</p>
-              <h2>CHAMPION SELECT</h2>
+              <p class="eyebrow" data-i18n="draft.pick">Draft Pick</p><h2 data-i18n="draft.championSelect">CHAMPION SELECT</h2>
             </section>
             <section class="ban-strip align-right">
-              <span>ENEMY BANS</span>
+              <span data-i18n="draft.enemyBans">ENEMY BANS</span>
               <div id="enemyBans" class="ban-list"></div>
             </section>
           </header>
 
           <section class="teams-layout">
             <section class="team-column ally">
-              <h3>YOUR TEAM</h3>
+              <h3 data-i18n="draft.yourTeam">YOUR TEAM</h3>
               <div id="allyTeam" class="pick-list"></div>
             </section>
 
             <section class="draft-focus">
               <div id="draftSelfSummary" class="draft-self-summary" hidden></div>
               <div class="champion-focus">
-                <p class="eyebrow">CURRENT STATE</p>
-                <h3 id="currentAction">待機中</h3>
+                <p class="eyebrow" data-i18n="draft.currentState">CURRENT STATE</p>
+                <h3 id="currentAction" data-i18n="static.waiting">Waiting</h3>
                 <p id="currentPick" hidden></p>
                 <div id="banInsightPanel" class="ban-insight-panel" hidden></div>
               </div>
             </section>
 
             <section class="team-column enemy">
-              <h3>ENEMY TEAM</h3>
+              <h3 data-i18n="draft.enemyTeam">ENEMY TEAM</h3>
               <div id="enemyTeam" class="pick-list"></div>
             </section>
           </section>
@@ -172,23 +164,23 @@
       <section id="championPoolView" class="view-panel" hidden>
         <section class="champion-pool-panel">
           <div class="champion-pool-toolbar">
-            <nav id="laneTabs" class="lane-tabs" aria-label="lane switcher"></nav>
-            <button id="saveChampionPoolButton" type="button">保存</button>
+            <nav id="laneTabs" class="lane-tabs" aria-label="lane switcher" data-i18n-aria-label="window.laneSwitcher"></nav>
+            <button id="saveChampionPoolButton" type="button" data-i18n="settings.save">Save</button>
           </div>
 
           <section class="pool-editor">
             <section class="selected-pool">
               <h3 id="championPoolListTitle">TOP</h3>
               <div id="championPoolList" class="champion-pool-list"></div>
-              <p id="championPoolEmpty" class="pool-empty">まだ登録されていません。</p>
+              <p id="championPoolEmpty" class="pool-empty" data-i18n="pool.empty">No champions have been added yet.</p>
             </section>
 
             <section class="champion-picker">
               <label class="settings-field" for="championPoolSearchInput">
-                <input id="championPoolSearchInput" type="search" placeholder="チャンピオン名で検索" spellcheck="false" />
+                <input id="championPoolSearchInput" type="search" placeholder="Search champions" data-i18n-placeholder="champions.search" spellcheck="false" />
               </label>
               <div id="championPoolPickerGrid" class="champion-picker-grid"></div>
-              <p id="championPoolPickerEmpty" class="pool-empty">一致するチャンピオンがありません。</p>
+              <p id="championPoolPickerEmpty" class="pool-empty" data-i18n="pool.noMatchingChampions">No matching champions found.</p>
             </section>
           </section>
 
@@ -201,21 +193,21 @@
           <section class="stats-table-section stats-api-champions-panel" aria-labelledby="statsApiChampionsTitle">
             <div class="stats-api-filters">
               <label class="stats-api-field compact" for="statsApiPatchSelect">
-                <span>Patch</span>
+                <span data-i18n="static.patch">Patch</span>
                 <select id="statsApiPatchSelect"></select>
               </label>
 
               <label class="stats-api-field compact" for="statsApiRegionSelect">
-                <span>Region</span>
+                <span data-i18n="static.region">Region</span>
                 <select id="statsApiRegionSelect">
                   <option value="">ALL</option>
                 </select>
               </label>
 
               <div class="stats-api-rank-dropdown">
-                <span class="stats-api-rank-label">Rank</span>
+                <span class="stats-api-rank-label" data-i18n="static.rank">Rank</span>
                 <button id="statsApiRankDropdownButton" class="stats-api-rank-dropdown-button" type="button" aria-expanded="false" aria-controls="statsApiRankDropdown">
-                  <span id="statsApiRankSummary">All ranks</span>
+                  <span id="statsApiRankSummary" data-i18n="static.allRanks">All ranks</span>
                 </button>
                 <div id="statsApiRankDropdown" class="stats-api-rank-dropdown-panel" hidden>
                   <div id="statsApiRankOptions" class="stats-api-rank-options"></div>
@@ -223,39 +215,35 @@
               </div>
 
               <div class="stats-api-field stats-api-lane-filter">
-                <span>Lane</span>
-                <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter"></nav>
+                <span data-i18n="static.lane">Lane</span>
+                <nav id="statsApiLaneTabs" class="lane-tabs stats-api-lane-tabs" aria-label="champion stats lane filter" data-i18n-aria-label="window.laneSwitcher"></nav>
               </div>
-              <button id="statsApiDetailsBackButton" class="stats-api-back-button stats-api-filters-back-button" type="button" aria-label="チャンピオン一覧に戻る" hidden>×</button>
+              <button id="statsApiDetailsBackButton" class="stats-api-back-button stats-api-filters-back-button" type="button" aria-label="Back to champion list" data-i18n-aria-label="window.backToChampions" hidden>×</button>
             </div>
 
-            <p id="statsApiStatus" class="stats-api-status" role="status">StatsAPIのメタ情報を取得しています。</p>
+            <p id="statsApiStatus" class="stats-api-status" role="status" data-i18n="static.loadingMetadata">Loading Stats API metadata.</p>
 
             <div id="statsApiChampionsListView" class="stats-api-view">
               <div class="stats-table-wrap">
                 <table class="stats-table stats-api-table">
                   <thead>
                     <tr>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="tierScore">Tier</button></th>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion">チャンピオン</button></th>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane">Lane</button></th>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games">Games</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="tierScore" data-i18n="static.tier">Tier</button></th><th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="champion" data-i18n="static.champion">Champion</button></th><th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="lane" data-i18n="static.lane">Lane</button></th><th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="games" data-i18n="static.games">Games</button></th>
                       <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="winRate">WR</button></th>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="pickRate">Pick</button></th>
-                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="banRate">Ban</button></th>
+                      <th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="pickRate" data-i18n="static.pickRate">Pick</button></th><th scope="col"><button class="stats-sort-button stats-api-sort-button" type="button" data-stats-api-sort-key="banRate" data-i18n="static.banRate">Ban</button></th>
                     </tr>
                   </thead>
                   <tbody id="statsApiChampionsTableBody"></tbody>
                 </table>
               </div>
-              <p id="statsApiChampionsEmpty" class="pool-empty">条件に合うチャンピオンがありません。</p>
+              <p id="statsApiChampionsEmpty" class="pool-empty" data-i18n="champions.noMatchingChampions">No champions match the selected filters.</p>
             </div>
 
             <section id="statsApiDetailsView" class="stats-api-view stats-api-details-view" hidden>
               <div class="stats-api-details-toolbar">
-                <button class="stats-api-back-button" type="button" aria-label="チャンピオン一覧に戻る">×</button>
+                <button class="stats-api-back-button" type="button" aria-label="Back to champion list" data-i18n-aria-label="window.backToChampions">×</button>
                 <div class="stats-api-details-heading">
-                  <p class="eyebrow">Champion Details</p>
+                  <p class="eyebrow" data-i18n="static.championDetails">Champion Details</p>
                   <h2 id="statsApiDetailsTitle">-</h2>
                 </div>
               </div>
@@ -269,13 +257,12 @@
       <section id="statsView" class="view-panel" hidden>
         <section class="stats-panel">
           <div class="stats-toolbar">
-            <nav class="stats-subtabs" aria-label="stats switcher">
-              <button class="stats-subtab active" id="playedStatsSubtabButton" type="button" data-stats-view="played">プレイしたチャンピオン</button>
-              <button class="stats-subtab" id="opponentStatsSubtabButton" type="button" data-stats-view="opponents">対面チャンピオン</button>
+            <nav class="stats-subtabs" aria-label="stats switcher" data-i18n-aria-label="window.statsSwitcher">
+              <button class="stats-subtab active" id="playedStatsSubtabButton" type="button" data-stats-view="played" data-i18n="static.playedChampions">Played champions</button><button class="stats-subtab" id="opponentStatsSubtabButton" type="button" data-stats-view="opponents" data-i18n="static.laneOpponents">Lane opponents</button>
             </nav>
 
             <label id="playedStatsSampleFilter" class="sample-filter" for="playedStatsSampleSelect">
-              <span>Min. games</span>
+              <span data-i18n="static.minGames">Min. games</span>
               <select id="playedStatsSampleSelect">
                 <option value="1">1+ games</option>
                 <option value="3">3+ games</option>
@@ -286,7 +273,7 @@
             </label>
 
             <label id="opponentStatsSampleFilter" class="sample-filter" for="opponentStatsSampleSelect" hidden>
-              <span>Min. games</span>
+              <span data-i18n="static.minGames">Min. games</span>
               <select id="opponentStatsSampleSelect">
                 <option value="1">1+ games</option>
                 <option value="3">3+ games</option>
@@ -298,46 +285,46 @@
           </div>
 
           <section id="playedStatsView" class="stats-subview">
-            <nav id="playedStatsLaneTabs" class="lane-tabs" aria-label="played champion lane switcher"></nav>
+            <nav id="playedStatsLaneTabs" class="lane-tabs" aria-label="played champion lane switcher" data-i18n-aria-label="window.laneSwitcher"></nav>
 
             <section class="stats-table-section">
-              <h3>自分がプレイしたチャンピオン統計</h3>
+              <h3 data-i18n="static.playedStatistics">Played champion statistics</h3>
               <div class="stats-table-wrap">
                 <table class="stats-table">
                   <thead>
                     <tr>
-                      <th scope="col">チャンピオン</th>
-                      <th scope="col"><button id="playedStatsSortGamesButton" class="stats-sort-button" type="button">試合数</button></th>
-                      <th scope="col"><button id="playedStatsSortWinRateButton" class="stats-sort-button" type="button">勝率</button></th>
+                      <th scope="col" data-i18n="static.champion">Champion</th>
+                      <th scope="col"><button id="playedStatsSortGamesButton" class="stats-sort-button" type="button" data-i18n="static.games">Games</button></th>
+                      <th scope="col"><button id="playedStatsSortWinRateButton" class="stats-sort-button" type="button" data-i18n="static.winRate">Win rate</button></th>
                       <th scope="col">K/D/A</th>
                     </tr>
                   </thead>
                   <tbody id="playedStatsTableBody"></tbody>
                 </table>
               </div>
-              <p id="playedStatsEmpty" class="pool-empty">条件に合うチャンピオン実績がありません。</p>
+              <p id="playedStatsEmpty" class="pool-empty" data-i18n="stats.noPlayedData">No played champion results match the selected filters.</p>
             </section>
           </section>
 
           <section id="opponentStatsView" class="stats-subview" hidden>
-            <nav id="opponentStatsLaneTabs" class="lane-tabs" aria-label="lane opponent switcher"></nav>
+            <nav id="opponentStatsLaneTabs" class="lane-tabs" aria-label="lane opponent switcher" data-i18n-aria-label="window.laneSwitcher"></nav>
 
             <section class="stats-table-section">
-              <h3>レーンで対面したチャンピオン統計</h3>
+              <h3 data-i18n="static.laneOpponentStatistics">Lane opponent statistics</h3>
               <div class="stats-table-wrap">
                 <table class="stats-table">
                   <thead>
                     <tr>
-                      <th scope="col">対面チャンピオン</th>
-                      <th scope="col"><button id="opponentStatsSortGamesButton" class="stats-sort-button" type="button">対面試合数</button></th>
-                      <th scope="col"><button id="opponentStatsSortWinRateButton" class="stats-sort-button" type="button">対面勝率</button></th>
-                      <th scope="col">自分のK/D/A</th>
+                      <th scope="col" data-i18n="static.laneOpponents">Lane opponent</th>
+                      <th scope="col"><button id="opponentStatsSortGamesButton" class="stats-sort-button" type="button" data-i18n="static.matchups">Matchups</button></th>
+                      <th scope="col"><button id="opponentStatsSortWinRateButton" class="stats-sort-button" type="button" data-i18n="static.winRate">Win rate</button></th>
+                      <th scope="col">Your K/D/A</th>
                     </tr>
                   </thead>
                   <tbody id="opponentStatsTableBody"></tbody>
                 </table>
               </div>
-              <p id="opponentStatsEmpty" class="pool-empty">条件に合う対面データがありません。</p>
+              <p id="opponentStatsEmpty" class="pool-empty" data-i18n="stats.noOpponentData">No lane opponent data matches the selected filters.</p>
             </section>
           </section>
         </section>
@@ -346,34 +333,47 @@
       <section id="settingsView" class="view-panel" hidden>
         <section class="settings-panel">
           <label class="settings-field" for="lolInstallDirInput">
-            <span>インストールディレクトリ</span>
+            <span data-i18n="settings.installDirectory">Installation directory</span>
             <div class="path-input-row">
               <input id="lolInstallDirInput" type="text" spellcheck="false" />
-              <button id="chooseLolDirButton" type="button">参照</button>
-              <button id="saveLolDirButton" type="button">保存</button>
+              <button id="chooseLolDirButton" type="button" data-i18n="settings.browse">Browse</button>
+              <button id="saveLolDirButton" type="button" data-i18n="settings.save">Save</button>
             </div>
           </label>
 
           <div class="settings-divider"></div>
 
           <div class="settings-field">
-            <span>Match-V5 regional route</span>
-            <small id="riotRegionalRouteStatus" class="settings-help">LoLログイン後に LCU から自動検出します。</small>
+            <span data-i18n="settings.matchV5Route">Match-V5 regional route</span>
+            <small id="riotRegionalRouteStatus" class="settings-help" data-i18n="settings.routeHelp">Detected automatically from the LCU after you log in to League of Legends.</small>
           </div>
 
           <div class="settings-divider"></div>
 
           <label class="settings-field" for="themeModeSelect">
-            <span>表示テーマ</span>
+            <span data-i18n="settings.theme">Theme</span>
             <div class="token-input-row">
               <select id="themeModeSelect">
-                <option value="system">システムと同期</option>
-                <option value="light">ライト</option>
-                <option value="dark">ダーク</option>
+                <option value="system" data-i18n="settings.theme.system">System</option>
+                <option value="light" data-i18n="settings.theme.light">Light</option>
+                <option value="dark" data-i18n="settings.theme.dark">Dark</option>
               </select>
-              <button id="saveThemeModeButton" type="button">保存</button>
+              <button id="saveThemeModeButton" type="button" data-i18n="settings.save">Save</button>
             </div>
-            <small id="themeModeStatus" class="settings-help">OSの表示モードに合わせます。</small>
+            <small id="themeModeStatus" class="settings-help" data-i18n="settings.theme.systemHelp">Matches your operating system appearance.</small>
+          </label>
+
+          <div class="settings-divider"></div>
+
+          <label class="settings-field" for="languageSelect">
+            <span data-i18n="settings.language">Language</span>
+            <div class="token-input-row">
+              <select id="languageSelect">
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+              </select>
+              <button id="saveLanguageButton" type="button" data-i18n="settings.save">Save</button>
+            </div>
           </label>
 
           <p id="settingsMessage" class="settings-message" role="status"></p>
@@ -385,6 +385,7 @@
     <script src="./mock-lcu-api.js"></script>
     <script src="./ui/dom-elements.js"></script>
     <script src="./ui/formatters.js"></script>
+    <script src="./ui/i18n.js"></script>
     <script src="./ui/champion-icons.js"></script>
     <script src="./ui/settings-view.js"></script>
     <script src="./ui/champion-pool-view.js"></script>

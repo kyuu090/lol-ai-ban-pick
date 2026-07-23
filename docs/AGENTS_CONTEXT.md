@@ -194,11 +194,12 @@ app.getPath('userData')/settings.json
 ```json
 {
   "lolInstallDir": "C:\\Riot Games\\League of Legends",
-  "riotPlatformRegion": "JP1"
+  "riotPlatformRegion": "JP1",
+  "language": "en"
 }
 ```
 
-Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions` だけを含める。BFF Base URL や Riot API key は公開しない。
+`language` はアプリの表示言語で、既定値は `en`。設定画面から英語と日本語を選択できる。Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions`, `themeMode`, `language` と選択肢を含む。BFF Base URL や Riot API key は公開しない。
 
 ### Riot Match History
 
@@ -656,7 +657,7 @@ StatsAPI ベースの Champions 画面を実装している。
 - 一覧は `/v1/stats/positions/{position}/champions` を使う
 - 一覧のチャンピオン行を選ぶと、同じフィルター条件のまま `/v1/stats/positions/{position}/champions/{championId}/details` を再取得して詳細画面へ切り替える
 - 詳細画面ではキーストーン、ルーンセット、サモナースペル、開始アイテム、ブーツ、コアアイテム、3rd-6th アイテム、スキルオーダーを表示する
-- ルーン画像と日本語名は Data Dragon の `https://ddragon.leagueoflegends.com/cdn/{version}/data/ja_JP/runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
+- ルーン画像と名称は、選択中のアプリ言語に対応する Data Dragon locale（英語は `en_US`、日本語は `ja_JP`）の `runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
 - スキル画像は Data Dragon の champion spell metadata をチャンピオンごとに取得してキャッシュし、`Lv1-6` / `優先スキル` の両方で利用する。取得失敗時は `Q/W/E/R` の文字表示に戻す
 - ルーンセットはゲーム内のルーン設定画面に寄せた見た目で、選択中のスタイル配下だけを明るく表示し、未選択ルーンはグレーアウトする
 - フィルター変更時は一覧だけでなく、表示中の詳細チャンピオンにも同じ条件を再適用して API を再取得する

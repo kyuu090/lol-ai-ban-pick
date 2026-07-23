@@ -5,6 +5,7 @@ const {
 } = require('./ai-analysis-service');
 
 import type { MatchHistoryStatus } from '../types/domain/match-history';
+const { translate } = require('./i18n');
 
 type MatchId = string | number;
 type RetryCallback = (context: { attempt: number; delayMs: number } | unknown) => void | Promise<void>;
@@ -31,6 +32,7 @@ interface RiotId {
 }
 
 interface RiotMatchHistoryServiceDeps {
+  getLanguage?: () => 'en' | 'ja';
   matchIdsPageSize: number;
   updateMatchHistoryStatus: (patch: Partial<MatchHistoryStatus>) => void;
   clearRiotRateLimitCountdown: () => void;
@@ -137,7 +139,8 @@ function getDefaultSeasonStartAt(now = new Date()): Date {
 function createRiotMatchHistoryService({
   matchIdsPageSize,
   updateMatchHistoryStatus,
-  clearRiotRateLimitCountdown
+  clearRiotRateLimitCountdown,
+  getLanguage
 }: RiotMatchHistoryServiceDeps): RiotMatchHistoryService {
   function requestBffHealth({ onRetry = null }: RequestRetryOptions = {}): Promise<unknown> {
     return requestBffJson({
@@ -213,7 +216,7 @@ function createRiotMatchHistoryService({
       updateMatchHistoryStatus({
         phase: 'collecting',
         requestedMatches: allMatchIds.length,
-        message: `試合IDリスト取得中... ${allMatchIds.length} 試合`
+        message: translate(getLanguage?.(), 'matchHistory.fetchingIds', { matches: allMatchIds.length })
       });
 
       if (pageMatchIds.length < matchIdsPageSize) break;

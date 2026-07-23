@@ -35,6 +35,10 @@ npm test
 
 Node.js 標準の `node:test` で、LCU lockfile のパース、認証ヘッダ生成、チャンピオン一覧の正規化、ドラフト表示用の BAN 集計・ターン判定・表示状態判定、Riot API retry、試合履歴の正規化・集計、match history 更新時の ID 重複排除を確認します。
 
+## 多言語対応
+
+表示文言は `ui/i18n.ts`（Renderer）または `main/i18n.ts`（Main process）の安定したキーで管理します。画面コードでは原文を検索・置換せず、`UiI18n.translate('namespace.key')` を使います。設定ファイルの `language` は `en` / `ja` を保存し、未設定または不正な値は英語になります。Data Dragon の取得ロケールもこの設定から `en_US` / `ja_JP` を選びます。
+
 ## 開発フロー
 
 通常の開発は、`main` から作業ブランチを作って Pull Request で取り込む流れにします。
@@ -324,7 +328,9 @@ riot-match-cache/<account-puuid>.json
 match-history/<account-puuid>.json
 ```
 
-`settings.json` には LoL インストールディレクトリに加えて、Riot API 連携用の開発者トークンと Region を保存できます。トークン本文は Rendererやログには出しません。
+`settings.json` には LoL インストールディレクトリ、表示テーマ、アプリの言語設定を保存します。`language` は既定で `en`（英語）で、現在は `en` と `ja` を選択できます。存在しない値や古い設定ファイルで `language` が未指定の場合は、安全に `en` へ正規化します。英語選択時はチャンピオン名と Data Dragon のルーン・スキル名を `en_US` で取得し、日本語選択時は LCU と Data Dragon の `ja_JP` を使用します。翻訳文言は `ui/i18n.ts` の言語別辞書に集約しているため、新しい言語は言語コードと辞書を追加して拡張します。
+
+Renderer の旧来コンポーネントが動的に追加する文言は、`ui/i18n.ts` の DOM ローカライザでも英語設定時に変換する。ドラフト中・試合中・StatsAPI の分析表・試合履歴の進捗表示を含めて、動的な DOM 更新後にも適用される。
 
 ## Riot API / Match History
 

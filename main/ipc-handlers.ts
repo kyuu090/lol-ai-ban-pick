@@ -13,6 +13,7 @@ function registerIpcHandlers({
   ipcMain.handle('settings:update-lol-install-dir', handlers.updateLolInstallDir);
   ipcMain.handle('settings:update-riot-platform-region', handlers.updateRiotPlatformRegion);
   ipcMain.handle('settings:update-theme-mode', handlers.updateThemeMode);
+  ipcMain.handle('settings:update-language', handlers.updateLanguage);
   ipcMain.handle('window:minimize', handlers.minimizeWindow);
   ipcMain.handle('window:toggle-maximize', handlers.toggleMaximizeWindow);
   ipcMain.handle('window:close', handlers.closeWindow);
@@ -40,6 +41,7 @@ interface IpcHandlerMap {
   updateLolInstallDir: (...args: any[]) => unknown;
   updateRiotPlatformRegion: (...args: any[]) => unknown;
   updateThemeMode: (...args: any[]) => unknown;
+  updateLanguage: (...args: any[]) => unknown;
   minimizeWindow: (...args: any[]) => unknown;
   toggleMaximizeWindow: (...args: any[]) => unknown;
   closeWindow: (...args: any[]) => unknown;

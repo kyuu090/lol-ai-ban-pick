@@ -57,10 +57,10 @@
         state.championPoolDirty = false;
         deps.renderChampionPool();
         deps.logDebug('Champion pool save completed', { championPool: state.championPool });
-        elements.championPoolMessage.textContent = 'チャンピオンプールを保存しました。';
+        elements.championPoolMessage.textContent = window.UiI18n?.translate('pool.saved') || 'Champion pool saved.';
       } catch (error: any) {
         deps.logWarn('Champion pool save failed', { message: error.message, stack: error.stack });
-        elements.championPoolMessage.textContent = `保存できませんでした: ${error.message}`;
+        elements.championPoolMessage.textContent = window.UiI18n?.translate('pool.saveFailed', { message: error.message }) || `Could not save: ${error.message}`;
       } finally {
         elements.saveChampionPoolButton.disabled = false;
       }

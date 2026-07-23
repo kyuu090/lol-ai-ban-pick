@@ -2,6 +2,8 @@
   function createDraftView(deps: DraftViewDeps) {
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
+    const t = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
+    const getDataDragonLocale = (): 'en_US' | 'ja_JP' => root.UiI18n?.getDataDragonLocale() || 'en_US';
     const statsApiHelpers = (root.UiChampionsView || {}) as any;
     const buildStatsApiChampionDetailsUrl = typeof statsApiHelpers.buildStatsApiChampionDetailsUrl === 'function'
       ? statsApiHelpers.buildStatsApiChampionDetailsUrl
@@ -27,39 +29,19 @@
       };
     const formatStatsApiErrorMessage = typeof statsApiHelpers.formatStatsApiErrorMessage === 'function'
       ? statsApiHelpers.formatStatsApiErrorMessage
-      : (error: any) => String(error?.message || error || 'StatsAPIを取得できませんでした。');
+      : (error: any) => String(error?.message || error || t('common.statsApiLoadFailed'));
     const KEYSTONE_LABELS: Record<number, string> = {
-      8005: 'プレスアタック',
-      8008: 'リーサルテンポ',
-      8010: '征服者',
-      8021: 'フリートフットワーク',
-      8112: '電撃',
-      8124: '捕食者',
-      8128: 'ダークハーベスト',
-      8214: 'エアリー',
-      8229: '秘儀の彗星',
-      8230: 'フェイズラッシュ',
-      8437: '不死者の握撃',
-      8439: 'アフターショック',
-      8465: 'ガーディアン',
-      9923: 'ヘイルブレード'
+      8005: 'rune.keystone.8005', 8008: 'rune.keystone.8008', 8010: 'rune.keystone.8010', 8021: 'rune.keystone.8021',
+      8112: 'rune.keystone.8112', 8124: 'rune.keystone.8124', 8128: 'rune.keystone.8128', 8214: 'rune.keystone.8214',
+      8229: 'rune.keystone.8229', 8230: 'rune.keystone.8230', 8437: 'rune.keystone.8437', 8439: 'rune.keystone.8439',
+      8465: 'rune.keystone.8465', 9923: 'rune.keystone.9923'
     };
     const RUNE_STYLE_LABELS: Record<number, string> = {
-      8000: '栄華',
-      8100: '覇道',
-      8200: '魔道',
-      8300: '天啓',
-      8400: '不滅',
-      8500: '栄華'
+      8000: 'rune.style.8000', 8100: 'rune.style.8100', 8200: 'rune.style.8200', 8300: 'rune.style.8300', 8400: 'rune.style.8400', 8500: 'rune.style.8500'
     };
     const SHARD_LABELS: Record<number, string> = {
-      5001: 'スケーリング体力',
-      5005: '攻撃速度',
-      5007: 'スキルヘイスト',
-      5008: 'アダプティブフォース',
-      5010: '移動速度',
-      5011: '体力',
-      5013: '行動妨害耐性'
+      5001: 'rune.shard.5001', 5005: 'rune.shard.5005', 5007: 'rune.shard.5007', 5008: 'rune.shard.5008',
+      5010: 'rune.shard.5010', 5011: 'rune.shard.5011', 5013: 'rune.shard.5013'
     };
     const SHARD_ICON_PATHS: Record<number, string> = {
       5001: 'perk-images/StatMods/StatModsHealthPlusIcon.png',
@@ -76,17 +58,8 @@
       [5011, 5013, 5001]
     ] as const;
     const SUMMONER_SPELL_LABELS: Record<number, string> = {
-      1: 'クレンズ',
-      3: 'イグゾースト',
-      4: 'フラッシュ',
-      6: 'ゴースト',
-      7: 'ヒール',
-      11: 'スマイト',
-      12: 'テレポート',
-      13: 'クラリティ',
-      14: 'イグナイト',
-      21: 'バリア',
-      32: 'マーク'
+      1: 'Cleanse', 3: 'Exhaust', 4: 'Flash', 6: 'Ghost', 7: 'Heal', 11: 'Smite',
+      12: 'Teleport', 13: 'Clarity', 14: 'Ignite', 21: 'Barrier', 32: 'Mark'
     };
     const SUMMONER_SPELL_ICON_KEYS: Record<number, string> = {
       1: 'SummonerBoost',
@@ -149,17 +122,17 @@
 
     function getKeystoneLabel(keystoneId: unknown): string {
       const numericKeystoneId = normalizePositiveId(keystoneId);
-      return getRuneAssetEntry('perks', numericKeystoneId)?.name || KEYSTONE_LABELS[numericKeystoneId] || getRuneLabel(numericKeystoneId) || `Keystone ${numericKeystoneId || '-'}`;
+      return getRuneAssetEntry('perks', numericKeystoneId)?.name || (KEYSTONE_LABELS[numericKeystoneId] ? t(KEYSTONE_LABELS[numericKeystoneId]) : '') || getRuneLabel(numericKeystoneId) || `Keystone ${numericKeystoneId || '-'}`;
     }
 
     function getRuneStyleLabel(styleId: unknown): string {
       const numericStyleId = normalizePositiveId(styleId);
-      return getRuneAssetEntry('styles', numericStyleId)?.name || RUNE_STYLE_LABELS[numericStyleId] || `Style ${numericStyleId || '-'}`;
+      return getRuneAssetEntry('styles', numericStyleId)?.name || (RUNE_STYLE_LABELS[numericStyleId] ? t(RUNE_STYLE_LABELS[numericStyleId]) : '') || `Style ${numericStyleId || '-'}`;
     }
 
     function getRuneLabel(runeId: unknown): string {
       const numericRuneId = normalizePositiveId(runeId);
-      return getRuneAssetEntry('perks', numericRuneId)?.name || SHARD_LABELS[numericRuneId] || `Rune ${numericRuneId || '-'}`;
+      return getRuneAssetEntry('perks', numericRuneId)?.name || (SHARD_LABELS[numericRuneId] ? t(SHARD_LABELS[numericRuneId]) : '') || `Rune ${numericRuneId || '-'}`;
     }
 
     function getSummonerSpellLabel(spellId: unknown): string {
@@ -392,7 +365,7 @@
     function createStatsApiShardNode(shardId: unknown, isSelected: boolean): HTMLElement {
       const node = doc.createElement('div');
       node.className = `stats-api-shard-node${isSelected ? ' selected' : ''}`;
-      node.title = SHARD_LABELS[normalizePositiveId(shardId)] || getRuneLabel(shardId);
+      node.title = (SHARD_LABELS[normalizePositiveId(shardId)] ? t(SHARD_LABELS[normalizePositiveId(shardId)]) : '') || getRuneLabel(shardId);
       node.setAttribute('aria-label', node.title);
       const iconUrl = getShardIconUrl(shardId);
       if (iconUrl) {
@@ -555,14 +528,14 @@
     function createStatsApiRuneTabs(runes: any[] | undefined, statShards: any[] | undefined): HTMLElement[] {
       const runeSets = Array.isArray(runes) ? runes : [];
       if (!runeSets.length) {
-        return [createText('stats-api-detail-empty', 'ルーン候補がありません。', 'p')];
+        return [createText('stats-api-detail-empty', t('draft.noRunes'), 'p')];
       }
       const tabWrap = doc.createElement('div');
       tabWrap.className = 'stats-api-rune-tabs';
       const tabList = doc.createElement('div');
       tabList.className = 'stats-api-rune-tab-list';
       tabList.setAttribute('role', 'tablist');
-      tabList.setAttribute('aria-label', 'ルーンセット候補');
+      tabList.setAttribute('aria-label', t('draft.runeSets'));
       const panels = doc.createElement('div');
       panels.className = 'stats-api-rune-tab-panels';
       const buttons: HTMLButtonElement[] = [];
@@ -617,9 +590,9 @@
     function createStatsApiSummonerSpellSection(entries: any[] | undefined): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'stats-api-detail-subsection stats-api-rune-summoner-section';
-      section.append(createText('stats-api-detail-subtitle', 'サモナースペル', 'h4'));
+      section.append(createText('stats-api-detail-subtitle', t('draft.summonerSpells'), 'h4'));
       if (!entries?.length) {
-        section.append(createText('stats-api-detail-empty', 'サモナースペル候補がありません。', 'p'));
+        section.append(createText('stats-api-detail-empty', t('draft.noSummonerSpells'), 'p'));
         return section;
       }
       const list = doc.createElement('div');
@@ -665,7 +638,7 @@
             throw new Error('Data Dragon version is unavailable.');
           }
           draftDataDragonVersion = version;
-          return deps.fetch!(`https://ddragon.leagueoflegends.com/cdn/${version}/data/ja_JP/runesReforged.json`);
+          return deps.fetch!(`https://ddragon.leagueoflegends.com/cdn/${version}/data/${getDataDragonLocale()}/runesReforged.json`);
         })
         .then((response) => response.json())
         .then((payload) => {
@@ -677,7 +650,7 @@
               catalog.styles[String(styleId)] = {
                 iconPath: String(style?.icon || ''),
                 id: styleId,
-                name: String(style?.name || RUNE_STYLE_LABELS[styleId] || `Style ${styleId}`),
+                name: String(style?.name || (RUNE_STYLE_LABELS[styleId] ? t(RUNE_STYLE_LABELS[styleId]) : '') || `Style ${styleId}`),
                 slots: normalizedSlots,
                 styleId
               };
@@ -747,7 +720,7 @@
 
       if (!deps.requestStatsApiJson) {
         draftRecommendationStatus = 'error';
-        draftRecommendationError = 'StatsAPI request helper が利用できません。';
+        draftRecommendationError = t('common.statsApiUnavailable');
         renderDraftRecommendation(localMember);
         return;
       }
@@ -785,18 +758,18 @@
       if (!context || !panel) return false;
 
       if (draftRecommendationStatus === 'loading') {
-        panel.replaceChildren(createText('draft-recommend-empty', 'StatsAPI からおすすめを取得中です。', 'p'));
+        panel.replaceChildren(createText('draft-recommend-empty', t('draft.loadingRecommendations'), 'p'));
         return true;
       }
 
       if (draftRecommendationStatus === 'error') {
-        panel.replaceChildren(createText('draft-recommend-empty', draftRecommendationError || 'おすすめを取得できませんでした。', 'p'));
+        panel.replaceChildren(createText('draft-recommend-empty', draftRecommendationError || t('draft.recommendationsUnavailable'), 'p'));
         return true;
       }
 
       const keystones = Array.isArray(draftRecommendationData?.keystones) ? draftRecommendationData.keystones : [];
       if (!keystones.length) {
-        panel.replaceChildren(createText('draft-recommend-empty', 'おすすめデータがありません。', 'p'));
+        panel.replaceChildren(createText('draft-recommend-empty', t('draft.noRecommendations'), 'p'));
         return true;
       }
 
@@ -857,8 +830,8 @@
 
       const runeBodies = createStatsApiRuneTabs(activeKeystone?.runes, activeKeystone?.statShards);
       const runeCard = createStatsApiDetailCard(
-        'ルーン',
-        runeBodies.length ? runeBodies : [createText('stats-api-detail-empty', 'ルーン候補がありません。', 'p')]
+        t('draft.runeSets'),
+        runeBodies.length ? runeBodies : [createText('stats-api-detail-empty', t('draft.noRunes'), 'p')]
       );
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
       const runeHeader = runeCard.querySelector('.stats-api-detail-card-header');
@@ -868,7 +841,7 @@
       }
 
       const summonerCard = createStatsApiDetailCard(
-        'サモナースペル',
+        t('draft.summonerSpells'),
         [createStatsApiSummonerSpellSection(activeKeystone?.summonerSpells)]
       );
       summonerCard.classList.add('stats-api-detail-card-summoners');
@@ -1001,7 +974,7 @@
       const requestId = ++draftMatchupRequestId;
       if (!deps.requestStatsApiJson) {
         draftMatchupStatus = 'error';
-        draftMatchupError = 'StatsAPI request helper が利用できません。';
+        draftMatchupError = t('common.statsApiUnavailable');
         renderDraftFocus(champSelect, activeAction);
         return;
       }
@@ -1074,7 +1047,7 @@
       eyebrow.className = 'eyebrow';
       eyebrow.textContent = 'AI Analysis';
       const title = doc.createElement('h3');
-      title.textContent = deps.getDraftAiAnalysisPhase() === 'final_composition' ? '最終構成分析' : 'バンピック分析';
+      title.textContent = deps.getDraftAiAnalysisPhase() === 'final_composition' ? t('draft.analysis.finalTitle') : t('draft.analysis.title');
       titleBlock.append(eyebrow, title);
 
       const badge = doc.createElement('span');
@@ -1085,24 +1058,24 @@
 
       if (status === 'requesting') {
         panel.append(createDraftAiAnalysisStatus(deps.getDraftAiAnalysisPhase() === 'final_composition'
-          ? 'AIに最終構成を分析依頼中・・'
-          : 'AIに分析を依頼中・・'));
+          ? t('draft.analysis.finalLoading')
+          : t('draft.analysis.loading')));
         return;
       }
 
       if (status === 'error') {
-        panel.append(createDraftAiAnalysisStatus(deps.getDraftAiAnalysisError() || 'AI分析を取得できませんでした。'));
+        panel.append(createDraftAiAnalysisStatus(deps.getDraftAiAnalysisError() || t('ai.unavailable')));
         return;
       }
 
       if (status !== 'ready') {
-        panel.append(createDraftAiAnalysisStatus('AI分析を待機中・・'));
+        panel.append(createDraftAiAnalysisStatus(t('draft.analysis.waiting')));
         return;
       }
 
       const notes = deps.getDraftAiAnalysisNotes();
       if (!notes.length) {
-        panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+        panel.append(createDraftAiAnalysisStatus(t('draft.analysis.unavailable')));
         return;
       }
 
@@ -1148,7 +1121,7 @@
       if (bans.length === 0) {
         const item = doc.createElement('span');
         item.className = 'ban-token empty';
-        item.textContent = 'BANなし';
+        item.textContent = t('draft.analysis.noBans');
         container.append(item);
       }
     }
@@ -1232,13 +1205,13 @@
           renderDraftInsights(insightType, { champSelect, localMember });
         }
         elements.currentPick.textContent = isLocalTurn
-          ? activeAction.type === 'ban' ? 'あなたのBANです' : 'あなたのPICKです'
+          ? activeAction.type === 'ban' ? t('draft.action.yourBan') : t('draft.action.yourPick')
           : '';
         elements.currentPick.hidden = !isLocalTurn;
         return;
       }
 
-      elements.currentAction.textContent = localMember?.championId ? deps.championLabel(localMember.championId) : '待機中';
+      elements.currentAction.textContent = localMember?.championId ? deps.championLabel(localMember.championId) : t('draft.action.waiting');
       elements.currentPick.textContent = '';
       elements.currentPick.hidden = true;
     }
@@ -1414,11 +1387,11 @@
       section.append(heading);
 
       if (draftMatchupStatus === 'loading') {
-        section.append(createText('ban-insight-empty', 'StatsAPIからカウンター候補を取得中です。', 'p'));
+        section.append(createText('ban-insight-empty', t('draft.matchup.loadingCounters'), 'p'));
         return section;
       }
       if (draftMatchupStatus === 'error') {
-        section.append(createText('ban-insight-empty', draftMatchupError || 'カウンター候補を取得できませんでした。', 'p'));
+        section.append(createText('ban-insight-empty', draftMatchupError || t('draft.matchup.unavailable'), 'p'));
         return section;
       }
 
@@ -1439,7 +1412,7 @@
       if (!statsList.length) {
         const empty = doc.createElement('p');
         empty.className = 'ban-insight-empty';
-        empty.textContent = `対象データがありません（${draftMatchupMinGames}+ games）`;
+        empty.textContent = t('draft.matchup.noData', { minGames: draftMatchupMinGames });
         section.append(empty);
         return section;
       }
@@ -1566,11 +1539,11 @@
       section.append(header);
 
       if (draftMatchupStatus === 'loading') {
-        section.append(createText('ban-insight-empty', 'StatsAPIから有利候補を取得中です。', 'p'));
+        section.append(createText('ban-insight-empty', t('draft.matchup.loadingAdvantage'), 'p'));
         return [section];
       }
       if (draftMatchupStatus === 'error') {
-        section.append(createText('ban-insight-empty', draftMatchupError || '有利候補を取得できませんでした。', 'p'));
+        section.append(createText('ban-insight-empty', draftMatchupError || t('draft.matchup.unavailable'), 'p'));
         return [section];
       }
 
@@ -1594,7 +1567,7 @@
       if (!statsList.length) {
         const empty = doc.createElement('p');
         empty.className = 'ban-insight-empty';
-        empty.textContent = `対象データがありません（${draftMatchupMinGames}+ games）`;
+        empty.textContent = t('draft.matchup.noData', { minGames: draftMatchupMinGames });
         section.append(empty);
         return [section];
       }
@@ -1602,7 +1575,7 @@
       const list = doc.createElement('ol');
       list.className = 'pick-pool-list marked-opponent-list draft-champion-card-grid counter-card-grid';
       statsList.forEach((stats: any) => {
-        list.append(createDraftChampionCard(stats.championId, stats, { tone: 'counter', winRateLabel: '対面WR' }));
+        list.append(createDraftChampionCard(stats.championId, stats, { tone: 'counter', winRateLabel: t('draft.matchup.winRate') }));
       });
       section.append(list);
 
@@ -1647,7 +1620,7 @@
     function createPickPoolCandidateItem(candidate: any, hasOpponent: boolean): HTMLLIElement {
       const item = createDraftChampionCard(candidate.championId, candidate.stats, {
         tone: 'pool',
-        winRateLabel: hasOpponent ? '対面WR' : 'WR'
+        winRateLabel: hasOpponent ? t('draft.matchup.winRate') : 'WR'
       });
       item.classList.toggle('unavailable', !candidate.available);
       if (candidate.unavailableReason) item.append(createText('draft-champion-card-status', candidate.unavailableReason, 'em'));

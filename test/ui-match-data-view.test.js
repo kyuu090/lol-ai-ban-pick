@@ -40,7 +40,7 @@ test('match data view renders empty and populated summaries', () => {
 
   view.renderMatchDataSummary({ normalizedMatches: 0 });
   assert.equal(elements.matchDataCount.textContent, 'No data');
-  assert.equal(elements.matchDataRange.textContent, '試合データが取得されていません');
+  assert.equal(elements.matchDataRange.textContent, 'No match data has been downloaded.');
   assert.equal(elements.matchDataSeasonHint.hidden, true);
 
   view.renderMatchDataSummary({

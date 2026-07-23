@@ -3,7 +3,7 @@ import type { AppState } from './domain/app-state';
 import type { ChampionPool } from './domain/champion';
 import type { FinalCompositionDraftContext, PickPhaseDraftContext } from './domain/draft';
 import type { MatchHistoryMode, MatchHistorySource, MatchHistorySummary } from './domain/match-history';
-import type { PublicSettings, RiotPlatformRegion, ThemeMode } from './domain/settings';
+import type { AppLanguage, PublicSettings, RiotPlatformRegion, ThemeMode } from './domain/settings';
 
 export interface CollectRiotMatchHistoryOptions {
   mode?: MatchHistoryMode;
@@ -56,6 +56,10 @@ export interface IpcInvokeChannelMap {
   };
   'settings:update-theme-mode': {
     args: [themeMode: ThemeMode];
+    result: PublicSettings;
+  };
+  'settings:update-language': {
+    args: [language: AppLanguage];
     result: PublicSettings;
   };
   'window:minimize': {

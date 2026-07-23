@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { setLanguage } = require('../ui/i18n');
+
+setLanguage('ja', { documentElement: {}, querySelectorAll: () => [] });
 
 const { createDraftView } = require('../ui/draft-view');
 

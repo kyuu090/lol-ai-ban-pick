@@ -2,6 +2,7 @@
   function createChampionPoolView(deps: ChampionPoolViewDeps) {
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
+    const t = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
     const lanes = deps.lanes;
     const laneToPosition = deps.laneToPosition;
     const normalizeChampionPool = deps.normalizeChampionPool;
@@ -66,7 +67,7 @@
         const championId = Number(button.dataset.championId);
         const selected = selectedChampionIds.has(championId);
         button.classList.toggle('selected', selected);
-        button.title = selected ? `${championLabel(championId)} は登録済みです` : championTitle(championId);
+        button.title = selected ? t('pool.alreadySelected', { champion: championLabel(championId) }) : championTitle(championId);
       });
     }
 
@@ -130,7 +131,7 @@
         const button = doc.createElement('button');
         button.type = 'button';
         button.className = `champion-picker-card${selected ? ' selected' : ''}`;
-        button.title = selected ? `${champion.name} は登録済みです` : championTitle(championId);
+        button.title = selected ? t('pool.alreadySelected', { champion: champion.name }) : championTitle(championId);
         button.dataset.championId = String(championId);
 
         const portrait = doc.createElement('div');
@@ -151,8 +152,8 @@
 
       elements.championPoolPickerEmpty.hidden = filteredOptions.length > 0;
       elements.championPoolPickerEmpty.textContent = options.length > 0
-        ? '一致するチャンピオンがありません。'
-        : 'LCU接続後にチャンピオン一覧を取得します。';
+        ? t('pool.noMatchingChampions')
+        : t('pool.waitingForChampions');
     }
 
     function renderChampionPool(): void {
@@ -202,8 +203,8 @@
         removeButton.type = 'button';
         removeButton.className = 'pool-remove-button';
         removeButton.dataset.championId = String(championId);
-        removeButton.title = `${championLabel(championId)} を削除`;
-        removeButton.setAttribute('aria-label', `${championLabel(championId)} を削除`);
+        removeButton.title = t('pool.removeChampion', { champion: championLabel(championId) });
+        removeButton.setAttribute('aria-label', t('pool.removeChampion', { champion: championLabel(championId) }));
         const removeIcon = doc.createElement('span');
         removeIcon.className = 'remove-x-icon';
         removeButton.append(removeIcon);
