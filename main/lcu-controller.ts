@@ -180,10 +180,7 @@ function createLcuController({
       const detectedRiotRouting = await getRiotRoutingFromLcu(regionLocale);
 
       const lcuChampionsById = createChampionsById(championSummary);
-      const useEnglishChampionNames = getSettings().language === 'en';
-      const dataDragonChampionsById = useEnglishChampionNames
-        ? await lcuClient.getChampionCatalog().catch(() => ({}))
-        : {};
+      const dataDragonChampionsById = await lcuClient.getChampionCatalog().catch(() => ({}));
       const championsById = Object.keys(dataDragonChampionsById).length > 0
         ? dataDragonChampionsById
         : Object.keys(lcuChampionsById).length > 0

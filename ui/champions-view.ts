@@ -935,6 +935,9 @@
     let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
     let statsApiRuneCatalogUrl = '';
     let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
+    let summonerSpellLabels: Record<number, string> = {};
+    let summonerSpellLabelsUrl = '';
+    let summonerSpellLabelsPromise: Promise<Record<number, string> | null> | null = null;
     const statsApiChampionSpellCatalogs = new Map<string, Record<string, StatsApiChampionSpellAssetEntry> | null>();
     const statsApiChampionSpellCatalogPromises = new Map<string, Promise<Record<string, StatsApiChampionSpellAssetEntry> | null>>();
     let statsApiChampionSearchQuery = '';
@@ -1107,6 +1110,30 @@
       return statsApiRuneCatalogPromise;
     }
 
+    async function ensureSummonerSpellLabels(): Promise<Record<number, string> | null> {
+      const patch = getStatsApiDataDragonVersion(String(getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || ''));
+      const url = `https://ddragon.leagueoflegends.com/cdn/${patch}/data/${getDataDragonLocale()}/summoner.json`;
+      if (summonerSpellLabelsUrl === url && Object.keys(summonerSpellLabels).length) return summonerSpellLabels;
+      if (summonerSpellLabelsUrl === url && summonerSpellLabelsPromise) return summonerSpellLabelsPromise;
+      if (!fetchImpl) return null;
+      summonerSpellLabelsUrl = url;
+      summonerSpellLabelsPromise = fetchImpl(url)
+        .then((response: Response) => response.ok ? response.json() : null)
+        .then((payload: any) => {
+          const labels: Record<number, string> = {};
+          Object.values(payload?.data || {}).forEach((spell: any) => {
+            const id = Number(spell?.key);
+            const name = String(spell?.name || '').trim();
+            if (id > 0 && name) labels[id] = name;
+          });
+          summonerSpellLabels = labels;
+          return labels;
+        })
+        .catch(() => null)
+        .finally(() => { summonerSpellLabelsPromise = null; });
+      return summonerSpellLabelsPromise;
+    }
+
     function getStatsApiChampionAlias(championId: unknown): string {
       const numericChampionId = normalizeChampionId(championId);
       if (!numericChampionId) return '';
@@ -1250,7 +1277,7 @@
 
     function getSummonerSpellLabel(spellId: unknown): string {
       const numericSpellId = normalizeChampionId(spellId);
-      return SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
+      return summonerSpellLabels[numericSpellId] || SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
     }
 
     function getSummonerSpellIconUrl(spellId: unknown): string {
@@ -2771,9 +2798,9 @@
       leadRateKey: keyof StatsApiTimelineDifference;
       unit: string;
     } {
-      if (metric === 'xp') return { differenceKey: 'avgXp', label: 'XP difference', leadRateKey: 'xpLeadRate', unit: ' XP' };
-      if (metric === 'cs') return { differenceKey: 'avgCs', label: 'CS difference', leadRateKey: 'csLeadRate', unit: ' CS' };
-      return { differenceKey: 'avgGold', label: 'Gold difference', leadRateKey: 'goldLeadRate', unit: ' G' };
+      if (metric === 'xp') return { differenceKey: 'avgXp', label: t('timeline.xpDifference'), leadRateKey: 'xpLeadRate', unit: ' XP' };
+      if (metric === 'cs') return { differenceKey: 'avgCs', label: t('timeline.csDifference'), leadRateKey: 'csLeadRate', unit: ' CS' };
+      return { differenceKey: 'avgGold', label: t('timeline.goldDifference'), leadRateKey: 'goldLeadRate', unit: ' G' };
     }
 
     function formatStatsApiTimelineDifference(value: unknown, metric: StatsApiTimelineMetric): string {
@@ -2992,10 +3019,10 @@
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
-        createText('stats-api-timeline-legend global-self', 'Overall difference'),
-        createText('stats-api-timeline-legend global-self dashed', 'Overall lead rate'),
+        createText('stats-api-timeline-legend global-self', t('timeline.overallDifference')),
+        createText('stats-api-timeline-legend global-self dashed', t('timeline.overallLeadRate')),
         ...(userTimeline.length ? [
-          createText('stats-api-timeline-legend user-self', 'Your difference'),
+          createText('stats-api-timeline-legend user-self', t('timeline.yourDifference')),
           createText('stats-api-timeline-legend user-self dashed', 'Your lead rate')
         ] : [])
       );
@@ -3044,7 +3071,7 @@
         const tooltipLines = [
           `${point.minute} min`,
           `${config.label} ${formatStatsApiTimelineDifference(differences[index], metric)}`,
-          `Lead rate ${formatStatsApiRate(leadRates[index])}`,
+          t('timeline.leadRate', { value: formatStatsApiRate(leadRates[index]) }),
           Number.isFinite(userDifferences[index]) ? `You ${formatStatsApiTimelineDifference(userDifferences[index], metric)} / ${formatStatsApiRate(userLeadRates[index])} (${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)} games)` : '',
           `Games ${formatStatsApiGames(point.games)}`
         ].filter(Boolean);
@@ -3093,15 +3120,15 @@
       heading.className = 'stats-api-timeline-card-heading';
       heading.append(createText(
         'stats-api-timeline-card-title',
-        `${latestIndicator.label} (through 20 min)`,
+        t('timeline.through20', { label: latestIndicator.label }),
         'h4'
       ));
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta fight-legend';
       meta.append(
         createText('stats-api-timeline-legend fight-net', latestIndicator.description),
-        createText('stats-api-timeline-net-direction', '+ champion advantage / − opponent advantage'),
-        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'Your average')] : [])
+        createText('stats-api-timeline-net-direction', t('timeline.advantageDirection')),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', t('timeline.yourAverage'))] : [])
       );
       card.append(heading, meta);
 
@@ -3276,20 +3303,20 @@
       card.className = 'stats-api-timeline-chart-card stats-api-combat-impact-card';
       const heading = doc.createElement('header');
       heading.className = 'stats-api-timeline-card-heading';
-      heading.append(createText('stats-api-timeline-card-title', 'Combat impact', 'h4'));
+      heading.append(createText('stats-api-timeline-card-title', t('timeline.combatImpact'), 'h4'));
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
-        createText('stats-api-timeline-legend impact-self', 'Champion'),
-        createText('stats-api-timeline-legend impact-opponent', 'Opponent'),
-        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'Your average')] : [])
+        createText('stats-api-timeline-legend impact-self', t('timeline.champion')),
+        createText('stats-api-timeline-legend impact-opponent', t('timeline.opponent')),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', t('timeline.yourAverage'))] : [])
       );
       const facets = doc.createElement('div');
       facets.className = 'stats-api-impact-facets';
       facets.append(
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageToChampions', label: 'Champion damage', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageTaken', label: 'Damage taken', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgTimeEnemyCcMs', label: 'Enemy CC duration', unit: ' sec', divisor: 1000 })
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageToChampions', label: t('timeline.championDamage'), unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageTaken', label: t('timeline.damageTaken'), unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgTimeEnemyCcMs', label: t('timeline.enemyCcDuration'), unit: ' sec', divisor: 1000 })
       );
       card.append(heading, meta, facets);
       return card;
@@ -3315,7 +3342,7 @@
       heading.className = 'stats-api-timeline-card-heading';
       heading.append(createText(
         'stats-api-timeline-card-title',
-        'Plate difference (through 20 min)',
+        t('timeline.plateDifference'),
         'h4'
       ));
       const meta = doc.createElement('div');
@@ -3546,6 +3573,7 @@
       try {
         await Promise.all([
           ensureStatsApiRuneCatalog(),
+          ensureSummonerSpellLabels(),
           ensureStatsApiChampionSpellCatalog(championId)
         ]);
         const response = await fetchStatsApiJson(detailsUrl);
