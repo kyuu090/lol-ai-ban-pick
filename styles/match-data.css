@@ -18,6 +18,7 @@
 
 .match-data-summary {
   display: flex;
+  flex: 0 0 286px;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
@@ -29,9 +30,14 @@
   line-height: 1.15;
 }
 
-.match-data-summary #matchDataRange {
+.match-data-summary #matchDataRange,
+.match-data-progress {
   color: var(--muted);
+  display: block;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .match-data-summary #matchDataRange.is-error {
@@ -39,14 +45,20 @@
 }
 
 .match-data-season-hint {
-  align-self: start;
   background: rgba(97, 54, 255, 0.09);
   border-color: rgba(97, 54, 255, 0.24);
+  border-radius: 4px;
   color: var(--accent);
+  display: block;
   font-size: 12px;
   font-weight: 800;
-  min-height: 26px;
-  padding: 0 9px;
+  line-height: 1.35;
+  margin: 0;
+  min-height: 34px;
+  padding: 6px 9px;
+  text-align: left;
+  white-space: normal;
+  width: 100%;
 }
 
 .match-data-season-hint:hover:not(:disabled) {
@@ -56,7 +68,6 @@
 
 .match-data-progress {
   color: var(--accent);
-  font-size: 12px;
   font-weight: 700;
   min-height: 14px;
 }
@@ -66,6 +77,14 @@
 }
 
 .match-data-download {
+  display: flex;
+  flex: 0 0 238px;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 68px;
+}
+
+.match-data-download-controls {
   display: inline-flex;
   position: relative;
 }

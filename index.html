@@ -40,15 +40,17 @@
             <span class="label" data-i18n="header.matchData">5v5 SR match data</span>
             <strong id="matchDataCount">No data</strong>
             <span id="matchDataRange">No match data has been downloaded.</span>
-            <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>Downloading all matches this season may increase the sample size.</button>
             <span id="matchDataProgress" class="match-data-progress" role="status" hidden></span>
           </div>
           <div class="match-data-download">
-            <button id="collectRiotMatchesButton" class="match-data-update-button" type="button" data-i18n="header.downloadRecent">Download recent match</button>
-            <button id="matchDataMenuButton" class="match-data-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">▾</button>
-            <div id="matchDataMenu" class="match-data-menu" role="menu" hidden>
-              <button id="collectSeasonRiotMatchesButton" type="button" role="menuitem" data-i18n="header.downloadSeason">Download current season matches</button>
+            <div class="match-data-download-controls">
+              <button id="collectRiotMatchesButton" class="match-data-update-button" type="button" data-i18n="header.downloadRecent">Download recent match</button>
+              <button id="matchDataMenuButton" class="match-data-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">▾</button>
+              <div id="matchDataMenu" class="match-data-menu" role="menu" hidden>
+                <button id="collectSeasonRiotMatchesButton" type="button" role="menuitem" data-i18n="header.downloadSeason">Download current season matches</button>
+              </div>
             </div>
+            <button id="matchDataSeasonHint" class="match-data-season-hint" type="button" hidden>Downloading all matches this season may increase the sample size.</button>
           </div>
         </div>
         <div class="header-actions">

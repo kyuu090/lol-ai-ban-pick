@@ -239,7 +239,7 @@ app.getPath('userData')/settings.json
 - queueId は保持し、`queueGroup` で Ranked Solo/Duo、Ranked Flex、Normal Draft、Normal Blind、Quickplay などを分ける
 - ヘッダーの `Download recent match` ボタンでrecent手動取得する
 - `Download recent match` 右側のプルダウンからseason手動取得する
-- 正規化済みmatch数が1〜90件の場合、ヘッダーに `シーズン中データの全取得でサンプル数を増やせる可能性があります` の導線を表示し、クリックでseason取得を開始する
+- 正規化済みmatch数が1〜90件の場合、`Download recent match` の直下に `シーズン中データの全取得でサンプル数を増やせる可能性があります` の導線を表示し、クリックでseason取得を開始する。ダウンロード領域は常にこの導線の高さを予約し、表示状態でヘッダー本体の高さを変化させない
 - season手動取得では、match id一覧取得までは自動で行い、対象試合数と未取得detail数が分かった時点でアプリ独自の確認ウィンドウを表示する
 - season確認ウィンドウでは、未取得detail数を概算 `100 requests / 2分` で見積もり、予想時間・対象試合数・未取得試合数を表示する。ライト／ダーク／システムテーマを引き継ぐ
 - season手動取得で未取得detailが0件なら確認ウィンドウは表示せず、進捗行に `未取得な試合は0件です` と表示する
@@ -249,7 +249,7 @@ app.getPath('userData')/settings.json
 - raw responseはファイル保存してもログやRendererへ常時表示しない
 - 取得中は同じ取得ボタンを押せない状態にする
 - Riot API rate limit 時は retrying として扱う
-- 取得状態はヘッダーの進捗行に表示し、ボタン内テキストも短く切り替える
+- 取得状態はヘッダーの日付表示と同じ1行を進捗表示へ置き換えて表示し、ボタン内テキストも短く切り替える。試合データ要約の幅を固定し、長い進捗文は省略表示とツールチップで扱う。進捗の有無や文字列長でヘッダーの高さ・ダウンロードボタン位置は変化させない
 
 保存候補:
 

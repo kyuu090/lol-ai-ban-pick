@@ -82,8 +82,11 @@
 
     function renderMatchDataProgress(status: any): void {
       const message = status?.message || '';
-      elements.matchDataProgress.hidden = !message;
+      const hasProgress = Boolean(message);
+      elements.matchDataRange.hidden = hasProgress;
+      elements.matchDataProgress.hidden = !hasProgress;
       elements.matchDataProgress.textContent = message;
+      elements.matchDataProgress.title = message;
       elements.matchDataProgress.dataset.phase = status?.phase || '';
     }
 
