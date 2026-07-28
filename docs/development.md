@@ -35,6 +35,16 @@ npm test
 
 Node.js 標準の `node:test` で、LCU lockfile のパース、認証ヘッダ生成、チャンピオン一覧の正規化、ドラフト表示用の BAN 集計・ターン判定・表示状態判定、Riot API retry、試合履歴の正規化・集計、match history 更新時の ID 重複排除を確認します。
 
+## 依存関係の脆弱性診断
+
+リリース対象となる実行時依存関係は、次のコマンドで確認します。結果が 0 件であることをリリース前の必須条件にします。
+
+```bash
+npm audit --omit=dev
+```
+
+開発・パッケージング用依存関係も含めて確認する場合は `npm audit` を使います。`electron-builder` 系は npm advisory の修正候補が相互に別メジャーバージョンを示すことがあるため、`npm audit fix --force` を繰り返さず、lockfile の差分、`npm audit --omit=dev`、`npm test` を確認してから更新を取り込みます。
+
 ## 多言語対応
 
 表示文言は `ui/i18n.ts`（Renderer）または `main/i18n.ts`（Main process）の安定したキーで管理します。画面コードでは原文を検索・置換せず、`UiI18n.translate('namespace.key')` を使います。設定ファイルの `language` は `en` / `ja` を保存し、未設定または不正な値は英語になります。Data Dragon の取得ロケールもこの設定から `en_US` / `ja_JP` を選びます。
