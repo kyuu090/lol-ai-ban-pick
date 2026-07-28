@@ -90,13 +90,13 @@
             if (state.finalCompositionAnalysisRequestKey !== requestKey) return;
             state.finalCompositionAnalysisNotes = notes;
             state.finalCompositionAnalysisStatus = notes.length ? 'ready' : 'error';
-            state.finalCompositionAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+            state.finalCompositionAnalysisError = notes.length ? '' : (root.UiI18n?.translate('ai.noDisplay') || 'Could not display AI analysis.');
             deps.renderInGameFinalCompositionAnalysis();
           }
           if (state.draftAiAnalysisRequestKey === requestKey) {
             state.draftAiAnalysisNotes = notes;
             state.draftAiAnalysisStatus = notes.length ? 'ready' : 'error';
-            state.draftAiAnalysisError = notes.length ? '' : 'AI分析を表示できませんでした。';
+            state.draftAiAnalysisError = notes.length ? '' : (root.UiI18n?.translate('ai.noDisplay') || 'Could not display AI analysis.');
             deps.renderDraftAiAnalysis(state.draftAiAnalysisStatus);
           }
           deps.logDebug('Draft AI analysis response received', { requestKey, notes: notes.length });
@@ -131,9 +131,9 @@
 
     function createDraftAiAnalysisErrorMessage(error: any): string {
       const message = String(error?.message || '');
-      if (message.includes('429')) return 'AI分析のリクエストが混み合っています。少し待ってから再度お試しください。';
-      if (message.includes('400')) return 'AI分析に必要なドラフト情報が不足しています。';
-      return 'AI分析を取得できませんでした。';
+      if (message.includes('429')) return root.UiI18n?.translate('ai.rateLimited') || 'AI analysis is busy. Please try again shortly.';
+      if (message.includes('400')) return root.UiI18n?.translate('ai.insufficientDraft') || 'Draft information is insufficient for AI analysis.';
+      return root.UiI18n?.translate('ai.unavailable') || 'Could not load AI analysis.';
     }
 
     function parseDraftAiAnalysisNotes(response: any): Array<{ title: string; body: string }> {

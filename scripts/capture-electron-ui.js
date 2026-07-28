@@ -7,6 +7,7 @@ const {
   CAPTURE_SETTINGS,
   createCaptureState,
   createDraftCaptureState,
+  createInGameCaptureState,
   createChampionIconDataUrl,
   createStatsFixtureResponse
 } = require('./ui-capture-fixtures');
@@ -31,7 +32,7 @@ function hasFlag(name) {
 
 /** @param {string} value */
 function normalizeTarget(value) {
-  return ['champions', 'build', 'matchups', 'matchup', 'timeline', 'draft-ban', 'draft-pick', 'draft-pick-pool'].includes(value) ? value : 'timeline';
+  return ['champions', 'build', 'matchups', 'matchup', 'timeline', 'draft-ban', 'draft-pick', 'draft-pick-pool', 'in-game'].includes(value) ? value : 'timeline';
 }
 
 /** @param {string} value */
@@ -53,6 +54,7 @@ const target = normalizeTarget(readOption('view', 'timeline'));
 const captureLane = normalizeLane(readOption('lane', 'MIDDLE'));
 const themeMode = readOption('theme', 'light') === 'dark' ? 'dark' : 'light';
 const statsSource = readOption('stats-source', 'production') === 'fixture' ? 'fixture' : 'production';
+const aiSource = readOption('ai-source', 'fixture') === 'production' ? 'production' : 'fixture';
 const width = positiveInteger(readOption('width', '1440'), 1440);
 const height = positiveInteger(readOption('height', '900'), 900);
 const scrollMode = readOption('scroll', 'top') === 'bottom' ? 'bottom' : 'top';
@@ -61,12 +63,16 @@ const showWindow = hasFlag('show');
 const holdMs = Math.max(0, Number(readOption('hold-ms', showWindow ? '5000' : '0')) || 0);
 const defaultOutput = path.join(projectRoot, '.tmp-ui-captures', `${target}-${themeMode}.png`);
 const outputPath = path.resolve(readOption('output', defaultOutput));
-const captureState = target === 'draft-ban'
+const inGameCaptureState = target === 'in-game' ? createInGameCaptureState() : null;
+let captureState = target === 'draft-ban'
   ? createDraftCaptureState('ban')
   : target === 'draft-pick' || target === 'draft-pick-pool'
     ? createDraftCaptureState('pick')
+    : target === 'in-game'
+      ? { ...inGameCaptureState, gameflowPhase: 'ChampSelect' }
     : createCaptureState(themeMode);
 captureState.settings.themeMode = themeMode;
+if (inGameCaptureState) inGameCaptureState.settings.themeMode = themeMode;
 const captureSettings = { ...CAPTURE_SETTINGS, themeMode };
 
 app.disableHardwareAcceleration();
@@ -100,7 +106,13 @@ function registerFixtureIpc() {
     return window.isMaximized();
   });
   handle('window:close', (event) => BrowserWindow.fromWebContents(event.sender)?.close());
-  handle('lcu:resolve-in-game-stats-opponent', () => null);
+  handle('lcu:resolve-in-game-stats-opponent', () => target === 'in-game' ? {
+    enemyChampionIds: [238, 84, 61, 134, 25],
+    laneMatchupLane: 'MIDDLE',
+    localPosition: 'MIDDLE',
+    opponentChampionId: 238,
+    opponentPosition: 'MIDDLE'
+  } : null);
   handle('riot-match-history:collect', () => captureState.matchHistorySummary);
   handle('stats-api:request', async (_event, pathOrUrl) => {
     if (statsSource === 'fixture') {
@@ -120,6 +132,24 @@ function registerFixtureIpc() {
   }));
   handle('openai:final-composition', () => ({ notes: [] }));
   ipcMain.on('log:renderer', () => undefined);
+}
+
+async function hydrateInGameAnalysisFromProduction() {
+  if (target !== 'in-game' || aiSource !== 'production' || !inGameCaptureState) return;
+
+  const request = inGameCaptureState.laneMatchupAnalysis?.request;
+  const payload = request?.payload;
+  if (!payload) throw new Error('In-game capture fixture is missing its lane matchup payload.');
+
+  const { requestLaneMatchupAnalysis } = require(path.join(projectRoot, 'dist-app', 'main', 'ai-analysis-service.js'));
+  const response = await requestLaneMatchupAnalysis(payload, inGameCaptureState.settings.language);
+  inGameCaptureState.laneMatchupAnalysis = {
+    ...inGameCaptureState.laneMatchupAnalysis,
+    status: 'ready',
+    response,
+    error: null,
+    updatedAt: new Date().toISOString()
+  };
 }
 
 /** @param {number} ms */
@@ -155,6 +185,14 @@ async function clickByScript(window, expression, label) {
 
 /** @param {Electron.BrowserWindow} window */
 async function openCaptureTarget(window) {
+  if (target === 'in-game') {
+    await waitForRenderer(window, "!document.querySelector('#champSelectView')?.hidden", 'champion-select snapshot');
+    captureState = inGameCaptureState;
+    window.webContents.send('lcu:state', captureState);
+    await waitForRenderer(window, "!document.querySelector('#inGameView')?.hidden", 'in-game view');
+    await waitForRenderer(window, "document.querySelectorAll('#inGameRecommendations .in-game-recommend-card').length > 0 && document.querySelectorAll('#inGameSkillOrder .in-game-skill-panel').length > 0", 'in-game recommendations');
+    return;
+  }
   if (target === 'draft-ban' || target === 'draft-pick' || target === 'draft-pick-pool') {
     await waitForRenderer(window, "!document.querySelector('#draftView')?.hidden", 'draft view');
     if (target === 'draft-pick') {
@@ -223,6 +261,7 @@ async function waitForCaptureIdle(window) {
 async function capture() {
   registerFixtureIpc();
   await app.whenReady();
+  await hydrateInGameAnalysisFromProduction();
   /** @type {string[]} */
   const consoleErrors = [];
   const window = new BrowserWindow({
@@ -287,7 +326,7 @@ async function capture() {
   const image = await window.webContents.capturePage();
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, image.toPNG());
-  process.stdout.write(`${JSON.stringify({ outputPath, target, captureLane, themeMode, statsSource, width, height, scrollMode, hoverSelector, hoverResult, consoleErrors }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ outputPath, target, captureLane, themeMode, statsSource, aiSource, width, height, scrollMode, hoverSelector, hoverResult, consoleErrors }, null, 2)}\n`);
   if (holdMs > 0) await delay(holdMs);
   if (!window.isDestroyed()) window.destroy();
   app.quit();

@@ -2,7 +2,7 @@ import type { AiAnalysisResponse } from './domain/ai-analysis';
 import type { AppState } from './domain/app-state';
 import type { ChampionPool } from './domain/champion';
 import type { FinalCompositionDraftContext, PickPhaseDraftContext } from './domain/draft';
-import type { PublicSettings, RiotPlatformRegion, ThemeMode } from './domain/settings';
+import type { AppLanguage, PublicSettings, RiotPlatformRegion, ThemeMode } from './domain/settings';
 import type {
   CollectRiotMatchHistoryOptions,
   CollectRiotMatchHistoryResult
@@ -20,6 +20,7 @@ export interface LcuApi {
   updateLolInstallDir(lolInstallDir: string): Promise<PublicSettings>;
   updateRiotPlatformRegion(riotPlatformRegion: RiotPlatformRegion | string): Promise<PublicSettings>;
   updateThemeMode(themeMode: ThemeMode): Promise<PublicSettings>;
+  updateLanguage(language: AppLanguage): Promise<PublicSettings>;
   minimizeWindow(): Promise<void>;
   toggleMaximizeWindow(): Promise<boolean>;
   closeWindow(): Promise<void>;

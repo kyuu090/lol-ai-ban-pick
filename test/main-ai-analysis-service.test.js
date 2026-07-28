@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   createRiotBffPath,
+  normalizeAnalysisLanguage,
   requestBffJson
 } = require('../main/ai-analysis-service');
 const { DEFAULT_RIOT_BFF_BASE_URL } = require('../riot-api');
@@ -19,6 +20,14 @@ test('createRiotBffPath encodes Riot route segments and query values', () => {
     }),
     '/api/riot/JP1/matches/by-puuid/abc%2Fdef/ids?start=0&count=100'
   );
+});
+
+test('analysis language maps application language to the BFF contract and reserves Korean', () => {
+  assert.equal(normalizeAnalysisLanguage('en'), 'en');
+  assert.equal(normalizeAnalysisLanguage('ja'), 'jp');
+  assert.equal(normalizeAnalysisLanguage('jp'), 'jp');
+  assert.equal(normalizeAnalysisLanguage('kr'), 'kr');
+  assert.equal(normalizeAnalysisLanguage('unknown'), 'en');
 });
 
 test('requestBffJson forwards request options to Riot BFF request helper', async () => {

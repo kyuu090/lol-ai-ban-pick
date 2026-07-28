@@ -1,7 +1,8 @@
 const { BrowserWindow, ipcMain } = require('electron');
 
 import type { BrowserWindow as ElectronBrowserWindow } from 'electron';
-import type { ThemeMode } from '../types/domain/settings';
+import type { AppLanguage, ThemeMode } from '../types/domain/settings';
+const { translate } = require('./i18n');
 
 const RESPONSE_CHANNEL = 'season-match-history-dialog:response';
 
@@ -11,6 +12,7 @@ interface ShowSeasonMatchHistoryDialogOptions {
   htmlPath: string;
   preloadPath: string;
   themeMode: ThemeMode;
+  language: AppLanguage;
   totalMatches: number;
   missingMatches: number;
   estimateText: string;
@@ -22,6 +24,7 @@ function showSeasonMatchHistoryDialog({
   htmlPath,
   preloadPath,
   themeMode,
+  language,
   totalMatches,
   missingMatches,
   estimateText
@@ -44,7 +47,7 @@ function showSeasonMatchHistoryDialog({
       fullscreenable: false,
       frame: false,
       backgroundColor: themeMode === 'dark' ? '#10162d' : '#f5f4ff',
-      title: 'シーズン中の全試合データ取得',
+      title: translate(language, 'season.title'),
       icon: iconPath,
       webPreferences: {
         preload: preloadPath,
@@ -71,6 +74,7 @@ function showSeasonMatchHistoryDialog({
     dialogWindow.loadFile(htmlPath, {
       query: {
         themeMode,
+        language,
         totalMatches: String(totalMatches),
         missingMatches: String(missingMatches),
         estimateText

@@ -67,6 +67,17 @@ declare global {
     renderSettings(settings: PublicSettings | null | undefined, deps?: SettingsViewDeps): void;
   }
 
+  interface UiI18nApi {
+    DEFAULT_LANGUAGE: 'en';
+    getLanguage(): import('./domain/settings').AppLanguage;
+    getMissingTranslationKeys(language: import('./domain/settings').AppLanguage, referenceLanguage?: import('./domain/settings').AppLanguage): string[];
+    getDataDragonLocale(): 'en_US' | 'ja_JP' | 'ko_KR';
+    normalizeLanguage(language: unknown): import('./domain/settings').AppLanguage;
+    setLanguage(language: unknown, doc?: Document): import('./domain/settings').AppLanguage;
+    translate(key: string, values?: Record<string, string | number>): string;
+    applyStaticTranslations(doc?: Document): void;
+  }
+
   interface MatchDataViewDeps {
     elements: UiDomElements;
     formatMatchDataDate(value: string | number | Date | null | undefined): string | null;
@@ -160,6 +171,7 @@ declare global {
     UiFormatters?: UiFormattersApi;
     UiChampionIcons?: ChampionIconLoader & { createChampionIconLoader(options?: ChampionIconLoaderOptions): ChampionIconLoader };
     UiSettingsView?: UiSettingsViewApi;
+    UiI18n?: UiI18nApi;
     UiChampionPoolView?: { createChampionPoolView(deps: ChampionPoolViewDeps): any };
     UiMatchDataView?: { createMatchDataView(deps: MatchDataViewDeps): any };
     UiChampionsView?: { createChampionsView(deps: ChampionsViewDeps): any };

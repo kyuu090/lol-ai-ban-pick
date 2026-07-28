@@ -15,7 +15,7 @@
 
       if (matchCount <= 0) {
         elements.matchDataCount.textContent = 'No data';
-        elements.matchDataRange.textContent = '試合データが取得されていません';
+        elements.matchDataRange.textContent = root.UiI18n?.translate('matchData.none') || 'No match data has been downloaded.';
         elements.matchDataSeasonHint.hidden = true;
         return;
       }
@@ -25,7 +25,7 @@
       elements.matchDataCount.textContent = `${matchCount} matches`;
       elements.matchDataRange.textContent = oldest && newest
         ? `${oldest} - ${newest}`
-        : '期間不明';
+        : (root.UiI18n?.translate('matchData.unknownPeriod') || 'Unknown period');
       elements.matchDataSeasonHint.hidden = matchCount > 90;
     }
 
@@ -82,8 +82,11 @@
 
     function renderMatchDataProgress(status: any): void {
       const message = status?.message || '';
-      elements.matchDataProgress.hidden = !message;
+      const hasProgress = Boolean(message);
+      elements.matchDataRange.hidden = hasProgress;
+      elements.matchDataProgress.hidden = !hasProgress;
       elements.matchDataProgress.textContent = message;
+      elements.matchDataProgress.title = message;
       elements.matchDataProgress.dataset.phase = status?.phase || '';
     }
 

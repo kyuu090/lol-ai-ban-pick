@@ -180,9 +180,12 @@ function createLcuController({
       const detectedRiotRouting = await getRiotRoutingFromLcu(regionLocale);
 
       const lcuChampionsById = createChampionsById(championSummary);
-      const championsById = Object.keys(lcuChampionsById).length > 0
-        ? lcuChampionsById
-        : await lcuClient.getChampionCatalog().catch(() => getState().championsById || {});
+      const dataDragonChampionsById = await lcuClient.getChampionCatalog().catch(() => ({}));
+      const championsById = Object.keys(dataDragonChampionsById).length > 0
+        ? dataDragonChampionsById
+        : Object.keys(lcuChampionsById).length > 0
+          ? lcuChampionsById
+          : getState().championsById || {};
       log.debug('LCU state refreshed', {
         hasLobby: Boolean(lobby && !hasError(lobby)),
         hasChampSelect: Boolean(champSelect && !hasError(champSelect)),
@@ -190,7 +193,7 @@ function createLcuController({
         gameflowPhase,
         hasGameflowSession: Boolean(gameflowSession && !hasError(gameflowSession)),
         championCount: Object.keys(championsById).length,
-        championSource: Object.keys(lcuChampionsById).length > 0 ? 'lcu' : 'data-dragon'
+        championSource: Object.keys(dataDragonChampionsById).length > 0 ? 'data-dragon' : 'lcu'
       });
 
       updateState({

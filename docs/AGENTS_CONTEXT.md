@@ -194,11 +194,12 @@ app.getPath('userData')/settings.json
 ```json
 {
   "lolInstallDir": "C:\\Riot Games\\League of Legends",
-  "riotPlatformRegion": "JP1"
+  "riotPlatformRegion": "JP1",
+  "language": "en"
 }
 ```
 
-Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions` だけを含める。BFF Base URL や Riot API key は公開しない。
+`language` はアプリの表示言語で、既定値は `en`。設定画面から英語（`en`）、日本語（`ja`）、韓国語（`kr`）を選択できる。Data Dragon はそれぞれ `en_US`、`ja_JP`、`ko_KR` を使用し、AI分析BFFへはそれぞれ `en`、`jp`、`kr` を送信する。Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `riotRegionalRoute`, `riotPlatformRegions`, `themeMode`, `language` と選択肢を含む。BFF Base URL や Riot API key は公開しない。
 
 ### Riot Match History
 
@@ -238,7 +239,7 @@ Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `rio
 - queueId は保持し、`queueGroup` で Ranked Solo/Duo、Ranked Flex、Normal Draft、Normal Blind、Quickplay などを分ける
 - ヘッダーの `Download recent match` ボタンでrecent手動取得する
 - `Download recent match` 右側のプルダウンからseason手動取得する
-- 正規化済みmatch数が1〜90件の場合、ヘッダーに `シーズン中データの全取得でサンプル数を増やせる可能性があります` の導線を表示し、クリックでseason取得を開始する
+- 正規化済みmatch数が1〜90件の場合、`Download recent match` の直下に `シーズン中データの全取得でサンプル数を増やせる可能性があります` の導線を表示し、クリックでseason取得を開始する。ダウンロード領域は常にこの導線の高さを予約し、表示状態でヘッダー本体の高さを変化させない
 - season手動取得では、match id一覧取得までは自動で行い、対象試合数と未取得detail数が分かった時点でアプリ独自の確認ウィンドウを表示する
 - season確認ウィンドウでは、未取得detail数を概算 `100 requests / 2分` で見積もり、予想時間・対象試合数・未取得試合数を表示する。ライト／ダーク／システムテーマを引き継ぐ
 - season手動取得で未取得detailが0件なら確認ウィンドウは表示せず、進捗行に `未取得な試合は0件です` と表示する
@@ -248,7 +249,7 @@ Rendererへ返す公開settingsは、`lolInstallDir`, `riotPlatformRegion`, `rio
 - raw responseはファイル保存してもログやRendererへ常時表示しない
 - 取得中は同じ取得ボタンを押せない状態にする
 - Riot API rate limit 時は retrying として扱う
-- 取得状態はヘッダーの進捗行に表示し、ボタン内テキストも短く切り替える
+- 取得状態はヘッダーの日付表示と同じ1行を進捗表示へ置き換えて表示し、ボタン内テキストも短く切り替える。試合データ要約の幅を固定し、長い進捗文は省略表示とツールチップで扱う。進捗の有無や文字列長でヘッダーの高さ・ダウンロードボタン位置は変化させない
 
 保存候補:
 
@@ -656,7 +657,7 @@ StatsAPI ベースの Champions 画面を実装している。
 - 一覧は `/v1/stats/positions/{position}/champions` を使う
 - 一覧のチャンピオン行を選ぶと、同じフィルター条件のまま `/v1/stats/positions/{position}/champions/{championId}/details` を再取得して詳細画面へ切り替える
 - 詳細画面ではキーストーン、ルーンセット、サモナースペル、開始アイテム、ブーツ、コアアイテム、3rd-6th アイテム、スキルオーダーを表示する
-- ルーン画像と日本語名は Data Dragon の `https://ddragon.leagueoflegends.com/cdn/{version}/data/ja_JP/runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
+- ルーン画像と名称は、選択中のアプリ言語に対応する Data Dragon locale（英語は `en_US`、日本語は `ja_JP`）の `runesReforged.json` から取得し、`styleId / perkId` を `perk-images/...` パスへ正規化して表示する。取得失敗時や未知 ID はテキストにフォールバックする
 - スキル画像は Data Dragon の champion spell metadata をチャンピオンごとに取得してキャッシュし、`Lv1-6` / `優先スキル` の両方で利用する。取得失敗時は `Q/W/E/R` の文字表示に戻す
 - ルーンセットはゲーム内のルーン設定画面に寄せた見た目で、選択中のスタイル配下だけを明るく表示し、未選択ルーンはグレーアウトする
 - フィルター変更時は一覧だけでなく、表示中の詳細チャンピオンにも同じ条件を再適用して API を再取得する

@@ -33,7 +33,7 @@
 
       if (!loggedIn) return;
 
-      elements.helloMessage.textContent = `こんにちは ${deps.getSummonerName(nextState.summoner)}`;
+      elements.helloMessage.textContent = root.UiI18n?.translate('draft.greeting', { name: deps.getSummonerName(nextState.summoner) }) || `Hello ${deps.getSummonerName(nextState.summoner)}`;
 
       if (inChampSelect) {
         state.lastChampSelectSnapshot = champSelect;

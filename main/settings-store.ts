@@ -8,16 +8,18 @@ const {
   normalizeRiotRegionalRoute
 } = require('../riot-api');
 
-import type { PublicSettings, RiotPlatformRegion, RiotRegionalRoute, ThemeMode } from '../types/domain/settings';
+import type { AppLanguage, PublicSettings, RiotPlatformRegion, RiotRegionalRoute, ThemeMode } from '../types/domain/settings';
 
 const DEFAULT_LOL_INSTALL_DIR = 'C:\\Riot Games\\League of Legends';
 const THEME_MODES: readonly ThemeMode[] = ['system', 'light', 'dark'];
+const APP_LANGUAGES: readonly AppLanguage[] = ['en', 'ja', 'kr'];
 
 interface StoredSettings {
   lolInstallDir: string;
   riotPlatformRegion: RiotPlatformRegion;
   riotRegionalRoute: RiotRegionalRoute;
   themeMode: ThemeMode;
+  language: AppLanguage;
 }
 
 type SettingsInput = Partial<StoredSettings>;
@@ -41,12 +43,17 @@ function createDefaultSettings(): StoredSettings {
     lolInstallDir: DEFAULT_LOL_INSTALL_DIR,
     riotPlatformRegion: DEFAULT_RIOT_PLATFORM_REGION as RiotPlatformRegion,
     riotRegionalRoute: 'ASIA',
-    themeMode: 'system'
+    themeMode: 'system',
+    language: 'en'
   };
 }
 
 function normalizeThemeMode(themeMode: unknown): ThemeMode {
   return THEME_MODES.includes(themeMode as ThemeMode) ? themeMode as ThemeMode : 'system';
+}
+
+function normalizeAppLanguage(language: unknown): AppLanguage {
+  return APP_LANGUAGES.includes(language as AppLanguage) ? language as AppLanguage : 'en';
 }
 
 function normalizeSettings(sourceSettings: SettingsInput = {}): StoredSettings {
@@ -59,7 +66,8 @@ function normalizeSettings(sourceSettings: SettingsInput = {}): StoredSettings {
     riotRegionalRoute: normalizeRiotRegionalRoute(
       sourceSettings.riotRegionalRoute || createRiotApiHosts(sourceSettings.riotPlatformRegion).regionalRoute
     ) as RiotRegionalRoute,
-    themeMode: normalizeThemeMode(sourceSettings.themeMode)
+    themeMode: normalizeThemeMode(sourceSettings.themeMode),
+    language: normalizeAppLanguage(sourceSettings.language)
   };
 }
 
@@ -73,7 +81,9 @@ function createPublicSettings(sourceSettings: SettingsInput): PublicSettings {
     riotRegionalRoute: settings.riotRegionalRoute,
     riotPlatformRegions: RIOT_PLATFORM_REGIONS as readonly RiotPlatformRegion[],
     themeMode: normalizeThemeMode(settings.themeMode),
-    themeModes: THEME_MODES
+    themeModes: THEME_MODES,
+    language: normalizeAppLanguage(settings.language),
+    languages: APP_LANGUAGES
   };
 }
 
@@ -119,11 +129,13 @@ async function saveSettings({
 export = {
   DEFAULT_LOL_INSTALL_DIR,
   THEME_MODES,
+  APP_LANGUAGES,
   createDefaultSettings,
   createPublicSettings,
   getSettingsPath,
   loadSettings,
   normalizeSettings,
+  normalizeAppLanguage,
   normalizeThemeMode,
   saveSettings
 };

@@ -8,6 +8,7 @@ const {
 } = require('../lcu-logic');
 
 import type { PublicSettings } from '../types/domain/settings';
+const { translate } = require('./i18n');
 
 interface LcuConnection {
   processName?: string;
@@ -48,7 +49,6 @@ interface LcuClient {
 }
 
 const DATA_DRAGON_BASE_URL = 'https://ddragon.leagueoflegends.com';
-const DATA_DRAGON_LOCALE = 'en_US';
 
 function createLcuClient({
   getSettings,
@@ -68,6 +68,13 @@ function createLcuClient({
   let dataDragonVersionPromise: Promise<string | null> | null = null;
   let dataDragonAliasMapPromise: Promise<Record<number, string> | null> | null = null;
   let dataDragonChampionCatalogPromise: Promise<Record<number, { id: number; name: string; alias?: string; title?: string }> | null> | null = null;
+  let dataDragonChampionCatalogLocale: string | null = null;
+
+  function getDataDragonLocale(): 'en_US' | 'ja_JP' | 'ko_KR' {
+    if (getSettings().language === 'ja') return 'ja_JP';
+    if (getSettings().language === 'kr') return 'ko_KR';
+    return 'en_US';
+  }
 
   async function readLockfile(): Promise<LcuConnection> {
     let raw: string;
@@ -77,7 +84,7 @@ function createLcuClient({
     try {
       raw = await fs.readFile(lockfilePath, 'utf8');
     } catch (error) {
-      throw new Error(`LoLクライアントが起動していないか、ログインしていません: ${lockfilePath}`);
+      throw new Error(translate(getSettings().language, 'lcu.clientNotRunning', { path: lockfilePath }));
     }
 
     const { processName, pid, port, password, protocol } = parseLockfile(raw);
@@ -89,7 +96,7 @@ function createLcuClient({
   async function fetchJson(endpoint: string): Promise<unknown> {
     const connection = getConnection();
     if (!connection) {
-      throw new Error('LCU接続情報がありません');
+      throw new Error(translate(getSettings().language, 'lcu.connectionUnavailable'));
     }
 
     const startedAt = Date.now();
@@ -117,7 +124,7 @@ function createLcuClient({
   async function fetchBuffer(endpoint: string): Promise<Buffer> {
     const connection = getConnection();
     if (!connection) {
-      throw new Error('LCU接続情報がありません');
+      throw new Error(translate(getSettings().language, 'lcu.connectionUnavailable'));
     }
 
     const startedAt = Date.now();
@@ -222,7 +229,7 @@ function createLcuClient({
       dataDragonAliasMapPromise = getLatestDataDragonVersion()
         .then((version) => {
           if (!version) return null;
-          return requestJson(`${DATA_DRAGON_BASE_URL}/cdn/${version}/data/${DATA_DRAGON_LOCALE}/champion.json`);
+          return requestJson(`${DATA_DRAGON_BASE_URL}/cdn/${version}/data/en_US/champion.json`);
         })
         .then((response) => createDataDragonChampionAliasMap(response))
         .catch((error) => {
@@ -235,11 +242,16 @@ function createLcuClient({
   }
 
   async function getDataDragonChampionCatalog(): Promise<Record<number, { id: number; name: string; alias?: string; title?: string }> | null> {
+    const locale = getDataDragonLocale();
+    if (dataDragonChampionCatalogLocale !== locale) {
+      dataDragonChampionCatalogPromise = null;
+      dataDragonChampionCatalogLocale = locale;
+    }
     if (!dataDragonChampionCatalogPromise) {
       dataDragonChampionCatalogPromise = getLatestDataDragonVersion()
         .then((version) => {
           if (!version) return null;
-          return requestJson(`${DATA_DRAGON_BASE_URL}/cdn/${version}/data/${DATA_DRAGON_LOCALE}/champion.json`);
+          return requestJson(`${DATA_DRAGON_BASE_URL}/cdn/${version}/data/${locale}/champion.json`);
         })
         .then((response) => createDataDragonChampionCatalog(response))
         .catch((error) => {

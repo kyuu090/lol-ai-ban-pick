@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>シーズン中の全試合データ取得</title>
+  <title>Download all season match data</title>
   <link rel="stylesheet" href="./styles/base.css" />
   <link rel="stylesheet" href="./styles/theme.css" />
   <link rel="stylesheet" href="./styles/season-match-history-dialog.css" />
@@ -13,32 +13,38 @@
     <div class="season-dialog-accent" aria-hidden="true"></div>
     <section class="season-dialog-panel">
       <div class="season-dialog-icon" aria-hidden="true">↓</div>
-      <p class="season-dialog-eyebrow">MATCH DATA</p>
-      <h1 id="seasonDialogTitle">シーズン中の全試合を取得</h1>
-      <p class="season-dialog-description">今シーズンの試合データをまとめて取得し、BAN / PICK 分析のサンプル数を増やします。</p>
+      <p class="season-dialog-eyebrow" data-i18n="season.eyebrow">MATCH DATA</p>
+      <h1 id="seasonDialogTitle" data-i18n="season.title">Download all season match data</h1>
+      <p class="season-dialog-description" data-i18n="season.description">Download this season's match data to increase the sample size for ban/pick analysis.</p>
       <div class="season-dialog-estimate">
-        <span>予想時間</span>
+        <span data-i18n="season.estimatedTime">Estimated time</span>
         <strong id="estimateText">--</strong>
       </div>
       <dl class="season-dialog-stats">
-        <div><dt>対象試合</dt><dd id="totalMatches">0 試合</dd></div>
-        <div><dt>未取得</dt><dd id="missingMatches">0 試合</dd></div>
+        <div><dt data-i18n="season.totalMatches">Total matches</dt><dd id="totalMatches">0 matches</dd></div>
+        <div><dt data-i18n="season.notDownloaded">Not downloaded</dt><dd id="missingMatches">0 matches</dd></div>
       </dl>
-      <p class="season-dialog-note">試合数によっては時間がかかります。取得中もアプリはそのまま利用できます。</p>
+      <p class="season-dialog-note" data-i18n="season.note">This may take time depending on the number of matches. You can continue using the app while it downloads.</p>
       <div class="season-dialog-actions">
-        <button id="cancelButton" class="season-dialog-button secondary" type="button">キャンセル</button>
-        <button id="confirmButton" class="season-dialog-button primary" type="button" autofocus>取得を開始</button>
+        <button id="cancelButton" class="season-dialog-button secondary" type="button" data-i18n="season.cancel">Cancel</button>
+        <button id="confirmButton" class="season-dialog-button primary" type="button" autofocus data-i18n="season.startDownload">Start download</button>
       </div>
     </section>
   </main>
+  <script src="./ui/i18n.js"></script>
   <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
+      const language = params.get('language') === 'ja' ? 'ja' : 'en';
+      document.documentElement.lang = language;
       const themeMode = params.get('themeMode');
       if (themeMode === 'light' || themeMode === 'dark') document.documentElement.dataset.theme = themeMode;
+      window.UiI18n.setLanguage(language, document);
+      document.title = window.UiI18n.translate('season.title');
       document.querySelector('#estimateText').textContent = params.get('estimateText') || '--';
-      document.querySelector('#totalMatches').textContent = `${params.get('totalMatches') || '0'} 試合`;
-      document.querySelector('#missingMatches').textContent = `${params.get('missingMatches') || '0'} 試合`;
+      const matches = window.UiI18n.translate('season.matches');
+      document.querySelector('#totalMatches').textContent = `${params.get('totalMatches') || '0'} ${matches}`;
+      document.querySelector('#missingMatches').textContent = `${params.get('missingMatches') || '0'} ${matches}`;
       const respond = (confirmed) => window.lcuApi.respondToSeasonMatchHistoryDialog(confirmed);
       document.querySelector('#confirmButton').addEventListener('click', () => respond(true));
       document.querySelector('#cancelButton').addEventListener('click', () => respond(false));

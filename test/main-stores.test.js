@@ -48,7 +48,8 @@ test('settings store normalizes, saves, loads, and exposes public settings', asy
     lolInstallDir: 'D:\\League',
     riotPlatformRegion: 'KR',
     riotRegionalRoute: 'ASIA',
-    themeMode: 'dark'
+    themeMode: 'dark',
+    language: 'en'
   });
 
   const loaded = await loadSettings({ userDataPath });
@@ -58,6 +59,8 @@ test('settings store normalizes, saves, loads, and exposes public settings', asy
   assert.equal(publicSettings.riotPlatformRegion, 'KR');
   assert.equal(publicSettings.riotRegionalRoute, 'ASIA');
   assert.deepEqual(publicSettings.themeModes, ['system', 'light', 'dark']);
+  assert.equal(publicSettings.language, 'en');
+  assert.deepEqual(publicSettings.languages, ['en', 'ja', 'kr']);
   assert.equal(normalizeThemeMode('unknown'), 'system');
 });
 

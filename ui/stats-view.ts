@@ -3,6 +3,7 @@
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
     const lanes = deps.lanes;
+    const t = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
 
     function renderPlayedStatsLaneTabs(): void {
       const activeLaneId = deps.getActivePlayedLaneId();
@@ -170,7 +171,7 @@
         const row = createStatsTableRow(stats, 'championId');
         row.classList.add('stats-table-clickable-row');
         row.classList.toggle('expanded', selected);
-        row.title = `${deps.championLabel(championId)} に対する自分ピックを表示`;
+        row.title = t('stats.showPicksAgainst', { champion: deps.championLabel(championId) });
         row.addEventListener('click', () => {
           deps.setExpandedOpponentStatsChampionId(selected ? null : championId);
           renderLaneOpponentStats();
@@ -184,7 +185,7 @@
 
       elements.opponentStatsTableBody.replaceChildren(...rows);
       elements.opponentStatsEmpty.hidden = statsList.length > 0;
-      elements.opponentStatsEmpty.textContent = '条件に合う対面データがありません。';
+      elements.opponentStatsEmpty.textContent = root.UiI18n?.translate('stats.noOpponentData') || 'No lane opponent data matches the selected filters.';
     }
 
     function createOpponentPickBreakdownRow(opponentChampionId: number, position: string): HTMLTableRowElement {
@@ -220,8 +221,8 @@
         .slice(0, 3);
 
       container.append(
-        createOpponentPickBreakdownGroup('勝ち越しが多い自分ピック', winning, 'won'),
-        createOpponentPickBreakdownGroup('負け越しが多い自分ピック', losing, 'lost')
+        createOpponentPickBreakdownGroup(t('stats.winningPicks'), winning, 'won'),
+        createOpponentPickBreakdownGroup(t('stats.losingPicks'), losing, 'lost')
       );
       return container;
     }
@@ -241,7 +242,7 @@
       if (!statsList.length) {
         const empty = doc.createElement('p');
         empty.className = 'stats-opponent-detail-empty';
-        empty.textContent = '該当するピックはありません。';
+        empty.textContent = t('stats.noMatchingPicks');
         group.append(empty);
         return group;
       }
@@ -328,7 +329,7 @@
         const row = createStatsTableRow(stats, 'championId');
         row.classList.add('stats-table-clickable-row');
         row.classList.toggle('expanded', selected);
-        row.title = `${deps.championLabel(championId)} の対面別成績を表示`;
+        row.title = t('stats.showMatchupsFor', { champion: deps.championLabel(championId) });
         row.addEventListener('click', () => {
           deps.setExpandedPlayedStatsChampionId(selected ? null : championId);
           renderPlayedChampionStats();
@@ -342,7 +343,7 @@
 
       elements.playedStatsTableBody.replaceChildren(...rows);
       elements.playedStatsEmpty.hidden = statsList.length > 0;
-      elements.playedStatsEmpty.textContent = '条件に合うチャンピオン実績がありません。';
+      elements.playedStatsEmpty.textContent = root.UiI18n?.translate('stats.noPlayedData') || 'No played champion results match the selected filters.';
     }
 
     function createPlayedPickBreakdownRow(championId: number, position: string): HTMLTableRowElement {
@@ -378,8 +379,8 @@
         .slice(0, 3);
 
       container.append(
-        createMatchupBreakdownGroup('得意な対面', strongInto, 'won', 'opponentChampionId'),
-        createMatchupBreakdownGroup('苦手な対面', weakInto, 'lost', 'opponentChampionId')
+        createMatchupBreakdownGroup(t('stats.strongMatchups'), strongInto, 'won', 'opponentChampionId'),
+        createMatchupBreakdownGroup(t('stats.weakMatchups'), weakInto, 'lost', 'opponentChampionId')
       );
       return container;
     }

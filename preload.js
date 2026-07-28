@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('lcuApi', {
   updateLolInstallDir: (lolInstallDir) => ipcRenderer.invoke('settings:update-lol-install-dir', lolInstallDir),
   updateRiotPlatformRegion: (riotPlatformRegion) => ipcRenderer.invoke('settings:update-riot-platform-region', riotPlatformRegion),
   updateThemeMode: (themeMode) => ipcRenderer.invoke('settings:update-theme-mode', themeMode),
+  updateLanguage: (language) => ipcRenderer.invoke('settings:update-language', language),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggle-maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),

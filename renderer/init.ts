@@ -176,7 +176,12 @@ const { renderChampSelect, renderDraftAiAnalysis, resetDraftRecommendationState 
     championLabel,
     championTitle,
     positionLabel,
-    getPendingLabel,
+    getPendingLabel: (member, label) => {
+        const championId = Number(member?.championPickIntent) || 0;
+        return championId
+            ? window.UiI18n.translate('draft.plannedPick', { champion: label(championId) })
+            : window.UiI18n.translate('draft.pickPending');
+    },
     getMemberChampionId,
     getChampionsById: () => rendererState.championsById,
     fetch: window.fetch?.bind(window),
@@ -261,7 +266,9 @@ function logWarn(message, details) {
 }
 function renderWindowMaximizedState(isMaximized) {
     elements.windowMaximizeButton.textContent = isMaximized ? '❐' : '□';
-    elements.windowMaximizeButton.setAttribute('aria-label', isMaximized ? '元に戻す' : '最大化');
+    elements.windowMaximizeButton.setAttribute('aria-label', isMaximized
+        ? (window.UiI18n?.translate('window.restore') || 'Restore window')
+        : (window.UiI18n?.translate('window.maximize') || 'Maximize window'));
 }
 async function renderClientVersion() {
     if (!elements.clientVersionLabel || !window.lcuApi?.getClientVersion)
@@ -279,7 +286,7 @@ async function renderClientVersion() {
 function championLabel(championId) {
     const id = Number(championId);
     if (id <= 0)
-        return '未選択';
+        return window.UiI18n?.translate('home.unselected') || 'Not selected';
     return rendererState.championsById[id]?.name || `Champion ${id}`;
 }
 function championTitle(championId) {
@@ -378,8 +385,8 @@ function renderWeakChampionLists(lane = getActiveChampionPoolLane()) {
         Number(stats.games || 0) >= minGames &&
         Number(stats.winRate || 0) < 0.5))).slice(0, 8);
     elements.weakLaneChampionTitle.textContent = lane.label;
-    renderWeakChampionList(elements.weakEnemyChampionList, elements.weakEnemyChampionEmpty, enemyStats, '条件に合う試合データがありません。');
-    renderWeakChampionList(elements.weakLaneChampionList, elements.weakLaneChampionEmpty, laneStats, '条件に合う対面データがありません。', { includeSelfPicks: true, position });
+    renderWeakChampionList(elements.weakEnemyChampionList, elements.weakEnemyChampionEmpty, enemyStats, window.UiI18n?.translate('home.noMatchData') || 'No matching match data.');
+    renderWeakChampionList(elements.weakLaneChampionList, elements.weakLaneChampionEmpty, laneStats, window.UiI18n?.translate('home.noLaneData') || 'No matching lane data.', { includeSelfPicks: true, position });
 }
 function renderWeakChampionList(listElement, emptyElement, statsList, emptyText, options = {}) {
     listElement.replaceChildren(...statsList.map((stats) => createWeakChampionItem(stats, options)));
@@ -405,7 +412,7 @@ function createWeakChampionItem(stats, options = {}) {
             item.append(selfPickSummary, main);
         }
         else {
-            item.append(createStatsEmptySide('YOU', 'you', '自分のピック実績なし'), main);
+            item.append(createStatsEmptySide('YOU', 'you', window.UiI18n?.translate('home.noPickResults') || 'No pick results.'), main);
         }
     }
     else {
@@ -471,7 +478,9 @@ function createWeakSelfPickRow(symbol, statsList, tone) {
     row.className = `weak-self-pick-row ${tone}`;
     const title = document.createElement('span');
     title.className = 'weak-self-pick-group-title';
-    title.textContent = tone === 'lost' ? '苦手だったピック' : '勝てているピック';
+    title.textContent = tone === 'lost'
+        ? (window.UiI18n?.translate('home.weakPicks') || 'Weak picks')
+        : (window.UiI18n?.translate('home.strongPicks') || 'Strong picks');
     row.append(title);
     const tokens = document.createElement('div');
     tokens.className = 'weak-self-pick-group-tokens';
@@ -524,8 +533,8 @@ function renderStrongChampionLists(lane = getActiveChampionPoolLane()) {
         Number(stats.winRate || 0) > 0.5))).slice(0, 8);
     const matchupStats = getStrongLaneMatchupStats(position, minGames).slice(0, 8);
     elements.strongLaneMatchupTitle.textContent = lane.label;
-    renderStrongChampionList(elements.strongChampionList, elements.strongChampionEmpty, championStats, createStrongChampionItem, '条件に合うチャンピオン実績がありません。');
-    renderStrongChampionList(elements.strongLaneMatchupList, elements.strongLaneMatchupEmpty, matchupStats, createStrongLaneMatchupItem, '条件に合う対面データがありません。');
+    renderStrongChampionList(elements.strongChampionList, elements.strongChampionEmpty, championStats, createStrongChampionItem, window.UiI18n?.translate('home.noChampionResults') || 'No matching champion results.');
+    renderStrongChampionList(elements.strongLaneMatchupList, elements.strongLaneMatchupEmpty, matchupStats, createStrongLaneMatchupItem, window.UiI18n?.translate('home.noLaneData') || 'No matching lane data.');
 }
 function getStrongLaneMatchupStats(position, minGames) {
     const normalizedPosition = String(position || '').toUpperCase();
@@ -613,7 +622,7 @@ function createDraftAiAnalysisRequestKey(activeAction, draftContext) {
     return aiAnalysisController?.createDraftAiAnalysisRequestKey(activeAction, draftContext) || '';
 }
 function createDraftAiAnalysisErrorMessage(error) {
-    return aiAnalysisController?.createDraftAiAnalysisErrorMessage(error) || 'AI分析を取得できませんでした。';
+    return aiAnalysisController?.createDraftAiAnalysisErrorMessage(error) || window.UiI18n?.translate('home.aiUnavailable') || 'Could not load AI analysis.';
 }
 function parseDraftAiAnalysisNotes(response) {
     return aiAnalysisController?.parseDraftAiAnalysisNotes(response) || [];
@@ -673,11 +682,11 @@ async function chooseLolInstallDir() {
         const settings = await window.lcuApi.chooseLolInstallDir();
         elements.lolInstallDirInput.value = settings.lolInstallDir;
         logDebug('LoL install directory selected', { lolInstallDir: settings.lolInstallDir });
-        elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.savedAndReconnecting');
     }
     catch (error) {
         logWarn('LoL install directory selection failed', { message: error.message, stack: error.stack });
-        elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.saveFailed', { message: error.message });
     }
     finally {
         elements.chooseLolDirButton.disabled = false;
@@ -691,11 +700,11 @@ async function saveLolInstallDir() {
         const settings = await window.lcuApi.updateLolInstallDir(lolInstallDir);
         elements.lolInstallDirInput.value = settings.lolInstallDir;
         logDebug('LoL install directory saved', { lolInstallDir: settings.lolInstallDir });
-        elements.settingsMessage.textContent = '保存しました。接続状態を再確認しています。';
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.savedAndReconnecting');
     }
     catch (error) {
         logWarn('LoL install directory save failed', { message: error.message, stack: error.stack });
-        elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.saveFailed', { message: error.message });
     }
     finally {
         elements.saveLolDirButton.disabled = false;
@@ -709,14 +718,33 @@ async function saveThemeMode() {
         const settings = await window.lcuApi.updateThemeMode(themeMode);
         renderSettings(settings);
         logDebug('Theme mode saved', { themeMode: settings.themeMode });
-        elements.settingsMessage.textContent = '表示テーマを保存しました。';
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.themeSaved');
     }
     catch (error) {
         logWarn('Theme mode save failed', { message: error.message, stack: error.stack });
-        elements.settingsMessage.textContent = `保存できませんでした: ${error.message}`;
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.saveFailed', { message: error.message });
     }
     finally {
         elements.saveThemeModeButton.disabled = false;
+    }
+}
+async function saveLanguage() {
+    const language = elements.languageSelect.value;
+    elements.saveLanguageButton.disabled = true;
+    elements.settingsMessage.textContent = '';
+    try {
+        const settings = await window.lcuApi.updateLanguage(language);
+        renderSettings(settings);
+        logDebug('Application language saved', { language: settings.language });
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.languageSaved');
+        window.setTimeout(() => window.location.reload(), 100);
+    }
+    catch (error) {
+        logWarn('Application language save failed', { message: error.message, stack: error.stack });
+        elements.settingsMessage.textContent = window.UiI18n.translate('settings.saveFailed', { message: error.message });
+    }
+    finally {
+        elements.saveLanguageButton.disabled = false;
     }
 }
 async function collectRiotMatchHistory(mode = 'recent') {
@@ -754,6 +782,7 @@ elements.statsSubtabButtons.forEach((button) => {
 elements.chooseLolDirButton.addEventListener('click', chooseLolInstallDir);
 elements.saveLolDirButton.addEventListener('click', saveLolInstallDir);
 elements.saveThemeModeButton.addEventListener('click', saveThemeMode);
+elements.saveLanguageButton.addEventListener('click', saveLanguage);
 elements.saveChampionPoolButton.addEventListener('click', saveChampionPool);
 elements.championPoolSearchInput.addEventListener('input', renderChampionPool);
 elements.playedStatsSampleSelect.addEventListener('change', () => {

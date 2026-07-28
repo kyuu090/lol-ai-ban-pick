@@ -15,9 +15,9 @@
 
   function describeThemeMode(themeMode: unknown): string {
     const normalizedThemeMode = normalizeThemeMode(themeMode);
-    if (normalizedThemeMode === 'light') return 'ライトモードを使用します。';
-    if (normalizedThemeMode === 'dark') return 'ダークモードを使用します。';
-    return 'OSの表示モードに合わせます。';
+    if (normalizedThemeMode === 'light') return root.UiI18n!.translate('settings.theme.light');
+    if (normalizedThemeMode === 'dark') return root.UiI18n!.translate('settings.theme.dark');
+    return root.UiI18n!.translate('settings.theme.systemHelp');
   }
 
   function renderSettings(settings: any, deps: SettingsViewDeps = {}): void {
@@ -25,6 +25,7 @@
 
     const doc = (deps.document || root.document) as Document;
     const elements = (deps.elements || root.UiDomElements?.elements) as UiDomElements;
+    root.UiI18n!.setLanguage(settings.language, doc);
     const themeMode = normalizeThemeMode(settings.themeMode);
     applyThemeMode(themeMode, doc);
 
@@ -35,10 +36,13 @@
     if (doc.activeElement !== elements.themeModeSelect) {
       elements.themeModeSelect.value = themeMode;
     }
+    if (doc.activeElement !== elements.languageSelect) {
+      elements.languageSelect.value = root.UiI18n!.normalizeLanguage(settings.language);
+    }
     elements.themeModeStatus.textContent = describeThemeMode(themeMode);
     elements.riotRegionalRouteStatus.textContent = settings.detectedRiotPlatformRegion && settings.detectedRiotRegionalRoute
-      ? `LCUから自動検出したサーバ: ${settings.detectedRiotPlatformRegion} / Match-V5 route: ${settings.detectedRiotRegionalRoute}`
-      : 'LoLログイン後に LCU から自動検出します。';
+      ? root.UiI18n!.translate('settings.detectedRoute', { platformRegion: settings.detectedRiotPlatformRegion, regionalRoute: settings.detectedRiotRegionalRoute })
+      : root.UiI18n!.translate('settings.waitingForRoute');
   }
 
   function renderRiotPlatformRegions(settings: any, deps: SettingsViewDeps = {}): void {

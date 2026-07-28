@@ -1,4 +1,5 @@
 (function attachUiChampionsView(root: UiRoot) {
+  const translateUi = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
   const STATS_API_BASE_URL = 'https://db.banpick-ai.lol';
   const STATS_API_MIN_PICK_RATE = 0.005;
   const STATS_API_DEFAULT_RETRY_AFTER_SECONDS = 5;
@@ -15,37 +16,17 @@
   ];
   const STATS_API_MINIMUM_RANK_FOR_THRESHOLD = 'GOLD';
   const KEYSTONE_LABELS: Record<number, string> = {
-    8005: 'プレスアタック',
-    8008: 'リーサルテンポ',
-    8010: '征服者',
-    8021: 'フリートフットワーク',
-    8112: '電撃',
-    8124: '捕食者',
-    8128: 'ダークハーベスト',
-    8214: 'エアリー',
-    8229: '秘儀の彗星',
-    8230: 'フェイズラッシュ',
-    8437: '不死者の握撃',
-    8439: 'アフターショック',
-    8465: 'ガーディアン',
-    9923: 'ヘイルブレード'
+    8005: 'rune.keystone.8005', 8008: 'rune.keystone.8008', 8010: 'rune.keystone.8010', 8021: 'rune.keystone.8021',
+    8112: 'rune.keystone.8112', 8124: 'rune.keystone.8124', 8128: 'rune.keystone.8128', 8214: 'rune.keystone.8214',
+    8229: 'rune.keystone.8229', 8230: 'rune.keystone.8230', 8437: 'rune.keystone.8437', 8439: 'rune.keystone.8439',
+    8465: 'rune.keystone.8465', 9923: 'rune.keystone.9923'
   };
   const RUNE_STYLE_LABELS: Record<number, string> = {
-    8000: '栄華',
-    8100: '覇道',
-    8200: '魔道',
-    8300: '天啓',
-    8400: '不滅',
-    8500: '栄華'
+    8000: 'rune.style.8000', 8100: 'rune.style.8100', 8200: 'rune.style.8200', 8300: 'rune.style.8300', 8400: 'rune.style.8400', 8500: 'rune.style.8500'
   };
   const SHARD_LABELS: Record<number, string> = {
-    5001: 'スケーリング体力',
-    5005: '攻撃速度',
-    5007: 'スキルヘイスト',
-    5008: 'アダプティブフォース',
-    5010: '移動速度',
-    5011: '体力',
-    5013: '行動妨害耐性'
+    5001: 'rune.shard.5001', 5005: 'rune.shard.5005', 5007: 'rune.shard.5007', 5008: 'rune.shard.5008',
+    5010: 'rune.shard.5010', 5011: 'rune.shard.5011', 5013: 'rune.shard.5013'
   };
   // Data Dragon's public rune JSON does not include stat shard ID -> icon mappings,
   // so we keep the known official StatMods asset paths in one place.
@@ -64,17 +45,8 @@
     [5011, 5013, 5001]
   ] as const;
   const SUMMONER_SPELL_LABELS: Record<number, string> = {
-    1: 'クレンズ',
-    3: 'イグゾースト',
-    4: 'フラッシュ',
-    6: 'ゴースト',
-    7: 'ヒール',
-    11: 'スマイト',
-    12: 'テレポート',
-    13: 'クラリティ',
-    14: 'イグナイト',
-    21: 'バリア',
-    32: 'マーク'
+    1: 'Cleanse', 3: 'Exhaust', 4: 'Flash', 6: 'Ghost', 7: 'Heal', 11: 'Smite',
+    12: 'Teleport', 13: 'Clarity', 14: 'Ignite', 21: 'Barrier', 32: 'Mark'
   };
   const SUMMONER_SPELL_ICON_KEYS: Record<number, string> = {
     1: 'SummonerBoost',
@@ -639,9 +611,9 @@
       const championKillParticipations = championKills + championAssists;
       const opponentKillParticipations = opponentKills + opponentAssists;
       return {
-        description: '全Kill + Assist: 自JG − 相手JG',
-        detail: `自JG K+A ${championKillParticipations.toFixed(2)} / 相手JG K+A ${opponentKillParticipations.toFixed(2)}`,
-        label: 'JGキル関与数差',
+        description: translateUi('champions.jungleParticipationDescription'),
+        detail: translateUi('champions.jungleParticipationDetail', { champion: championKillParticipations.toFixed(2), opponent: opponentKillParticipations.toFixed(2) }),
+        label: translateUi('champions.jungleParticipation'),
         value: normalizeValue(championKillParticipations - opponentKillParticipations)
       };
     }
@@ -649,14 +621,14 @@
       return {
         description: 'Kill − Death（2v2）',
         detail: `Kill ${kills.toFixed(2)} / Death ${deaths.toFixed(2)}`,
-        label: '2v2キル収支',
+        label: translateUi('champions.duoCombat'),
         value: normalizeValue(kills - deaths)
       };
     }
     return {
-      description: 'ソロKill − ソロDeath',
+      description: translateUi('champions.soloCombatDescription'),
       detail: `Kill ${kills.toFixed(2)} / Death ${deaths.toFixed(2)}`,
-      label: 'ソロキル収支',
+      label: translateUi('champions.soloCombat'),
       value: normalizeValue(kills - deaths)
     };
   }
@@ -842,12 +814,12 @@
     const errorInfo = parseStatsApiErrorInfo(error);
     if (errorInfo.status === 429) {
       const retryAfter = errorInfo.retryAfterSeconds
-        ? `${errorInfo.retryAfterSeconds}秒後に再試行できます。`
-        : '少し待ってから再試行してください。';
-      return `レート制限に達しました。${retryAfter}`;
+        ? translateUi('champions.rateLimitRetry', { seconds: errorInfo.retryAfterSeconds })
+        : translateUi('champions.retryLater');
+      return translateUi('champions.rateLimitReached', { retry: retryAfter });
     }
     if (errorInfo.status && errorInfo.status >= 500) {
-      return `StatsAPIサーバーでエラーが発生しました (${errorInfo.status})。`;
+      return translateUi('champions.serverError', { status: errorInfo.status });
     }
     return errorInfo.message;
   }
@@ -858,7 +830,7 @@
     return `https://ddragon.leagueoflegends.com/cdn/img/${normalizedPath}`;
   }
 
-  function buildStatsApiRunesDataUrl(patch: unknown, locale = 'ja_JP'): string {
+  function buildStatsApiRunesDataUrl(patch: unknown, locale = 'en_US'): string {
     const normalizedPatch = String(patch || '').trim();
     const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
       ? normalizedPatch
@@ -871,7 +843,7 @@
     return `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/runesReforged.json`;
   }
 
-  function buildStatsApiChampionSpellDataUrl(patch: unknown, alias: unknown, locale = 'ja_JP'): string {
+  function buildStatsApiChampionSpellDataUrl(patch: unknown, alias: unknown, locale = 'en_US'): string {
     const normalizedAlias = String(alias || '').trim();
     const normalizedPatch = String(patch || '').trim();
     const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
@@ -934,6 +906,8 @@
     const doc = (deps.document || root.document) as Document;
     const requestStatsApiJson = deps.requestStatsApiJson || root.lcuApi?.requestStatsApiJson;
     const fetchImpl = deps.fetch || root.fetch?.bind(root);
+    const getDataDragonLocale = (): 'en_US' | 'ja_JP' | 'ko_KR' => root.UiI18n?.getDataDragonLocale() || 'en_US';
+    const t = (key: string, values: Record<string, string | number> = {}): string => root.UiI18n?.translate(key, values) || key;
     const championsPanel = doc.querySelector<HTMLElement>('.stats-api-champions-panel');
     const detailsView = doc.querySelector<HTMLElement>('#statsApiDetailsView');
     const detailsBackButton = doc.querySelector<HTMLButtonElement>('#statsApiDetailsBackButton');
@@ -961,6 +935,9 @@
     let statsApiRuneCatalog: StatsApiRuneAssetCatalog | null = null;
     let statsApiRuneCatalogUrl = '';
     let statsApiRuneCatalogPromise: Promise<StatsApiRuneAssetCatalog | null> | null = null;
+    let summonerSpellLabels: Record<number, string> = {};
+    let summonerSpellLabelsUrl = '';
+    let summonerSpellLabelsPromise: Promise<Record<number, string> | null> | null = null;
     const statsApiChampionSpellCatalogs = new Map<string, Record<string, StatsApiChampionSpellAssetEntry> | null>();
     const statsApiChampionSpellCatalogPromises = new Map<string, Promise<Record<string, StatsApiChampionSpellAssetEntry> | null>>();
     let statsApiChampionSearchQuery = '';
@@ -1015,7 +992,7 @@
       const active = statsApiLoadingCount > 0;
       if (elements.statsApiRefreshButton) {
         elements.statsApiRefreshButton.disabled = active;
-        elements.statsApiRefreshButton.textContent = active ? '取得中' : '更新';
+        elements.statsApiRefreshButton.textContent = active ? t('champions.loading') : t('champions.refresh');
       }
       if (championsPanel) {
         championsPanel.setAttribute('aria-busy', String(active));
@@ -1100,7 +1077,7 @@
 
     async function ensureStatsApiRuneCatalog(): Promise<StatsApiRuneAssetCatalog | null> {
       const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || '';
-      const runesDataUrl = buildStatsApiRunesDataUrl(getStatsApiDataDragonVersion(String(patch)));
+      const runesDataUrl = buildStatsApiRunesDataUrl(getStatsApiDataDragonVersion(String(patch)), getDataDragonLocale());
       if (statsApiRuneCatalog && statsApiRuneCatalogUrl === runesDataUrl) {
         return statsApiRuneCatalog;
       }
@@ -1131,6 +1108,30 @@
           statsApiRuneCatalogPromise = null;
         });
       return statsApiRuneCatalogPromise;
+    }
+
+    async function ensureSummonerSpellLabels(): Promise<Record<number, string> | null> {
+      const patch = getStatsApiDataDragonVersion(String(getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || ''));
+      const url = `https://ddragon.leagueoflegends.com/cdn/${patch}/data/${getDataDragonLocale()}/summoner.json`;
+      if (summonerSpellLabelsUrl === url && Object.keys(summonerSpellLabels).length) return summonerSpellLabels;
+      if (summonerSpellLabelsUrl === url && summonerSpellLabelsPromise) return summonerSpellLabelsPromise;
+      if (!fetchImpl) return null;
+      summonerSpellLabelsUrl = url;
+      summonerSpellLabelsPromise = fetchImpl(url)
+        .then((response: Response) => response.ok ? response.json() : null)
+        .then((payload: any) => {
+          const labels: Record<number, string> = {};
+          Object.values(payload?.data || {}).forEach((spell: any) => {
+            const id = Number(spell?.key);
+            const name = String(spell?.name || '').trim();
+            if (id > 0 && name) labels[id] = name;
+          });
+          summonerSpellLabels = labels;
+          return labels;
+        })
+        .catch(() => null)
+        .finally(() => { summonerSpellLabelsPromise = null; });
+      return summonerSpellLabelsPromise;
     }
 
     function getStatsApiChampionAlias(championId: unknown): string {
@@ -1175,7 +1176,7 @@
       if (!numericChampionId || !alias || !fetchImpl) {
         return null;
       }
-      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias);
+      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias, getDataDragonLocale());
       if (statsApiChampionSpellCatalogs.has(catalogUrl)) {
         return statsApiChampionSpellCatalogs.get(catalogUrl) || null;
       }
@@ -1217,7 +1218,7 @@
       const patch = getStatsApiSelectedFilters().patch || statsApiMeta?.latestPatch || '';
       const alias = getStatsApiChampionAlias(numericChampionId);
       if (!normalizedSkillLetter || !numericChampionId || !alias) return null;
-      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias);
+      const catalogUrl = buildStatsApiChampionSpellDataUrl(patch, alias, getDataDragonLocale());
       const catalog = statsApiChampionSpellCatalogs.get(catalogUrl);
       return catalog?.[normalizedSkillLetter] || null;
     }
@@ -1249,13 +1250,13 @@
     function getKeystoneLabel(keystoneId: unknown): string {
       const numericKeystoneId = normalizeChampionId(keystoneId);
       const assetName = getRuneAssetEntry('perks', numericKeystoneId)?.name;
-      return assetName || KEYSTONE_LABELS[numericKeystoneId] || `Keystone ${numericKeystoneId || '-'}`;
+      return assetName || (KEYSTONE_LABELS[numericKeystoneId] ? t(KEYSTONE_LABELS[numericKeystoneId]) : '') || `Keystone ${numericKeystoneId || '-'}`;
     }
 
     function getRuneStyleLabel(styleId: unknown): string {
       const numericStyleId = normalizeChampionId(styleId);
       const assetName = getRuneAssetEntry('styles', numericStyleId)?.name;
-      return assetName || RUNE_STYLE_LABELS[numericStyleId] || `Style ${numericStyleId || '-'}`;
+      return assetName || (RUNE_STYLE_LABELS[numericStyleId] ? t(RUNE_STYLE_LABELS[numericStyleId]) : '') || `Style ${numericStyleId || '-'}`;
     }
 
     function getRuneLabel(runeId: unknown): string {
@@ -1271,12 +1272,12 @@
 
     function getShardLabel(shardId: unknown): string {
       const numericShardId = normalizeChampionId(shardId);
-      return SHARD_LABELS[numericShardId] || `Shard ${numericShardId || '-'}`;
+      return (SHARD_LABELS[numericShardId] ? t(SHARD_LABELS[numericShardId]) : '') || `Shard ${numericShardId || '-'}`;
     }
 
     function getSummonerSpellLabel(spellId: unknown): string {
       const numericSpellId = normalizeChampionId(spellId);
-      return SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
+      return summonerSpellLabels[numericSpellId] || SUMMONER_SPELL_LABELS[numericSpellId] || `Spell ${numericSpellId || '-'}`;
     }
 
     function getSummonerSpellIconUrl(spellId: unknown): string {
@@ -1322,8 +1323,8 @@
       statsApiChampionSearchInput.id = 'statsApiChampionSearchInput';
       statsApiChampionSearchInput.type = 'search';
       statsApiChampionSearchInput.className = 'stats-api-list-search-input';
-      statsApiChampionSearchInput.placeholder = 'チャンピオン名で検索';
-      statsApiChampionSearchInput.setAttribute('aria-label', 'チャンピオン名で検索');
+      statsApiChampionSearchInput.placeholder = t('champions.search');
+      statsApiChampionSearchInput.setAttribute('aria-label', t('champions.search'));
       statsApiChampionSearchInput.autocomplete = 'off';
       statsApiChampionSearchInput.spellcheck = false;
       statsApiChampionSearchInput.addEventListener('input', () => {
@@ -1341,14 +1342,14 @@
 
     function getStatsApiOpponentSummaryLabel(): string {
       const selectedOption = getSelectedOpponentChampionOption();
-      return selectedOption ? selectedOption.name : '指定なし';
+      return selectedOption ? selectedOption.name : t('champions.none');
     }
 
     function updateStatsApiOpponentDropdownLabel(): void {
       if (!statsApiOpponentDropdownLabel) return;
       const selectedOption = getSelectedOpponentChampionOption();
       if (!selectedOption) {
-        statsApiOpponentDropdownLabel.replaceChildren(createText('stats-api-opponent-dropdown-name', '指定なし'));
+        statsApiOpponentDropdownLabel.replaceChildren(createText('stats-api-opponent-dropdown-name', t('champions.none')));
         return;
       }
       if (deps.createInlineChampionName) {
@@ -1389,7 +1390,7 @@
       clearButton.type = 'button';
       clearButton.className = `stats-api-opponent-option${selectedOpponentChampionId === 0 ? ' active' : ''}`;
       clearButton.setAttribute('aria-pressed', String(selectedOpponentChampionId === 0));
-      clearButton.append(createText('stats-api-opponent-option-name', '指定なし'));
+      clearButton.append(createText('stats-api-opponent-option-name', t('champions.none')));
       clearButton.addEventListener('click', async () => {
         const changed = selectedOpponentChampionId !== 0;
         selectedOpponentChampionId = 0;
@@ -1423,7 +1424,7 @@
       });
 
       if (nodes.length === 1) {
-        const empty = createText('stats-api-opponent-empty', '条件に合うチャンピオンがありません。', 'p');
+        const empty = createText('stats-api-opponent-empty', t('champions.noMatchingChampions'), 'p');
         statsApiOpponentOptionsList.replaceChildren(clearButton, empty);
         return;
       }
@@ -1437,7 +1438,7 @@
       statsApiOpponentDropdownField = doc.createElement('div');
       statsApiOpponentDropdownField.className = 'stats-api-field stats-api-opponent-filter';
       statsApiOpponentDropdownField.hidden = true;
-      statsApiOpponentDropdownField.append(createText('stats-api-opponent-label', '対面チャンピオン'));
+      statsApiOpponentDropdownField.append(createText('stats-api-opponent-label', t('champions.opponent')));
 
       const dropdown = doc.createElement('div');
       dropdown.className = 'stats-api-opponent-dropdown';
@@ -1462,8 +1463,8 @@
       statsApiOpponentSearchInput = doc.createElement('input');
       statsApiOpponentSearchInput.type = 'search';
       statsApiOpponentSearchInput.className = 'stats-api-opponent-search-input';
-      statsApiOpponentSearchInput.placeholder = '検索';
-      statsApiOpponentSearchInput.setAttribute('aria-label', '対面チャンピオンを検索');
+      statsApiOpponentSearchInput.placeholder = t('champions.search');
+      statsApiOpponentSearchInput.setAttribute('aria-label', t('champions.opponentSearch'));
       statsApiOpponentSearchInput.addEventListener('input', () => {
         renderStatsApiOpponentOptions(statsApiOpponentSearchInput?.value || '');
       });
@@ -1599,7 +1600,7 @@
       if (rows.length) {
         wrap.append(...rows);
       } else {
-        wrap.append(createStatsApiEmptyState(`${title}候補がありません。`));
+        wrap.append(createStatsApiEmptyState(t('champions.noCandidates', { title })));
       }
       return wrap;
     }
@@ -1858,7 +1859,7 @@
     ): HTMLElement[] {
       const runeSets = Array.isArray(runes) ? runes : [];
       if (!runeSets.length) {
-        return [createStatsApiEmptyState('ルーン候補がありません。')];
+        return [createStatsApiEmptyState(t('draft.noRunes'))];
       }
 
       const tabWrap = doc.createElement('div');
@@ -1866,7 +1867,7 @@
       const tabList = doc.createElement('div');
       tabList.className = 'stats-api-rune-tab-list';
       tabList.setAttribute('role', 'tablist');
-      tabList.setAttribute('aria-label', 'ルーンセット候補');
+      tabList.setAttribute('aria-label', t('champions.runeSetCandidates'));
       const panels = doc.createElement('div');
       panels.className = 'stats-api-rune-tab-panels';
 
@@ -1974,7 +1975,7 @@
       section.className = 'stats-api-detail-subsection';
       section.append(createText('stats-api-detail-subtitle', title, 'h4'));
       if (!entries?.length) {
-        section.append(createStatsApiEmptyState('候補がありません。'));
+        section.append(createStatsApiEmptyState(t('champions.noRecommendations')));
         return section;
       }
       const list = doc.createElement('div');
@@ -1992,7 +1993,7 @@
     function createStatsApiBuildStageSection(
       title: string,
       rows: HTMLElement[],
-      emptyMessage = '候補がありません。'
+      emptyMessage = t('champions.noRecommendations')
     ): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'stats-api-detail-subsection stats-api-build-stage';
@@ -2031,9 +2032,9 @@
     ): HTMLElement {
       const section = doc.createElement('section');
       section.className = 'stats-api-detail-subsection stats-api-rune-summoner-section';
-      section.append(createText('stats-api-detail-subtitle', 'サモナースペル', 'h4'));
+      section.append(createText('stats-api-detail-subtitle', t('champions.summonerSpells'), 'h4'));
       if (!entries?.length) {
-        section.append(createStatsApiEmptyState('サモナースペル候補がありません。'));
+        section.append(createStatsApiEmptyState(t('champions.noCandidates', { title: t('champions.summonerSpells') })));
         return section;
       }
       const list = doc.createElement('div');
@@ -2175,7 +2176,7 @@
         return response;
       }
       if (!fetchImpl) {
-        throw new Error('この環境ではfetchを利用できません。');
+        throw new Error(t('champions.fetchUnavailable'));
       }
       const response = await fetchImpl(pathOrUrl);
       if (!response.ok) {
@@ -2210,7 +2211,7 @@
         await refreshStatsApiChampionList();
       } catch (error: any) {
         if (!scheduleStatsApiRetry('meta', error)) {
-          setStatsApiStatus(`StatsAPIを取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+          setStatsApiStatus(t('champions.statsApiFailed', { message: formatStatsApiErrorMessage(error) }));
         }
       } finally {
         setStatsApiLoading(false);
@@ -2292,8 +2293,8 @@
       if (elements.statsApiChampionsEmpty) {
         elements.statsApiChampionsEmpty.hidden = false;
         elements.statsApiChampionsEmpty.textContent = statsApiChampionSearchQuery
-          ? '検索条件に合うチャンピオンがありません。'
-          : '条件に合うチャンピオンがありません。';
+          ? t('champions.noSearchResults')
+          : t('champions.noMatchingChampions');
       }
     }
 
@@ -2316,8 +2317,8 @@
       if (elements.statsApiChampionsEmpty) {
         elements.statsApiChampionsEmpty.hidden = sortedStatsList.length > 0;
         elements.statsApiChampionsEmpty.textContent = statsApiChampionSearchQuery
-          ? '検索条件に合うチャンピオンがありません。'
-          : '条件に合うチャンピオンがありません。';
+          ? t('champions.noSearchResults')
+          : t('champions.noMatchingChampions');
       }
       renderStatsApiSortButtons();
     }
@@ -2450,7 +2451,7 @@
       if (!filters.position) {
         clearStatsApiChampionRows();
         setStatsApiLoading(false);
-        setStatsApiStatus('利用可能なLaneが取得できませんでした。');
+        setStatsApiStatus(t('champions.lanesUnavailable'));
         return;
       }
       const requestId = ++statsApiRequestId;
@@ -2476,9 +2477,9 @@
         if (requestId !== statsApiRequestId) return;
         clearStatsApiChampionRows();
         if (!scheduleStatsApiRetry('champions', error)) {
-          setStatsApiStatus(`チャンピオン一覧を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+          setStatsApiStatus(t('champions.championListFailed', { message: formatStatsApiErrorMessage(error) }));
           if (selectedChampionId > 0 && !detailsView?.hidden) {
-            setStatsApiDetailsStatus(`分析データを更新できませんでした: ${formatStatsApiErrorMessage(error)}`);
+            setStatsApiDetailsStatus(t('champions.analysisRefreshFailed', { message: formatStatsApiErrorMessage(error) }));
           }
         }
       } finally {
@@ -2512,11 +2513,11 @@
     function createStatsApiDetailsNavigation(): HTMLElement {
       const navigation = doc.createElement('nav');
       navigation.className = 'stats-api-analysis-tabs';
-      navigation.setAttribute('aria-label', 'チャンピオン分析メニュー');
+      navigation.setAttribute('aria-label', t('champions.analysisMenu'));
       const sections: Array<{ id: StatsApiDetailsSection; label: string; icon: string }> = [
-        { id: 'build', label: 'ビルド', icon: '🛠' },
-        { id: 'timeline', label: 'タイムライン分析', icon: '↗' },
-        { id: 'matchups', label: 'マッチアップ分析', icon: '⚔' }
+        { id: 'build', label: t('champions.build'), icon: '🛠' },
+        { id: 'timeline', label: t('champions.timeline'), icon: '↗' },
+        { id: 'matchups', label: t('champions.matchups'), icon: '⚔' }
       ];
       navigation.append(...sections.map((section) => {
         const button = doc.createElement('button');
@@ -2595,7 +2596,7 @@
         if (requestId !== statsApiAnalysisRequestId) return;
         lastMatchupsData = null;
         renderStatsApiMatchups(null);
-        setStatsApiDetailsStatus(`対面データを取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+        setStatsApiDetailsStatus(t('champions.matchupFailed', { message: formatStatsApiErrorMessage(error) }));
       } finally {
         if (!hasCachedResponse) setStatsApiLoading(false);
       }
@@ -2625,7 +2626,7 @@
         if (requestId !== statsApiAnalysisRequestId) return;
         lastMatchupTimelineData = null;
         renderStatsApiTimeline(null, normalizedOpponentId);
-        setStatsApiDetailsStatus(`対面推移を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+        setStatsApiDetailsStatus(t('champions.matchupTimelineFailed', { message: formatStatsApiErrorMessage(error) }));
       } finally {
         if (!hasCachedResponse) setStatsApiLoading(false);
       }
@@ -2649,7 +2650,7 @@
         if (requestId !== statsApiAnalysisRequestId) return;
         lastChampionTimelineData = null;
         renderStatsApiTimeline(null);
-        setStatsApiDetailsStatus(`タイムライン分析を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+        setStatsApiDetailsStatus(t('champions.timelineFailed', { message: formatStatsApiErrorMessage(error) }));
       } finally {
         if (!hasCachedResponse) setStatsApiLoading(false);
       }
@@ -2673,12 +2674,12 @@
 
       const sampleField = doc.createElement('label');
       sampleField.className = 'stats-api-analysis-select';
-      sampleField.append(createText('', '最小試合数'));
+      sampleField.append(createText('', 'Minimum games'));
       const sampleSelect = doc.createElement('select');
       [0, 20, 50, 100].forEach((value) => {
         const option = doc.createElement('option');
         option.value = String(value);
-        option.textContent = value === 0 ? '制限なし' : `${value}試合`;
+        option.textContent = value === 0 ? 'No minimum' : `${value} games`;
         option.selected = value === statsApiMatchupsMinGames;
         sampleSelect.append(option);
       });
@@ -2691,7 +2692,7 @@
       panel.append(header);
 
       if (!matchupsData) {
-        panel.append(createStatsApiEmptyState('この条件では対面データがありません。'));
+        panel.append(createStatsApiEmptyState(t('champions.noMatchupData')));
         renderStatsApiAnalysisShell(panel);
         return;
       }
@@ -2706,7 +2707,7 @@
       );
 
       if (!matchups.length) {
-        panel.append(createStatsApiEmptyState('最小試合数を満たす対面がありません。'));
+        panel.append(createStatsApiEmptyState(t('champions.noMinimumMatchups')));
         renderStatsApiAnalysisShell(panel, null, matchupsData.baselineWinRate);
         return;
       }
@@ -2718,11 +2719,11 @@
       const thead = doc.createElement('thead');
       const headerRow = doc.createElement('tr');
       const sortableColumns: Array<{ key?: StatsApiMatchupSortKey; label: string }> = [
-        { key: 'opponent', label: '対面チャンピオン' },
-        { key: 'games', label: '試合数' },
-        { key: 'winRate', label: '勝率' },
-        { key: 'difference', label: '基準との差' },
-        { label: '時間推移' }
+        { key: 'opponent', label: 'Lane opponent' },
+        { key: 'games', label: 'Games' },
+        { key: 'winRate', label: 'Win rate' },
+        { key: 'difference', label: 'Difference from baseline' },
+        { label: 'Timeline' }
       ];
       sortableColumns.forEach(({ key, label }) => {
         const th = doc.createElement('th');
@@ -2738,7 +2739,7 @@
         button.className = `stats-sort-button stats-api-matchups-sort-button${active ? ' active' : ''}`;
         button.dataset.sortDirection = active ? statsApiMatchupsSortDirection : '';
         button.textContent = label;
-        button.setAttribute('aria-label', `${label}で並べ替え`);
+        button.setAttribute('aria-label', t('champions.sortBy', { label }));
         th.setAttribute('aria-sort', active
           ? (statsApiMatchupsSortDirection === 'asc' ? 'ascending' : 'descending')
           : 'none');
@@ -2774,7 +2775,7 @@
         differenceCell.className = difference >= 0 ? 'stats-api-positive' : 'stats-api-negative';
         const actionCell = doc.createElement('td');
         actionCell.className = 'stats-api-row-action';
-        actionCell.textContent = '見る →';
+        actionCell.textContent = 'View →';
         const openTimeline = () => refreshStatsApiMatchupTimeline(matchup.opponentChampionId);
         row.addEventListener('click', openTimeline);
         row.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -2797,9 +2798,9 @@
       leadRateKey: keyof StatsApiTimelineDifference;
       unit: string;
     } {
-      if (metric === 'xp') return { differenceKey: 'avgXp', label: '経験値差', leadRateKey: 'xpLeadRate', unit: ' XP' };
-      if (metric === 'cs') return { differenceKey: 'avgCs', label: 'CS差', leadRateKey: 'csLeadRate', unit: ' CS' };
-      return { differenceKey: 'avgGold', label: 'ゴールド差', leadRateKey: 'goldLeadRate', unit: ' G' };
+      if (metric === 'xp') return { differenceKey: 'avgXp', label: t('timeline.xpDifference'), leadRateKey: 'xpLeadRate', unit: ' XP' };
+      if (metric === 'cs') return { differenceKey: 'avgCs', label: t('timeline.csDifference'), leadRateKey: 'csLeadRate', unit: ' CS' };
+      return { differenceKey: 'avgGold', label: t('timeline.goldDifference'), leadRateKey: 'goldLeadRate', unit: ' G' };
     }
 
     function formatStatsApiTimelineDifference(value: unknown, metric: StatsApiTimelineMetric): string {
@@ -3018,11 +3019,11 @@
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
-        createText('stats-api-timeline-legend global-self', '全体の差分'),
-        createText('stats-api-timeline-legend global-self dashed', '全体のリード率'),
+        createText('stats-api-timeline-legend global-self', t('timeline.overallDifference')),
+        createText('stats-api-timeline-legend global-self dashed', t('timeline.overallLeadRate')),
         ...(userTimeline.length ? [
-          createText('stats-api-timeline-legend user-self', 'あなたの差分'),
-          createText('stats-api-timeline-legend user-self dashed', 'あなたのリード率')
+          createText('stats-api-timeline-legend user-self', t('timeline.yourDifference')),
+          createText('stats-api-timeline-legend user-self dashed', 'Your lead rate')
         ] : [])
       );
       card.append(heading, meta);
@@ -3042,7 +3043,7 @@
       svg.setAttribute('class', 'stats-api-timeline-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', `${config.label}の全体平均とユーザー平均の比較`);
+      svg.setAttribute('aria-label', t('champions.chart.globalVsUser', { label: config.label }));
       const tooltip = createStatsApiTimelineTooltip();
 
       [maxAbs, 0, -maxAbs].forEach((value) => appendStatsApiTimelineGuideLine(svg, padding.left, differenceY(value), width - padding.right, differenceY(value), value === 0 ? 'stats-api-timeline-zero-line' : 'stats-api-timeline-grid-line'));
@@ -3068,11 +3069,11 @@
         const globalBar = appendStatsApiTimelineBar(svg, x(index) - barWidth - 2, Math.min(differenceY(0), differenceY(differences[index])), barWidth, Math.abs(differenceY(differences[index]) - differenceY(0)), `stats-api-comparison-bar global${differences[index] < 0 ? ' negative' : ''}`);
         const userBar = Number.isFinite(userDifferences[index]) ? appendStatsApiTimelineBar(svg, x(index) + 2, Math.min(differenceY(0), differenceY(userDifferences[index])), barWidth, Math.abs(differenceY(userDifferences[index]) - differenceY(0)), `stats-api-comparison-bar user${userDifferences[index] < 0 ? ' negative' : ''}`) : null;
         const tooltipLines = [
-          `${point.minute}分`,
+          `${point.minute} min`,
           `${config.label} ${formatStatsApiTimelineDifference(differences[index], metric)}`,
-          `リード率 ${formatStatsApiRate(leadRates[index])}`,
-          Number.isFinite(userDifferences[index]) ? `あなた ${formatStatsApiTimelineDifference(userDifferences[index], metric)} / ${formatStatsApiRate(userLeadRates[index])}（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
-          `試合数 ${formatStatsApiGames(point.games)}試合`
+          t('timeline.leadRate', { value: formatStatsApiRate(leadRates[index]) }),
+          Number.isFinite(userDifferences[index]) ? `You ${formatStatsApiTimelineDifference(userDifferences[index], metric)} / ${formatStatsApiRate(userLeadRates[index])} (${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)} games)` : '',
+          `Games ${formatStatsApiGames(point.games)}`
         ].filter(Boolean);
         attachStatsApiTimelineTooltip(globalBar, tooltip, tooltipLines);
         if (userBar) attachStatsApiTimelineTooltip(userBar, tooltip, tooltipLines);
@@ -3119,15 +3120,15 @@
       heading.className = 'stats-api-timeline-card-heading';
       heading.append(createText(
         'stats-api-timeline-card-title',
-        `${latestIndicator.label}（20分まで）`,
+        t('timeline.through20', { label: latestIndicator.label }),
         'h4'
       ));
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta fight-legend';
       meta.append(
         createText('stats-api-timeline-legend fight-net', latestIndicator.description),
-        createText('stats-api-timeline-net-direction', '＋ 対象優勢 / − 対面優勢'),
-        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均')] : [])
+        createText('stats-api-timeline-net-direction', t('timeline.advantageDirection')),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', t('timeline.yourAverage'))] : [])
       );
       card.append(heading, meta);
 
@@ -3143,7 +3144,7 @@
       svg.setAttribute('class', 'stats-api-timeline-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', `20分までの${latestIndicator.label}。正値は対象チャンピオン優勢、負値は対面チャンピオン優勢`);
+      svg.setAttribute('aria-label', t('champions.chart.through20', { label: latestIndicator.label }));
       const tooltip = createStatsApiTimelineTooltip();
       [maximumAbsoluteValue, 0, -maximumAbsoluteValue].forEach((value) => {
         appendStatsApiTimelineGuideLine(
@@ -3166,22 +3167,22 @@
         const bar = appendStatsApiTimelineBar(svg, x(index) - barWidth - 2, Math.min(y(0), y(value)), barWidth, Math.abs(y(value) - y(0)), `stats-api-comparison-bar global${value < 0 ? ' negative' : ''}`);
         const userBar = Number.isFinite(userValues[index]) ? appendStatsApiTimelineBar(svg, x(index) + 2, Math.min(y(0), y(userValues[index])), barWidth, Math.abs(y(userValues[index]) - y(0)), `stats-api-comparison-bar user${userValues[index] < 0 ? ' negative' : ''}`) : null;
         attachStatsApiTimelineTooltip(bar, tooltip, [
-          `${point.minute}分`,
+          `${point.minute} min`,
           `${indicators[index].label} ${formatNetValue(value)}`,
           indicators[index].detail,
-          Number.isFinite(userValues[index]) ? `あなた ${formatNetValue(userValues[index])}（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
-          `試合数 ${formatStatsApiGames(point.games)}試合`
+          Number.isFinite(userValues[index]) ? `You ${formatNetValue(userValues[index])} (${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)} games)` : '',
+          `Games ${formatStatsApiGames(point.games)}`
         ].filter(Boolean));
         if (userBar) attachStatsApiTimelineTooltip(userBar, tooltip, [
-          `${point.minute}分`,
-          `あなた ${formatNetValue(userValues[index])}`,
-          `試合数 ${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合`
+          t('champions.chart.minute', { minute: point.minute }),
+          t('champions.chart.you', { value: formatNetValue(userValues[index]) }),
+          t('champions.chart.games', { games: formatStatsApiGames(userByMinute.get(Number(point.minute))?.games) })
         ]);
         appendStatsApiTimelineHoverBand(svg, tooltip, x(index), barSlotWidth, padding.top, height - padding.bottom, [
-          `${point.minute}分`,
+          t('champions.chart.minute', { minute: point.minute }),
           `${indicators[index].label} ${formatNetValue(value)}`,
-          Number.isFinite(userValues[index]) ? `あなた ${formatNetValue(userValues[index])}（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
-          `試合数 ${formatStatsApiGames(point.games)}試合`
+          Number.isFinite(userValues[index]) ? t('champions.chart.you', { value: `${formatNetValue(userValues[index])} (${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)})` }) : '',
+          t('champions.chart.games', { games: formatStatsApiGames(point.games) })
         ].filter(Boolean));
         const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('class', 'stats-api-timeline-axis-label');
@@ -3220,7 +3221,7 @@
       const userChampionValues = timeline.map((point) => Number(userByMinute.get(Number(point.minute))?.champion?.[config.key]) / divisor);
       const axisMaximum = getStatsApiTimelineAxisMaximum([...championValues, ...opponentValues, ...userChampionValues].filter(Number.isFinite));
       const formatValue = (value: number, compact = false) => {
-        if (config.unit === '秒') return `${value.toFixed(1)}秒`;
+        if (config.unit === ' sec') return t('champions.seconds', { value: value.toFixed(1) });
         if (compact && Math.abs(value) >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
         return `${Math.round(value).toLocaleString('ja-JP')}${config.unit}`;
       };
@@ -3242,7 +3243,7 @@
       svg.setAttribute('class', 'stats-api-impact-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', `${config.label}の対象チャンピオンと対面チャンピオンの時間推移`);
+      svg.setAttribute('aria-label', t('champions.chart.timelineAria', { label: config.label }));
       const tooltip = createStatsApiTimelineTooltip();
       [0, axisMaximum / 2, axisMaximum].forEach((value) => {
         appendStatsApiTimelineGuideLine(svg, padding.left, y(value), width - padding.right, y(value), 'stats-api-timeline-grid-line');
@@ -3256,11 +3257,11 @@
       }
       timeline.forEach((point, index) => {
         const tooltipLines = [
-          `${point.minute}分`,
-          `対象 ${formatValue(championValues[index])}`,
-          `対面 ${formatValue(opponentValues[index])}`,
-          Number.isFinite(userChampionValues[index]) ? `あなた ${formatValue(userChampionValues[index])}` : '',
-          `試合数 ${formatStatsApiGames(point.games)}試合`
+          t('champions.chart.minute', { minute: point.minute }),
+          t('champions.chart.champion', { value: formatValue(championValues[index]) }),
+          t('champions.chart.opponent', { value: formatValue(opponentValues[index]) }),
+          Number.isFinite(userChampionValues[index]) ? t('champions.chart.you', { value: formatValue(userChampionValues[index]) }) : '',
+          t('champions.chart.games', { games: formatStatsApiGames(point.games) })
         ].filter(Boolean);
         const slotWidth = plotWidth / timeline.length;
         const barWidth = Math.max(2, Math.min(8, slotWidth / 5));
@@ -3302,20 +3303,20 @@
       card.className = 'stats-api-timeline-chart-card stats-api-combat-impact-card';
       const heading = doc.createElement('header');
       heading.className = 'stats-api-timeline-card-heading';
-      heading.append(createText('stats-api-timeline-card-title', '戦闘インパクト', 'h4'));
+      heading.append(createText('stats-api-timeline-card-title', t('timeline.combatImpact'), 'h4'));
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta';
       meta.append(
-        createText('stats-api-timeline-legend impact-self', '対象'),
-        createText('stats-api-timeline-legend impact-opponent', '対面'),
-        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均')] : [])
+        createText('stats-api-timeline-legend impact-self', t('timeline.champion')),
+        createText('stats-api-timeline-legend impact-opponent', t('timeline.opponent')),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', t('timeline.yourAverage'))] : [])
       );
       const facets = doc.createElement('div');
       facets.className = 'stats-api-impact-facets';
       facets.append(
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageToChampions', label: '対チャンピオンダメージ', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageTaken', label: '被ダメージ', unit: '' }),
-        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgTimeEnemyCcMs', label: '敵へのCC時間', unit: '秒', divisor: 1000 })
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageToChampions', label: t('timeline.championDamage'), unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgDamageTaken', label: t('timeline.damageTaken'), unit: '' }),
+        createStatsApiCombatImpactFacet(timeline, userTimeline, { key: 'avgTimeEnemyCcMs', label: t('timeline.enemyCcDuration'), unit: ' sec', divisor: 1000 })
       );
       card.append(heading, meta, facets);
       return card;
@@ -3341,14 +3342,14 @@
       heading.className = 'stats-api-timeline-card-heading';
       heading.append(createText(
         'stats-api-timeline-card-title',
-        'プレート収支（20分まで）',
+        t('timeline.plateDifference'),
         'h4'
       ));
       const meta = doc.createElement('div');
       meta.className = 'stats-api-timeline-card-meta objective-legend';
       meta.append(
-        createText('stats-api-timeline-legend impact-self', '全体'),
-        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', 'あなたの平均')] : [])
+        createText('stats-api-timeline-legend impact-self', t('champions.chart.global')),
+        ...(userTimeline.length ? [createText('stats-api-timeline-legend user', t('champions.chart.yourAverage'))] : [])
       );
       card.append(heading, meta);
 
@@ -3364,11 +3365,11 @@
       svg.setAttribute('class', 'stats-api-timeline-chart stats-api-objectives-chart');
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', '20分までのレーンプレート収支の時間推移');
+      svg.setAttribute('aria-label', t('champions.chart.plateTimeline'));
       const tooltip = createStatsApiTimelineTooltip();
       [plateMaximum, 0, -plateMaximum].forEach((value) => {
         appendStatsApiTimelineGuideLine(svg, padding.left, plateY(value), width - padding.right, plateY(value), value === 0 ? 'stats-api-timeline-zero-line' : 'stats-api-timeline-grid-line');
-        appendStatsApiTimelineYAxisLabel(svg, `${value > 0 ? '+' : ''}${value.toFixed(1)}枚`, padding.left - 7, plateY(value), 'end');
+        appendStatsApiTimelineYAxisLabel(svg, t('champions.chart.plateCount', { value: `${value > 0 ? '+' : ''}${value.toFixed(1)}` }), padding.left - 7, plateY(value), 'end');
       });
       appendStatsApiTimelineGuideLine(svg, padding.left, padding.top, padding.left, height - padding.bottom, 'stats-api-timeline-axis-line');
       [
@@ -3380,10 +3381,10 @@
       });
       objectiveTimeline.forEach((point, index) => {
         const tooltipLines = [
-          `${point.minute}分`,
-          `プレート収支 ${plateNet[index] > 0 ? '+' : ''}${plateNet[index].toFixed(2)}枚`,
-          Number.isFinite(userPlateNet[index]) ? `あなた ${userPlateNet[index] > 0 ? '+' : ''}${userPlateNet[index].toFixed(2)}枚（${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)}試合）` : '',
-          `試合数 ${formatStatsApiGames(point.games)}試合`
+          t('champions.chart.minute', { minute: point.minute }),
+          t('champions.chart.plateNet', { value: `${plateNet[index] > 0 ? '+' : ''}${plateNet[index].toFixed(2)}` }),
+          Number.isFinite(userPlateNet[index]) ? t('champions.chart.you', { value: `${userPlateNet[index] > 0 ? '+' : ''}${userPlateNet[index].toFixed(2)} (${formatStatsApiGames(userByMinute.get(Number(point.minute))?.games)})` }) : '',
+          t('champions.chart.games', { games: formatStatsApiGames(point.games) })
         ].filter(Boolean);
         appendStatsApiTimelineHoverBand(svg, tooltip, x(index), plotWidth / objectiveTimeline.length, padding.top, height - padding.bottom, tooltipLines);
         const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -3428,7 +3429,7 @@
       table.className = 'stats-table stats-api-timeline-matrix';
       const thead = doc.createElement('thead');
       const headerRow = doc.createElement('tr');
-      ['指標', ...timeline.map((point) => `${point.minute}分`)].forEach((label) => {
+      ['Metric', ...timeline.map((point) => `${point.minute} min`)].forEach((label) => {
         const th = doc.createElement('th');
         th.scope = 'col';
         th.textContent = label;
@@ -3444,38 +3445,38 @@
       ));
       const isJungle = normalizeStatsApiPosition(getStatsApiSelectedFilters().position) === 'JUNGLE';
       const rows: Array<{ differenceValues?: number[]; label: string; values: string[] }> = [
-        { label: 'Gold差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgGold, 'gold')), differenceValues: timeline.map((point) => Number(point.difference?.avgGold || 0)) },
-        { label: 'Goldリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.goldLeadRate)) },
-        { label: 'XP差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgXp, 'xp')), differenceValues: timeline.map((point) => Number(point.difference?.avgXp || 0)) },
-        { label: 'XPリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.xpLeadRate)) },
-        { label: 'CS差', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgCs, 'cs')), differenceValues: timeline.map((point) => Number(point.difference?.avgCs || 0)) },
-        { label: 'CSリード', values: timeline.map((point) => formatStatsApiRate(point.difference?.csLeadRate)) },
-        { label: laneFightIndicators[0]?.label || 'レーン戦収支', values: laneFightIndicators.map((indicator) => `${indicator.value > 0 ? '+' : ''}${indicator.value.toFixed(2)}`), differenceValues: laneFightIndicators.map((indicator) => indicator.value) },
-        { label: '戦闘発生率', values: timeline.map((point) => formatStatsApiRate(point.laneFights?.fight_occurred_rate)) },
+        { label: 'Gold difference', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgGold, 'gold')), differenceValues: timeline.map((point) => Number(point.difference?.avgGold || 0)) },
+        { label: 'Gold lead', values: timeline.map((point) => formatStatsApiRate(point.difference?.goldLeadRate)) },
+        { label: 'XP difference', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgXp, 'xp')), differenceValues: timeline.map((point) => Number(point.difference?.avgXp || 0)) },
+        { label: 'XP lead', values: timeline.map((point) => formatStatsApiRate(point.difference?.xpLeadRate)) },
+        { label: 'CS difference', values: timeline.map((point) => formatStatsApiTimelineDifference(point.difference?.avgCs, 'cs')), differenceValues: timeline.map((point) => Number(point.difference?.avgCs || 0)) },
+        { label: 'CS lead', values: timeline.map((point) => formatStatsApiRate(point.difference?.csLeadRate)) },
+        { label: laneFightIndicators[0]?.label || 'Lane combat difference', values: laneFightIndicators.map((indicator) => `${indicator.value > 0 ? '+' : ''}${indicator.value.toFixed(2)}`), differenceValues: laneFightIndicators.map((indicator) => indicator.value) },
+        { label: 'Combat occurrence rate', values: timeline.map((point) => formatStatsApiRate(point.laneFights?.fight_occurred_rate)) },
         isJungle
           ? {
-              label: '平均 K+A 対象 / 対面',
+              label: t('champions.matrix.avgKa'),
               values: timeline.map((point) => `${(Number(point.champion.avgKills) + Number(point.champion.avgAssists)).toFixed(2)} / ${(Number(point.opponent.avgKills) + Number(point.opponent.avgAssists)).toFixed(2)}`)
             }
           : {
-              label: '平均 K / D / A',
+              label: t('champions.matrix.avgKda'),
               values: timeline.map((point) => `${Number(point.laneFights?.isolated_kills_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_deaths_vs_lane || 0).toFixed(2)} / ${Number(point.laneFights?.isolated_assists_vs_lane || 0).toFixed(2)}`)
             }
       ];
       if (timeline.some((point) => Number.isFinite(Number(point.champion?.avgDamageToChampions)))) {
         rows.push(
-          { label: '与ダメ 対象 / 対面', values: timeline.map((point) => `${formatStatsApiGames(point.champion?.avgDamageToChampions)} / ${formatStatsApiGames(point.opponent?.avgDamageToChampions)}`) },
-          { label: '被ダメ 対象 / 対面', values: timeline.map((point) => `${formatStatsApiGames(point.champion?.avgDamageTaken)} / ${formatStatsApiGames(point.opponent?.avgDamageTaken)}`) },
-          { label: 'CC秒 対象 / 対面', values: timeline.map((point) => `${(Number(point.champion?.avgTimeEnemyCcMs || 0) / 1000).toFixed(1)} / ${(Number(point.opponent?.avgTimeEnemyCcMs || 0) / 1000).toFixed(1)}`) }
+          { label: t('champions.matrix.damageDealt'), values: timeline.map((point) => `${formatStatsApiGames(point.champion?.avgDamageToChampions)} / ${formatStatsApiGames(point.opponent?.avgDamageToChampions)}`) },
+          { label: t('champions.matrix.damageTaken'), values: timeline.map((point) => `${formatStatsApiGames(point.champion?.avgDamageTaken)} / ${formatStatsApiGames(point.opponent?.avgDamageTaken)}`) },
+          { label: t('champions.matrix.ccTime'), values: timeline.map((point) => `${(Number(point.champion?.avgTimeEnemyCcMs || 0) / 1000).toFixed(1)} / ${(Number(point.opponent?.avgTimeEnemyCcMs || 0) / 1000).toFixed(1)}`) }
         );
       }
       if (timeline.some((point) => Boolean(point.laneObjectives))) {
         rows.push(
-          { label: 'プレート 取得 / 喪失', values: timeline.map((point) => `${Number(point.laneObjectives?.avgLaneOuterPlatesTaken || 0).toFixed(2)} / ${Number(point.laneObjectives?.avgLaneOuterPlatesLost || 0).toFixed(2)}`) },
-          { label: 'アウタータワー 取得 / 喪失', values: timeline.map((point) => `${formatStatsApiRate(point.laneObjectives?.laneOuterTowerTakenRate)} / ${formatStatsApiRate(point.laneObjectives?.laneOuterTowerLostRate)}`) }
+          { label: t('champions.matrix.plates'), values: timeline.map((point) => `${Number(point.laneObjectives?.avgLaneOuterPlatesTaken || 0).toFixed(2)} / ${Number(point.laneObjectives?.avgLaneOuterPlatesLost || 0).toFixed(2)}`) },
+          { label: t('champions.matrix.outerTower'), values: timeline.map((point) => `${formatStatsApiRate(point.laneObjectives?.laneOuterTowerTakenRate)} / ${formatStatsApiRate(point.laneObjectives?.laneOuterTowerLostRate)}`) }
         );
       }
-      rows.push({ label: '試合数', values: timeline.map((point) => formatStatsApiGames(point.games)) });
+      rows.push({ label: 'Games', values: timeline.map((point) => formatStatsApiGames(point.games)) });
       tbody.append(...rows.map((matrixRow) => {
         const row = doc.createElement('tr');
         const labelCell = doc.createElement('th');
@@ -3504,16 +3505,16 @@
       const summary = doc.createElement('summary');
       summary.className = 'stats-api-timeline-details-summary';
       summary.append(
-        createText('stats-api-timeline-details-label', '詳細データ（表）'),
-        createText('stats-api-timeline-details-hint', 'クリックで表示')
+        createText('stats-api-timeline-details-label', t('champions.detailsTable')),
+        createText('stats-api-timeline-details-hint', t('champions.clickToShow'))
       );
       details.addEventListener('toggle', () => {
         const hint = summary.querySelector<HTMLElement>('.stats-api-timeline-details-hint');
-        if (hint) hint.textContent = details.open ? 'クリックで閉じる' : 'クリックで表示';
+        if (hint) hint.textContent = details.open ? t('champions.clickToHide') : t('champions.clickToShow');
       });
       details.append(
         summary,
-        createText('stats-api-timeline-note', 'リード率は、その時点で対象チャンピオンの値が対面を上回った試合の割合です。試合数はその時点まで継続した試合のみを数えます。', 'p'),
+        createText('stats-api-timeline-note', t('champions.timelineNote'), 'p'),
         createStatsApiTimelineMatrix(timeline)
       );
       return details;
@@ -3530,7 +3531,7 @@
         const breadcrumb = doc.createElement('button');
         breadcrumb.type = 'button';
         breadcrumb.className = 'stats-api-analysis-back';
-        breadcrumb.textContent = '← 対面一覧に戻る';
+        breadcrumb.textContent = t('champions.backToMatchups');
         breadcrumb.addEventListener('click', () => {
           selectedMatchupOpponentChampionId = 0;
           if (lastMatchupsData) renderStatsApiMatchups(lastMatchupsData);
@@ -3539,13 +3540,13 @@
         panel.append(breadcrumb);
       }
       if (!timelineData) {
-        panel.append(createStatsApiEmptyState('この条件では時間推移データがありません。'));
+        panel.append(createStatsApiEmptyState(t('champions.noTimelineData')));
         renderStatsApiAnalysisShell(panel);
         return;
       }
       const timeline = Array.isArray(timelineData.timeline) ? timelineData.timeline : [];
       if (!timeline.length) {
-        panel.append(createStatsApiEmptyState('通常スナップショットがある試合がありません。'));
+        panel.append(createStatsApiEmptyState(t('champions.noSnapshots')));
       } else {
         panel.append(
           createStatsApiTimelineDashboard(timeline),
@@ -3572,6 +3573,7 @@
       try {
         await Promise.all([
           ensureStatsApiRuneCatalog(),
+          ensureSummonerSpellLabels(),
           ensureStatsApiChampionSpellCatalog(championId)
         ]);
         const response = await fetchStatsApiJson(detailsUrl);
@@ -3582,7 +3584,7 @@
         if (requestId !== statsApiDetailsRequestId) return;
         lastDetailsData = null;
         renderSelectedChampionDetails(null);
-        setStatsApiDetailsStatus(`チャンピオン詳細を取得できませんでした: ${formatStatsApiErrorMessage(error)}`);
+        setStatsApiDetailsStatus(t('champions.detailsFailed', { message: formatStatsApiErrorMessage(error) }));
       } finally {
         setStatsApiLoading(false);
       }
@@ -3599,7 +3601,7 @@
         detailsContent.replaceChildren(
           createStatsApiDetailsNavigation(),
           createStatsApiChampionHero(getSelectedChampionSummary()),
-          createStatsApiEmptyState('この条件ではビルドデータがありません。')
+          createStatsApiEmptyState(t('champions.noBuildData'))
         );
         return;
       }
@@ -3672,11 +3674,11 @@
         const opponent = doc.createElement('div');
         opponent.className = 'stats-api-matchup-opponent-main';
         opponent.append(
-          createText('stats-api-matchup-opponent-label', '分析対象', 'span'),
+          createText('stats-api-matchup-opponent-label', t('champions.opponent'), 'span'),
           createText('stats-api-champion-name stats-api-matchup-opponent-name', opponentName, 'h2'),
-          createText('stats-api-champion-subtitle', '対面チャンピオン', 'p')
+          createText('stats-api-champion-subtitle', t('champions.opponent'), 'p')
         );
-        hero.setAttribute('aria-label', `${heading.textContent || ''} 対 ${opponentName}`);
+        hero.setAttribute('aria-label', t('champions.vsOpponent', { champion: heading.textContent || '', opponent: opponentName }));
         hero.append(versus, createStatsApiChampionPortrait(normalizedOpponentId), opponent);
       }
       return hero;
@@ -3686,11 +3688,11 @@
       const section = doc.createElement('section');
       section.className = 'stats-api-keystone-panel';
       section.append(
-        createText('stats-api-section-title', 'キーストーン', 'h3'),
-        createText('stats-api-section-subtitle', 'キーストーンを選択してください', 'p')
+        createText('stats-api-section-title', t('champions.keystone'), 'h3'),
+        createText('stats-api-section-subtitle', t('champions.selectKeystone'), 'p')
       );
       if (!keystones.length) {
-        section.append(createStatsApiEmptyState('キーストーン候補がありません。'));
+        section.append(createStatsApiEmptyState(t('champions.noKeystoneOptions')));
         return section;
       }
       const list = doc.createElement('div');
@@ -3730,7 +3732,7 @@
       const grid = doc.createElement('div');
       grid.className = 'stats-api-detail-grid';
       if (!activeKeystone) {
-        grid.append(createStatsApiDetailCard('詳細', '候補がありません', [createStatsApiEmptyState('表示できるキーストーン詳細がありません。')]));
+        grid.append(createStatsApiDetailCard(t('champions.details'), t('champions.noRecommendations'), [createStatsApiEmptyState(t('champions.noKeystoneDetails'))]));
         return grid;
       }
 
@@ -3740,7 +3742,7 @@
           const entry = doc.createElement('article');
           entry.className = 'stats-api-detail-option';
           entry.append(
-            createText('stats-api-detail-option-title', `${index + 1}位 ルーンセット`, 'h4'),
+            createText('stats-api-detail-option-title', `${index + 1}. ${t('champions.runeSets')}`, 'h4'),
             createStatsApiRuneStyleRow(runeSet.primaryStyleId, runeSet.primaryRuneIds),
             createStatsApiRuneStyleRow(runeSet.secondaryStyleId, runeSet.secondaryRuneIds),
             createStatsApiOptionMeta(runeSet)
@@ -3751,7 +3753,7 @@
       if (activeKeystone.statShards?.length) {
         const shardSection = doc.createElement('section');
         shardSection.className = 'stats-api-detail-subsection';
-        shardSection.append(createText('stats-api-detail-subtitle', 'ルーンシャード', 'h4'));
+        shardSection.append(createText('stats-api-detail-subtitle', t('champions.runeShards'), 'h4'));
         const shardList = doc.createElement('div');
         shardList.className = 'stats-api-item-set-list';
         shardList.append(...activeKeystone.statShards.map((shards) => {
@@ -3772,25 +3774,25 @@
           const node = doc.createElement('article');
           node.className = 'stats-api-detail-option';
           node.append(
-            createText('stats-api-detail-option-title', `${index + 1}位 サモナースペル`, 'h4'),
+            createText('stats-api-detail-option-title', `${index + 1}. ${t('champions.summonerSpells')}`, 'h4'),
             createStatsApiTagList(entry.spellIds.map((id) => getSummonerSpellLabel(id))),
             createStatsApiOptionMeta(entry)
           );
           return node;
         })
-        : [createStatsApiEmptyState('サモナースペル候補がありません。')];
+        : [createStatsApiEmptyState(t('champions.noCandidates', { title: t('champions.summonerSpells') }))];
 
       const buildBodies: HTMLElement[] = [];
       if (activeKeystone.boots?.length) {
-        buildBodies.push(createStatsApiSingleItemRows('ブーツ', activeKeystone.boots));
+        buildBodies.push(createStatsApiSingleItemRows(t('champions.boots'), activeKeystone.boots));
       }
       if (activeKeystone.startingItems?.length) {
         const wrap = doc.createElement('section');
         wrap.className = 'stats-api-detail-subsection';
-        wrap.append(createText('stats-api-detail-subtitle', 'スタートアイテム', 'h4'));
+        wrap.append(createText('stats-api-detail-subtitle', t('champions.startingItems'), 'h4'));
         const list = doc.createElement('div');
         list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow('開始', entry.itemIds, entry, {
+        list.append(...activeKeystone.startingItems.map((entry) => createStatsApiItemSetRow(t('champions.start'), entry.itemIds, entry, {
           compact: true,
           hideTitle: true
         })));
@@ -3800,10 +3802,10 @@
       if (activeKeystone.firstSecondCoreItems?.length) {
         const wrap = doc.createElement('section');
         wrap.className = 'stats-api-detail-subsection';
-        wrap.append(createText('stats-api-detail-subtitle', '1st + 2nd コア', 'h4'));
+        wrap.append(createText('stats-api-detail-subtitle', t('champions.firstSecondCore'), 'h4'));
         const list = doc.createElement('div');
         list.className = 'stats-api-item-set-list';
-        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow('コア', entry.itemIds, entry, {
+        list.append(...activeKeystone.firstSecondCoreItems.map((entry) => createStatsApiItemSetRow(t('champions.core'), entry.itemIds, entry, {
           arrow: true,
           compact: true,
           hideTitle: true
@@ -3812,10 +3814,10 @@
         buildBodies.push(wrap);
       }
       buildBodies.push(
-        createStatsApiSingleItemRows('3rd アイテム', activeKeystone.thirdItems),
-        createStatsApiSingleItemRows('4th アイテム', activeKeystone.fourthItems),
-        createStatsApiSingleItemRows('5th アイテム', activeKeystone.fifthItems),
-        createStatsApiSingleItemRows('6th アイテム', activeKeystone.sixthItems)
+        createStatsApiSingleItemRows(t('champions.thirdItem'), activeKeystone.thirdItems),
+        createStatsApiSingleItemRows(t('champions.fourthItem'), activeKeystone.fourthItems),
+        createStatsApiSingleItemRows(t('champions.fifthItem'), activeKeystone.fifthItems),
+        createStatsApiSingleItemRows(t('champions.sixthItem'), activeKeystone.sixthItems)
       );
 
       const skillBodies: HTMLElement[] = [];
@@ -3827,33 +3829,33 @@
       }
       if (activeKeystone.skillPriorities?.length) {
         skillBodies.push(createStatsApiSkillSection(
-          '優先スキル',
+          t('champions.skillPriority'),
           activeKeystone.skillPriorities.map((entry) => createStatsApiSkillPriorityRow(entry))
         ));
       }
       if (!skillBodies.length) {
-        skillBodies.push(createStatsApiEmptyState('スキル候補がありません。'));
+        skillBodies.push(createStatsApiEmptyState(t('common.noSkillRecommendations')));
       }
 
       grid.append(
         createStatsApiDetailCard(
-          'ルーンセット',
-          'アクティブなキーストーンでよく使われる構成',
-          runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
+          t('champions.runeSets'),
+          t('champions.activeKeystoneRunes'),
+          runeBodies.length ? runeBodies : [createStatsApiEmptyState(t('draft.noRunes'))]
         ),
         createStatsApiDetailCard(
-          'サモナースペル',
-          'このキーストーンと一緒に使われる組み合わせ',
+          t('champions.summonerSpells'),
+          t('champions.keystoneSummoners'),
           summonerBodies
         ),
         createStatsApiDetailCard(
-          'アイテムビルド',
-          '開始から 6th までの代表候補',
+          t('champions.itemBuild'),
+          t('champions.itemBuildDescription'),
           buildBodies
         ),
         createStatsApiDetailCard(
-          'スキルオーダー',
-          'Lv1-6 の取り方と優先して伸ばすスキル',
+          t('champions.skillOrder'),
+          t('champions.skillOrderDescription'),
           skillBodies
         )
       );
@@ -3864,7 +3866,7 @@
       const grid = doc.createElement('div');
       grid.className = 'stats-api-detail-grid';
       if (!activeKeystone) {
-        grid.append(createStatsApiDetailCard('詳細', '候補がありません', [createStatsApiEmptyState('表示できるキーストーン詳細がありません。')]));
+        grid.append(createStatsApiDetailCard(t('champions.details'), t('champions.noRecommendations'), [createStatsApiEmptyState(t('champions.noKeystoneDetails'))]));
         return grid;
       }
 
@@ -3873,11 +3875,11 @@
 
       const buildBodies: HTMLElement[] = [
         createStatsApiBuildStageSection(
-          '開始',
+          t('champions.start'),
           createStatsApiBuildStageRowsFromSets(activeKeystone.startingItems, { iconOnly: true })
         ),
         createStatsApiBuildStageSection(
-          'ブーツ',
+          t('champions.boots'),
           (activeKeystone.boots || []).map((entry) => createStatsApiItemSetRow('', [entry.itemId], entry, {
             hideTitle: true,
             hidePickRate: true,
@@ -3923,18 +3925,18 @@
       }
       if (activeKeystone.skillPriorities?.length) {
         skillBodies.push(createStatsApiSkillSection(
-          '優先スキル',
+          t('champions.skillPriority'),
           activeKeystone.skillPriorities.map((entry) => createStatsApiSkillPriorityRow(entry))
         ));
       }
       if (!skillBodies.length) {
-        skillBodies.push(createStatsApiEmptyState('スキル候補がありません。'));
+        skillBodies.push(createStatsApiEmptyState(t('common.noSkillRecommendations')));
       }
 
       const runeCard = createStatsApiDetailCard(
-        'ルーンセット',
+        t('champions.runeSets'),
         '',
-        runeBodies.length ? runeBodies : [createStatsApiEmptyState('ルーン候補がありません。')]
+        runeBodies.length ? runeBodies : [createStatsApiEmptyState(t('draft.noRunes'))]
       );
       runeCard.classList.add('stats-api-detail-card-compact', 'stats-api-detail-card-runes');
       const runeHeader = runeCard.querySelector('.stats-api-detail-card-header');
@@ -3944,14 +3946,14 @@
       }
 
       const buildCard = createStatsApiDetailCard(
-        'アイテムビルド',
+        t('champions.itemBuild'),
         '',
         buildBodies
       );
       buildCard.classList.add('stats-api-detail-card-build');
 
       const summonerCard = createStatsApiDetailCard(
-        '\u30b5\u30e2\u30ca\u30fc\u30b9\u30da\u30eb',
+        t('champions.summonerSpells'),
         '',
         summonerBodies
       );
@@ -3962,7 +3964,7 @@
       leftColumn.append(runeCard, summonerCard);
 
       const skillCard = createStatsApiDetailCard(
-        'スキルオーダー',
+        t('champions.skillOrder'),
         '',
         skillBodies
       );
@@ -3977,9 +3979,9 @@
       if (errorInfo.status !== 429) return false;
 
       const retryAfterSeconds = errorInfo.retryAfterSeconds || STATS_API_DEFAULT_RETRY_AFTER_SECONDS;
-      const targetLabel = target === 'meta' ? 'StatsAPIのメタ情報' : 'チャンピオン一覧';
+      const targetLabel = target === 'meta' ? t('champions.metaInfo') : t('champions.championList');
       setStatsApiLoading(false);
-      setStatsApiStatus(`${targetLabel}はレート制限中です。${retryAfterSeconds}秒後に自動再試行します。`);
+      setStatsApiStatus(t('champions.rateLimitedRetry', { target: targetLabel, seconds: retryAfterSeconds }));
 
       statsApiRetryTimer = (deps.setTimeout || root.setTimeout || setTimeout)(() => {
         statsApiRetryTimer = null;

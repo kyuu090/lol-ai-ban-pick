@@ -6,6 +6,8 @@ Electron固有のpreload/IPCを含む画面を自動で起動し、Codexが確�
 
 StatsAPIは既定で本番の `https://db.banpick-ai.lol` を使用する。LCU状態、設定、ChampionPoolはキャプチャ専用fixtureを使用するため、League Clientを起動する必要はない。
 
+キャプチャfixtureの既定言語は英語であり、チャンピオン名も英語（例: `Ahri`、`Zed`）で表示する。
+
 ## 基本コマンド
 
 タイムライン分析画面をライトテーマ、1440×900で撮影する。
@@ -44,6 +46,7 @@ npm run capture:ui -- --view=timeline
 | `draft-ban` | BAN予定チャンピオンに対するStatsAPIカウンター候補のモック |
 | `draft-pick` | 指定した対面に対するStatsAPI有利候補とChampionPoolのモック |
 | `draft-pick-pool` | 対面未指定時の通常戦績を表示するChampionPoolのモック |
+| `in-game` | 試合開始後のおすすめアイテム、スキルオーダー、対面AI分析のモック |
 
 例:
 
@@ -65,6 +68,7 @@ npm run capture:ui -- --view=matchup --theme=dark
 | `--show` | 撮影時にElectronウィンドウを表示する |
 | `--hold-ms=5000` | 撮影後にウィンドウを表示し続ける時間 |
 | `--stats-source=production|fixture` | StatsAPIのデータ元。既定値は `production`。固定データでも全レーンを選択可能 |
+| `--ai-source=fixture|production` | `in-game` の対面AI分析データ元。既定値は `fixture`。`production` は実BFFを呼び出す |
 
 `--show` を指定した場合、既定で撮影後5秒間ウィンドウを表示する。
 
@@ -84,6 +88,18 @@ fixtureは `scripts/ui-capture-fixtures.js` にあり、Meta、チャンピオ�
 npm run capture:ui -- --view=draft-ban --stats-source=fixture
 npm run capture:ui -- --view=draft-pick --stats-source=fixture
 npm run capture:ui -- --view=draft-pick-pool --stats-source=fixture
+```
+
+試合開始後の画面は、まず完了済みのチャンプ選択状態をレンダラーへ渡し、その後に `GameStart` 状態へ遷移する。これにより、本番と同じく直前のピック、現在のルーン、同レーン対面を使っておすすめアイテム・スキルオーダー・対面AI分析を表示する。
+
+```powershell
+npm run capture:ui -- --view=in-game --stats-source=fixture --show --hold-ms=60000
+```
+
+対面AI分析も実際のBFFレスポンスで確認する場合は、明示的に `--ai-source=production` を指定する。この指定では `/api/openai/lane-matchup` へ、通常のアプリと同じ英語の Ahri 対 Zed のfixtureコンテキストをPOSTする。OpenAI利用枠を消費しうるため、既定値は `fixture` とする。
+
+```powershell
+npm run capture:ui -- --view=in-game --stats-source=fixture --ai-source=production --show --hold-ms=60000
 ```
 
 タイムライングラフのツールチップを撮影する例:

@@ -123,3 +123,22 @@ test('getChampionCatalog falls back to Data Dragon champion data', async () => {
     103: { id: 103, name: 'Ahri', alias: 'Ahri', title: 'the Nine-Tailed Fox' }
   });
 });
+
+test('getChampionCatalog requests Korean Data Dragon data for the kr application language', async () => {
+  const requestedUrls = [];
+  const client = createLcuClient({
+    getSettings: () => ({ lolInstallDir: 'C:\\Riot Games\\League of Legends', language: 'kr' }),
+    getConnection: () => null,
+    getStatus: () => 'disconnected',
+    getCachedChampionById: () => null,
+    requestJsonFromUrl: async (url) => {
+      requestedUrls.push(url);
+      return url.endsWith('/api/versions.json') ? ['15.13.1'] : { data: {} };
+    },
+    setIconUnavailableUntil() {}, getIconUnavailableUntil: () => 0, getIconUnavailableLogged: () => false, setIconUnavailableLogged() {},
+    log: { debug() {}, warn() {} }, serializeForLog: (error) => error
+  });
+
+  await client.getChampionCatalog();
+  assert.ok(requestedUrls.includes('https://ddragon.leagueoflegends.com/cdn/15.13.1/data/ko_KR/champion.json'));
+});

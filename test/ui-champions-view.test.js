@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { setLanguage } = require('../ui/i18n');
+
+setLanguage('ja', { documentElement: {}, querySelectorAll: () => [] });
 
 const {
   buildStatsApiChampionDetailsUrl,
@@ -137,8 +140,8 @@ test('champions view analysis URLs keep the selected champion, opponent, and com
 
 test('champions view builds official Data Dragon rune data URLs', () => {
   assert.equal(
-    buildStatsApiRunesDataUrl('16.13', 'ja_JP'),
-    'https://ddragon.leagueoflegends.com/cdn/16.13.1/data/ja_JP/runesReforged.json'
+    buildStatsApiRunesDataUrl('16.13', 'en_US'),
+    'https://ddragon.leagueoflegends.com/cdn/16.13.1/data/en_US/runesReforged.json'
   );
   assert.equal(
     buildStatsApiRunesDataUrl('16.13.1', 'en_US'),

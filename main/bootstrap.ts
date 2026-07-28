@@ -7,6 +7,7 @@ const {
   createDefaultSettings,
   createPublicSettings,
   loadSettings: loadSettingsFromStore,
+  normalizeAppLanguage,
   normalizeThemeMode,
   saveSettings: saveSettingsToStore
 } = require('./settings-store');
@@ -53,13 +54,14 @@ const { createLaneMatchupController } = require('./lane-matchup-controller');
 const { createMatchHistoryController } = require('./match-history-controller');
 const { showSeasonMatchHistoryDialog } = require('./season-match-history-dialog');
 const { createLcuController } = require('./lcu-controller');
+const { translate: translateMain } = require('./i18n');
 
 import type { BrowserWindow, IpcMain } from 'electron';
 import type { AppState } from '../types/domain/app-state';
 import type { ChampionPool } from '../types/domain/champion';
 import type { Summoner, LcuErrorPayload } from '../types/domain/lcu';
 import type { MatchHistoryStatus } from '../types/domain/match-history';
-import type { PublicSettings, RiotPlatformRegion, ThemeMode } from '../types/domain/settings';
+import type { AppLanguage, PublicSettings, RiotPlatformRegion, ThemeMode } from '../types/domain/settings';
 
 const LCU_ENDPOINTS = {
   lobby: '/lol-lobby/v2/lobby',
@@ -89,7 +91,6 @@ const SPLASH_HTML_PATH = path.join(__dirname, '..', 'splash.html');
 const SEASON_MATCH_HISTORY_DIALOG_HTML_PATH = path.join(__dirname, '..', 'season-match-history-dialog.html');
 const APP_USER_MODEL_ID = 'com.banpick.ai';
 const APP_USER_DATA_DIR_NAME = 'banpick-ai';
-const RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE = '試合データ取得サービスへの接続を確認してください。';
 const PACKAGE_LOCK_PATH = path.join(__dirname, '..', 'package-lock.json');
 const SPLASH_LOAD_TIMEOUT_MS = 3000;
 
@@ -98,6 +99,7 @@ type StoredSettings = {
   riotPlatformRegion: RiotPlatformRegion;
   riotRegionalRoute: import('../types/domain/settings').RiotRegionalRoute;
   themeMode: ThemeMode;
+  language: AppLanguage;
 };
 
 function bootstrap(): void {
@@ -143,7 +145,8 @@ function bootstrap(): void {
         })
       });
     },
-    clearRiotRateLimitCountdown: () => matchHistoryController.clearRiotRateLimitCountdown()
+    clearRiotRateLimitCountdown: () => matchHistoryController.clearRiotRateLimitCountdown(),
+    getLanguage: () => statePublisher.getState().settings.language
   });
 
   const matchHistoryController = createMatchHistoryController({
@@ -161,6 +164,7 @@ function bootstrap(): void {
       htmlPath: SEASON_MATCH_HISTORY_DIALOG_HTML_PATH,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       themeMode: settings.themeMode,
+      language: settings.language,
       totalMatches,
       missingMatches,
       estimateText
@@ -186,7 +190,7 @@ function bootstrap(): void {
       estimatedRequestsPerTwoMinutes: RIOT_ESTIMATED_REQUESTS_PER_TWO_MINUTES,
       seasonDetailBatchDelayMs: RIOT_SEASON_MATCH_DETAIL_BATCH_DELAY_MS,
       seasonDetailConcurrency: RIOT_SEASON_MATCH_DETAIL_CONCURRENCY,
-      serviceHelpMessage: RIOT_MATCH_DATA_SERVICE_HELP_MESSAGE
+      serviceHelpMessage: translateMain(statePublisher.getState().settings.language, 'matchHistory.serviceUnavailable')
     },
     log,
     serializeForLog
@@ -201,7 +205,7 @@ function bootstrap(): void {
     },
     gameflowSessionEndpoint: LCU_ENDPOINTS.gameflowSession,
     retryDelayMs: LANE_MATCHUP_RETRY_DELAY_MS,
-    requestLaneMatchupAnalysis,
+    requestLaneMatchupAnalysis: (payload: unknown) => requestLaneMatchupAnalysis(payload, settings.language),
     log,
     serializeForLog
   });
@@ -322,7 +326,7 @@ function bootstrap(): void {
     if (!window || window.isDestroyed()) return;
     await waitForSplashWindowLoaded(window);
 
-    const safeMessage = JSON.stringify(String(message || '').trim() || '起動を開始しています...');
+    const safeMessage = JSON.stringify(String(message || '').trim() || translateMain(settings.language, 'app.splash.starting'));
     try {
       await window.webContents.executeJavaScript(
         `window.setSplashStatus && window.setSplashStatus(${safeMessage});`,
@@ -364,7 +368,7 @@ function bootstrap(): void {
 
   async function chooseLolInstallDir(): Promise<PublicSettings> {
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'League of Legends のインストールディレクトリを選択',
+      title: translateMain(settings.language, 'app.selectInstallDirectory'),
       defaultPath: settings.lolInstallDir,
       properties: ['openDirectory']
     });
@@ -380,7 +384,7 @@ function bootstrap(): void {
 
   async function updateLolInstallDir(_event: unknown, lolInstallDir: unknown): Promise<PublicSettings> {
     if (!lolInstallDir || typeof lolInstallDir !== 'string') {
-      throw new Error('LoLインストールディレクトリが空です');
+      throw new Error(translateMain(settings.language, 'app.installDirectoryRequired'));
     }
 
     await saveSettings({ lolInstallDir });
@@ -400,6 +404,12 @@ function bootstrap(): void {
 
   async function updateThemeMode(_event: unknown, themeMode: unknown): Promise<PublicSettings> {
     await saveSettings({ themeMode: normalizeThemeMode(themeMode) });
+    return createPublicSettings(settings);
+  }
+
+  async function updateLanguage(_event: unknown, language: unknown): Promise<PublicSettings> {
+    await saveSettings({ language: normalizeAppLanguage(language) });
+    await lcuController.reconnectWithCurrentSettings();
     return createPublicSettings(settings);
   }
 
@@ -486,7 +496,7 @@ function bootstrap(): void {
     const appVersion = String(app.getVersion() || '').trim();
     if (appVersion) return appVersion;
 
-    throw new Error('クライアントバージョンを取得できませんでした');
+    throw new Error(translateMain(settings.language, 'app.clientVersionUnavailable'));
   }
 
   function cleanupWebSocket(): void {
@@ -498,7 +508,7 @@ function bootstrap(): void {
     .then(async () => {
       log.info('App ready');
       const splashWindow = createStartupSplashWindow();
-      await setSplashStatus(splashWindow, 'バージョン情報を確認しています...');
+      await setSplashStatus(splashWindow, translateMain('en', 'app.splash.checkingVersion'));
       const currentVersion = await getClientVersion();
       await setSplashVersion(splashWindow, currentVersion);
       const startupUpdateResult = await runStartupUpdateFlow({
@@ -514,11 +524,11 @@ function bootstrap(): void {
         return;
       }
 
-      await setSplashStatus(splashWindow, '設定を読み込んでいます...');
+      await setSplashStatus(splashWindow, translateMain('en', 'app.splash.loadingSettings'));
       await loadSettings();
-      await setSplashStatus(splashWindow, 'チャンピオンプールを読み込んでいます...');
+      await setSplashStatus(splashWindow, translateMain(settings.language, 'app.splash.loadingChampionPool'));
       await loadChampionPool();
-      await setSplashStatus(splashWindow, '起動準備をしています...');
+      await setSplashStatus(splashWindow, translateMain(settings.language, 'app.splash.preparing'));
 
       registerIpcHandlers({
         ipcMain: ipcMain as IpcMain,
@@ -537,19 +547,20 @@ function bootstrap(): void {
           chooseLolInstallDir,
           updateLolInstallDir,
           updateRiotPlatformRegion,
-          updateThemeMode,
+      updateThemeMode,
+      updateLanguage,
           minimizeWindow,
           toggleMaximizeWindow,
             closeWindow,
             collectRiotMatchHistory: matchHistoryController.collectRiotMatchHistory,
             resolveInGameStatsOpponent,
             requestStatsApiJson,
-            requestPickPhaseAnalysis,
-            requestFinalCompositionAnalysis
+            requestPickPhaseAnalysis: (event: unknown, context: unknown) => requestPickPhaseAnalysis(event, context, settings.language),
+            requestFinalCompositionAnalysis: (event: unknown, context: unknown) => requestFinalCompositionAnalysis(event, context, settings.language)
           }
       });
 
-      await setSplashStatus(splashWindow, 'ウィンドウを表示しています...');
+      await setSplashStatus(splashWindow, translateMain(settings.language, 'app.splash.showingWindow'));
       const nextMainWindow = createWindow();
       await waitForWindowReady(nextMainWindow);
       await closeSplashWindow(splashWindow);
@@ -565,8 +576,8 @@ function bootstrap(): void {
     .catch((error: unknown) => {
       log.error('Bootstrap failed', serializeForLog(error));
       dialog.showErrorBox(
-        '起動エラー',
-        'アプリの起動中にエラーが発生しました。debug.log を確認してください。'
+        translateMain(settings.language, 'app.startupErrorTitle'),
+        translateMain(settings.language, 'app.startupErrorMessage')
       );
       app.quit();
     });
@@ -608,7 +619,7 @@ function getPuuidFromSummoner(summoner: Summoner | LcuErrorPayload | null): stri
 
 function getRiotIdFromSummoner(summoner: Summoner | LcuErrorPayload | null): { gameName: string; tagLine: string } {
   if (!summoner || 'error' in summoner) {
-    throw new Error('Riot IDを取得するにはLoLクライアントへログインしてください');
+    throw new Error(translateMain('en', 'app.riotIdLoginRequired'));
   }
 
   const rawGameName = summoner.gameName || summoner.riotIdGameName || '';
@@ -623,7 +634,7 @@ function getRiotIdFromSummoner(summoner: Summoner | LcuErrorPayload | null): { g
     if (gameName && tagLine) return { gameName, tagLine };
   }
 
-  throw new Error('LCU current summonerからRiot IDとTaglineを取得できませんでした');
+  throw new Error(translateMain('en', 'app.riotIdUnavailable'));
 }
 
 export = {

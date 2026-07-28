@@ -2,6 +2,8 @@
   function createInGameView(deps: InGameViewDeps) {
     const elements = deps.elements;
     const doc = (deps.document || root.document) as Document;
+    const t = (key: string): string => root.UiI18n?.translate(key) || key;
+    const getDataDragonLocale = (): 'en_US' | 'ja_JP' | 'ko_KR' => root.UiI18n?.getDataDragonLocale() || 'en_US';
     const rendererLog = (root as any).lcuApi?.log;
     const statsApiHelpers = (root.UiChampionsView || {}) as any;
     const buildStatsApiChampionDetailsUrl = typeof statsApiHelpers.buildStatsApiChampionDetailsUrl === 'function'
@@ -25,7 +27,7 @@
       };
     const formatStatsApiErrorMessage = typeof statsApiHelpers.formatStatsApiErrorMessage === 'function'
       ? statsApiHelpers.formatStatsApiErrorMessage
-      : (error: any) => String(error?.message || error || 'StatsAPIを取得できませんでした。');
+      : (error: any) => String(error?.message || error || t('common.statsApiLoadFailed'));
     const normalizeRuneCatalog = typeof statsApiHelpers.normalizeStatsApiRuneCatalog === 'function'
       ? statsApiHelpers.normalizeStatsApiRuneCatalog
       : null;
@@ -34,7 +36,7 @@
       : null;
     const buildChampionSpellDataUrl = typeof statsApiHelpers.buildStatsApiChampionSpellDataUrl === 'function'
       ? statsApiHelpers.buildStatsApiChampionSpellDataUrl
-      : (patch: string, alias: string, locale = 'ja_JP') => {
+      : (patch: string, alias: string, locale = 'en_US') => {
         const normalizedAlias = String(alias || '').trim();
         const normalizedPatch = String(patch || '').trim();
         const version = /^\d+\.\d+\.\d+$/.test(normalizedPatch)
@@ -184,7 +186,8 @@
       if (runeCatalogPromise) return runeCatalogPromise;
       if (!fetchImpl) return null;
       const version = await ensureDataDragonVersion();
-      const runesUrl = buildRunesDataUrl ? buildRunesDataUrl(version, 'ja_JP') : `https://ddragon.leagueoflegends.com/cdn/${version}/data/ja_JP/runesReforged.json`;
+      const locale = getDataDragonLocale();
+      const runesUrl = buildRunesDataUrl ? buildRunesDataUrl(version, locale) : `https://ddragon.leagueoflegends.com/cdn/${version}/data/${locale}/runesReforged.json`;
       runeCatalogPromise = fetchImpl(runesUrl)
         .then((response: Response) => {
           if (!response.ok) {
@@ -219,7 +222,7 @@
         return null;
       }
       const version = await ensureDataDragonVersion();
-      const catalogUrl = buildChampionSpellDataUrl(version, alias, 'ja_JP');
+      const catalogUrl = buildChampionSpellDataUrl(version, alias, getDataDragonLocale());
       if (championSpellCatalogs.has(catalogUrl)) {
         return championSpellCatalogs.get(catalogUrl) || null;
       }
@@ -255,7 +258,7 @@
       const normalizedSkillLetter = String(skillLetter || '').trim().toUpperCase();
       const alias = getChampionAlias(championId);
       if (!normalizedSkillLetter || !alias) return null;
-      const catalogUrl = buildChampionSpellDataUrl(dataDragonVersion, alias, 'ja_JP');
+      const catalogUrl = buildChampionSpellDataUrl(dataDragonVersion, alias, getDataDragonLocale());
       const catalog = championSpellCatalogs.get(catalogUrl);
       return catalog?.[normalizedSkillLetter] || null;
     }
@@ -411,7 +414,7 @@
       if (ids.length) {
         list.append(...ids.map((itemId) => createRecommendationItemToken(itemId, { iconOnly: true })));
       } else {
-        list.append(createText('stats-api-detail-empty', '候補なし', 'span'));
+        list.append(createText('stats-api-detail-empty', t('inGame.noCandidates'), 'span'));
       }
       body.append(createText('stats-api-item-set-title', title, 'h4'), list);
       row.append(body);
@@ -449,7 +452,7 @@
           table.append(cell);
         });
       } else {
-        table.append(createText('stats-api-detail-empty', '候補なし', 'span'));
+        table.append(createText('stats-api-detail-empty', t('inGame.noCandidates'), 'span'));
       }
       row.append(table);
       if (entry) {
@@ -487,7 +490,7 @@
           priority.append(tag);
         });
       } else {
-        priority.append(createText('stats-api-detail-empty', '候補なし', 'span'));
+        priority.append(createText('stats-api-detail-empty', t('inGame.noCandidates'), 'span'));
       }
       row.append(priority);
       if (entry) {
@@ -503,7 +506,7 @@
       if (rows.length) {
         section.append(...rows);
       } else {
-        section.append(createText('stats-api-detail-empty', '候補なし', 'p'));
+        section.append(createText('stats-api-detail-empty', t('inGame.noCandidates'), 'p'));
       }
       return section;
     }
@@ -518,7 +521,7 @@
         list.append(...rows);
         section.append(list);
       } else {
-        section.append(createText('stats-api-detail-empty', '候補なし', 'p'));
+        section.append(createText('stats-api-detail-empty', t('inGame.noCandidates'), 'p'));
       }
       return section;
     }
@@ -556,7 +559,7 @@
         return {
           state: 'empty',
           activeKeystone: null,
-          message: 'チャンピオンとロールが確定したら、おすすめビルドとスキルオーダーを表示します。'
+          message: t('inGame.recommendationPending')
         };
       }
 
@@ -564,7 +567,7 @@
         return {
           state: 'waiting',
           activeKeystone: null,
-          message: '同じレーンの相手チャンピオン確定後に取得します。'
+          message: t('inGame.matchupPending')
         };
       }
 
@@ -573,7 +576,7 @@
         return {
           state: 'loading',
           activeKeystone: null,
-          message: 'StatsAPI からおすすめを取得中です。'
+          message: t('inGame.loadingRecommendations')
         };
       }
 
@@ -581,7 +584,7 @@
         return {
           state: 'error',
           activeKeystone: null,
-          message: slotState.error || 'おすすめを取得できませんでした。'
+          message: slotState.error || t('inGame.recommendationsUnavailable')
         };
       }
 
@@ -591,7 +594,7 @@
         return {
           state: 'empty',
           activeKeystone: null,
-          message: 'おすすめデータがありません。'
+          message: t('inGame.noRecommendationData')
         };
       }
 
@@ -606,7 +609,7 @@
       const tabList = doc.createElement('div');
       tabList.className = 'in-game-recommend-tab-list';
       tabList.setAttribute('role', 'tablist');
-      tabList.setAttribute('aria-label', '推奨表示の切り替え');
+      tabList.setAttribute('aria-label', t('inGame.recommendationTabs'));
 
       const entries: Array<{ key: 'general' | 'matchup'; disabled?: boolean }> = [
         { key: 'general' },
@@ -677,7 +680,7 @@
           (Array.isArray(activeKeystone?.skillOpenings) ? activeKeystone.skillOpenings : []).map((entry: any) => createRecommendationOpeningRow(entry, context?.championId))
         ),
         createRecommendationSection(
-          '優先スキル',
+          t('inGame.skillPriority'),
           (Array.isArray(activeKeystone?.skillPriorities) ? activeKeystone.skillPriorities : []).map((entry: any) => createRecommendationPriorityRow(entry, context?.championId))
         )
       );
@@ -693,7 +696,7 @@
       panel.replaceChildren();
 
       if (!recommendationContext) {
-        panel.append(createText('in-game-empty-note', 'チャンピオンとロールが確定したら、おすすめビルドとスキルオーダーを表示します。', 'p'));
+        panel.append(createText('in-game-empty-note', t('inGame.recommendationPending'), 'p'));
         return;
       }
 
@@ -715,7 +718,7 @@
       panel.replaceChildren();
 
       if (!recommendationContext) {
-        panel.append(createText('in-game-empty-note', 'チャンピオンとロールが確定したら、スキルオーダーを表示します。', 'p'));
+        panel.append(createText('in-game-empty-note', t('inGame.skillPending'), 'p'));
         return;
       }
 
@@ -726,7 +729,7 @@
       const slotState = recommendationSlots[slotKey];
       if (!deps.requestStatsApiJson) {
         slotState.status = 'error';
-        slotState.error = 'StatsAPI request helper が利用できません。';
+        slotState.error = t('common.statsApiUnavailable');
         slotState.data = null;
         renderInGameRecommendations(lastRecommendationContext);
         renderInGameSkillOrder(lastRecommendationContext);
@@ -905,10 +908,10 @@
         elements.inGameSelfPortrait.textContent = '?';
       }
 
-      elements.inGameChampionName.textContent = championId > 0 ? deps.championLabel(championId) : '試合中です';
+      elements.inGameChampionName.textContent = championId > 0 ? deps.championLabel(championId) : t('inGame.title');
       elements.inGameChampionDetail.textContent = championId > 0
         ? `${deps.positionLabel(position)} / ${summonerName || 'Summoner'}`
-        : 'ドラフト情報が取得できた試合では、ここに今回のピックメモを表示します。';
+        : t('inGame.pickMemo');
 
       renderInGameKeystone(keystoneId);
 
@@ -981,22 +984,22 @@
       panel.append(header);
 
       if (status === 'requesting') {
-        panel.append(createDraftAiAnalysisStatus('AIに最終構成を分析依頼中・・'));
+        panel.append(createDraftAiAnalysisStatus(t('inGame.final.loading')));
         return;
       }
 
       if (status === 'error') {
-        panel.append(createDraftAiAnalysisStatus(error || 'AI分析を取得できませんでした。'));
+        panel.append(createDraftAiAnalysisStatus(error || t('inGame.final.unavailable')));
         return;
       }
 
       if (status !== 'ready') {
-        panel.append(createDraftAiAnalysisStatus('最終構成分析を待機中・・'));
+        panel.append(createDraftAiAnalysisStatus(t('inGame.final.waiting')));
         return;
       }
 
       if (!notes.length) {
-        panel.append(createDraftAiAnalysisStatus('AI分析を表示できませんでした。'));
+        panel.append(createDraftAiAnalysisStatus(t('inGame.final.unavailable')));
         return;
       }
 
@@ -1033,17 +1036,17 @@
       panel.append(header);
 
       if (status === 'requesting') {
-        panel.append(createDraftAiAnalysisStatus('AIにレーン対面分析を依頼中...'));
+        panel.append(createDraftAiAnalysisStatus(t('inGame.lane.loading')));
         return;
       }
 
       if (status === 'error') {
-        panel.append(createDraftAiAnalysisStatus(analysis?.error || 'AI対面分析を取得できませんでした。'));
+        panel.append(createDraftAiAnalysisStatus(analysis?.error || t('inGame.lane.unavailable')));
         return;
       }
 
       if (status !== 'ready') {
-        panel.append(createDraftAiAnalysisStatus('GameStart / InProgress の対面情報を待っています。'));
+        panel.append(createDraftAiAnalysisStatus(t('inGame.lane.waiting')));
         return;
       }
 
@@ -1239,7 +1242,7 @@
     function createLaneMatchupOpponentVisual({ championIds, championName }: any): HTMLSpanElement {
       const container = doc.createElement('span');
       container.className = 'lane-matchup-title-opponent';
-      container.title = championName ? `vs ${championName}` : 'vs 相手';
+      container.title = championName ? `vs ${championName}` : t('inGame.opponent');
 
       const label = doc.createElement('span');
       label.textContent = 'vs';
@@ -1252,7 +1255,7 @@
 
       if (!ids.length) {
         const fallback = doc.createElement('span');
-        fallback.textContent = championName || '相手';
+        fallback.textContent = championName || t('inGame.opponent');
         container.append(fallback);
         return container;
       }

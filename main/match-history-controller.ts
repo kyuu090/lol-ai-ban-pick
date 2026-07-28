@@ -25,6 +25,7 @@ const {
   createMatchHistorySummary
 } = require('./app-state');
 const { extractUserLaneMatchupTimeline } = require('../riot-match-timeline');
+const { translate: translateMain } = require('./i18n');
 
 type Timer = ReturnType<typeof setTimeout>;
 type RiotId = { gameName: string; tagLine: string };
@@ -248,7 +249,7 @@ function createMatchHistoryController({
 
   function formatRiotRateLimitMessage(nextRetryAtMs: number): string {
     const seconds = Math.max(0, Math.ceil((nextRetryAtMs - Date.now()) / 1000));
-    return `RiotAPIのRateLimitを待機中... (次回取得まで${seconds}秒)`;
+    return translateMain(getState().settings?.language, 'matchHistory.rateLimited', { seconds });
   }
 
   function createRiotRetryHandler({ onRateLimitStart = null }: { onRateLimitStart?: (() => Promise<unknown> | unknown) | null } = {}) {
@@ -456,7 +457,9 @@ function createMatchHistoryController({
     missingMatches: number;
   }): Promise<boolean> {
     const estimateMinutes = estimateSeasonCollectionMinutes(missingMatches);
-    const estimateText = estimateMinutes > 0 ? `${estimateMinutes}分程度` : '1分未満';
+    const estimateText = estimateMinutes > 0
+      ? translateMain(getState().settings?.language, 'matchHistory.estimateMinutes', { minutes: estimateMinutes })
+      : translateMain(getState().settings?.language, 'matchHistory.estimateUnderMinute');
     return showSeasonMatchHistoryCollectionDialog({
       totalMatches,
       missingMatches,
@@ -469,7 +472,7 @@ function createMatchHistoryController({
     options: CollectRiotMatchHistoryOptions = {}
   ): Promise<unknown> {
     if (matchHistoryInProgress) {
-      throw new Error('試合データを取得中です');
+      throw new Error(translateMain(getState().settings?.language, 'matchHistory.inProgress'));
     }
 
     matchHistoryInProgress = true;
@@ -489,7 +492,7 @@ function createMatchHistoryController({
       failedRequests: 0,
       retryAttempt: 0,
       nextRetryAt: null,
-      message: `試合データ収集中... 0/${requestedMatches} 試合`,
+      message: translateMain(getState().settings?.language, 'matchHistory.collecting', { requestedMatches }),
       error: null,
       startedAt
     });
@@ -497,13 +500,13 @@ function createMatchHistoryController({
     try {
       const currentSummonerPuuid = getPuuidFromSummoner(getState().summoner);
       if (!currentSummonerPuuid) {
-        throw new Error('試合データを取得するにはLoLクライアントへログインしてください');
+        throw new Error(translateMain(getState().settings?.language, 'matchHistory.loginRequired'));
       }
 
       const riotId = getRiotIdFromSummoner(getState().summoner);
       const region = getState().detectedRiotPlatformRegion;
       if (!region) {
-        throw new Error('LoLクライアントからログイン先サーバを検出できていません');
+        throw new Error(translateMain(getState().settings?.language, 'matchHistory.regionUnavailable'));
       }
       const onRetry = createRiotRetryHandler();
       const storagePuuid = currentSummonerPuuid;
@@ -518,7 +521,7 @@ function createMatchHistoryController({
       }) as { puuid?: string } | null;
 
       if (!account?.puuid) {
-        throw new Error('Riot APIからPUUIDを取得できませんでした');
+        throw new Error(translateMain(getState().settings?.language, 'matchHistory.puuidUnavailable'));
       }
       clearRiotRateLimitCountdown();
       const targetPuuid = account.puuid;
@@ -562,7 +565,7 @@ function createMatchHistoryController({
         if (missingMatchIds.length === 0) {
           updateMatchHistoryStatus({
             phase: 'collecting',
-            message: '未取得な試合は0件です'
+            message: translateMain(getState().settings?.language, 'matchHistory.noneMissing')
           });
         } else {
           const confirmed = await confirmSeasonMatchHistoryCollection({
@@ -634,7 +637,7 @@ function createMatchHistoryController({
         if (missingMatchIdSet.has(matchIdKey)) {
           updateMatchHistoryStatus({
             phase: 'collecting',
-            message: `試合詳細を取得中... ${fetchedMatches}/${missingMatchIds.length} 試合`
+            message: translateMain(getState().settings?.language, 'matchHistory.fetchingDetails', { completed: fetchedMatches, total: missingMatchIds.length })
           });
           try {
             const result = await riotMatchHistoryService.collectBffMatchDetailsBatch({
@@ -655,7 +658,7 @@ function createMatchHistoryController({
         if (missingTimelineMatchIdSet.has(matchIdKey) && matchesById[matchIdKey]) {
           updateMatchHistoryStatus({
             phase: 'collecting',
-            message: `タイムラインを取得中... ${completedTimelineMatches}/${missingTimelineMatchIds.length} 試合`
+            message: translateMain(getState().settings?.language, 'matchHistory.fetchingTimeline', { completed: completedTimelineMatches, total: missingTimelineMatchIds.length })
           });
           const timelineResult = await riotMatchHistoryService.collectBffMatchTimelines({
             region,
@@ -677,7 +680,7 @@ function createMatchHistoryController({
 
       updateMatchHistoryStatus({
         phase: 'normalizing',
-        message: '試合データを正規化しています'
+        message: translateMain(getState().settings?.language, 'matchHistory.normalizing')
       });
 
       const snapshot = await publishCurrentSnapshot() as PublishedMatchHistorySnapshot;
@@ -703,9 +706,9 @@ function createMatchHistoryController({
           nextRetryAt: null,
           message: phase === 'completed'
             ? (mode === 'season' && source === 'manual' && missingMatchIds.length === 0
-              ? '未取得な試合は0件です'
-              : `試合データ収集完了 ${fetchedMatches}試合を更新しました`)
-            : `一部の試合データを収集しました ${fetchedMatches}試合を更新 / ${failedRequests}件失敗`,
+              ? translateMain(getState().settings?.language, 'matchHistory.noneMissing')
+              : translateMain(getState().settings?.language, 'matchHistory.complete', { matches: fetchedMatches }))
+            : translateMain(getState().settings?.language, 'matchHistory.partial', { matches: fetchedMatches, failed: failedRequests }),
           error: null
         });
       }

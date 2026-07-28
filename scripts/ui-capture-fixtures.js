@@ -1,24 +1,24 @@
 // @ts-check
 
 const CAPTURE_CHAMPIONS = {
-  1: { id: 1, name: 'アニー', alias: 'Annie', title: '闇の申し子' },
-  4: { id: 4, name: 'ツイステッド・フェイト', alias: 'TwistedFate', title: 'カードマスター' },
-  7: { id: 7, name: 'ルブラン', alias: 'Leblanc', title: '幻惑の奇術師' },
-  18: { id: 18, name: 'トリスターナ', alias: 'Tristana', title: 'ヨードルの主砲' },
-  25: { id: 25, name: 'モルガナ', alias: 'Morgana', title: '堕天の高潔' },
-  55: { id: 55, name: 'カタリナ', alias: 'Katarina', title: '凶兆の刃' },
-  61: { id: 61, name: 'オリアナ', alias: 'Orianna', title: '時計仕掛けの舞姫' },
-  84: { id: 84, name: 'アカリ', alias: 'Akali', title: '主なき暗殺者' },
-  99: { id: 99, name: 'ラックス', alias: 'Lux', title: '光の才女' },
-  103: { id: 103, name: 'アーリ', alias: 'Ahri', title: '九尾の狐' },
-  117: { id: 117, name: 'ルル', alias: 'Lulu', title: '森の妖精使い' },
-  127: { id: 127, name: 'リサンドラ', alias: 'Lissandra', title: '氷の魔女' },
-  134: { id: 134, name: 'シンドラ', alias: 'Syndra', title: '暗黒の女王' },
-  157: { id: 157, name: 'ヤスオ', alias: 'Yasuo', title: '赦されざる者' },
-  142: { id: 142, name: 'ゾーイ', alias: 'Zoe', title: '超常の遊び' },
-  238: { id: 238, name: 'ゼド', alias: 'Zed', title: '影の頭領' },
-  245: { id: 245, name: 'エコー', alias: 'Ekko', title: '砕けた時を渡る少年' },
-  518: { id: 518, name: 'ニーコ', alias: 'Neeko', title: '不思議のカメレオン' }
+  1: { id: 1, name: 'Annie', alias: 'Annie', title: 'the Dark Child' },
+  4: { id: 4, name: 'Twisted Fate', alias: 'TwistedFate', title: 'the Card Master' },
+  7: { id: 7, name: 'LeBlanc', alias: 'Leblanc', title: 'the Deceiver' },
+  18: { id: 18, name: 'Tristana', alias: 'Tristana', title: 'the Yordle Gunner' },
+  25: { id: 25, name: 'Morgana', alias: 'Morgana', title: 'the Fallen' },
+  55: { id: 55, name: 'Katarina', alias: 'Katarina', title: 'the Sinister Blade' },
+  61: { id: 61, name: 'Orianna', alias: 'Orianna', title: 'the Lady of Clockwork' },
+  84: { id: 84, name: 'Akali', alias: 'Akali', title: 'the Rogue Assassin' },
+  99: { id: 99, name: 'Lux', alias: 'Lux', title: 'the Lady of Luminosity' },
+  103: { id: 103, name: 'Ahri', alias: 'Ahri', title: 'the Nine-Tailed Fox' },
+  117: { id: 117, name: 'Lulu', alias: 'Lulu', title: 'the Fae Sorceress' },
+  127: { id: 127, name: 'Lissandra', alias: 'Lissandra', title: 'the Ice Witch' },
+  134: { id: 134, name: 'Syndra', alias: 'Syndra', title: 'the Dark Sovereign' },
+  157: { id: 157, name: 'Yasuo', alias: 'Yasuo', title: 'the Unforgiven' },
+  142: { id: 142, name: 'Zoe', alias: 'Zoe', title: 'the Aspect of Twilight' },
+  238: { id: 238, name: 'Zed', alias: 'Zed', title: 'the Master of Shadows' },
+  245: { id: 245, name: 'Ekko', alias: 'Ekko', title: 'the Boy Who Shattered Time' },
+  518: { id: 518, name: 'Neeko', alias: 'Neeko', title: 'the Curious Chameleon' }
 };
 
 const CAPTURE_SETTINGS = {
@@ -27,7 +27,9 @@ const CAPTURE_SETTINGS = {
   riotRegionalRoute: 'ASIA',
   riotPlatformRegions: ['JP1', 'KR'],
   themeMode: 'light',
-  themeModes: ['system', 'light', 'dark']
+  themeModes: ['system', 'light', 'dark'],
+  language: 'en',
+  languages: ['en', 'ja', 'kr']
 };
 
 /** @param {string} [themeMode] */
@@ -130,6 +132,73 @@ function createDraftCaptureState(phase) {
       { cellId: 8, championId: 0, assignedPosition: 'BOTTOM' },
       { cellId: 9, championId: 0, assignedPosition: 'UTILITY' }
     ]
+  };
+  return state;
+}
+
+function createInGameCaptureState() {
+  const state = /** @type {any} */ (createDraftCaptureState('pick'));
+  state.gameflowPhase = 'GameStart';
+  state.gameflowSession = {
+    gameData: {
+      mapId: 11,
+      gameMode: 'CLASSIC',
+      queue: { id: 420, mapId: 11, gameMode: 'CLASSIC', isRanked: true }
+    }
+  };
+  state.perksCurrentPage = {
+    selectedPerkIds: [8112, 8139, 8126, 8105, 8304, 8345, 5008, 5008, 5002]
+  };
+  state.champSelect = {
+    ...state.champSelect,
+    timer: { phase: 'FINALIZATION' },
+    actions: [[{
+      id: 1,
+      actorCellId: 0,
+      championId: 103,
+      completed: true,
+      isInProgress: false,
+      type: 'pick'
+    }]],
+    myTeam: [
+      { cellId: 0, championId: 103, assignedPosition: 'MIDDLE', perks: { perkIds: [8112] } },
+      { cellId: 1, championId: 117, assignedPosition: 'UTILITY' },
+      { cellId: 2, championId: 157, assignedPosition: 'TOP' },
+      { cellId: 3, championId: 245, assignedPosition: 'JUNGLE' },
+      { cellId: 4, championId: 18, assignedPosition: 'BOTTOM' }
+    ],
+    theirTeam: [
+      { cellId: 5, championId: 238, assignedPosition: 'MIDDLE' },
+      { cellId: 6, championId: 84, assignedPosition: 'JUNGLE' },
+      { cellId: 7, championId: 61, assignedPosition: 'TOP' },
+      { cellId: 8, championId: 134, assignedPosition: 'BOTTOM' },
+      { cellId: 9, championId: 25, assignedPosition: 'UTILITY' }
+    ]
+  };
+  state.laneMatchupAnalysis = {
+    status: 'ready',
+    request: {
+      enemyChampionIds: [238, 84, 61, 134, 25],
+      payload: {
+        myChampionName: 'Ahri',
+        myChampionId: 103,
+        lane: 'MID',
+        enemyChampionName: 'Zed',
+        enemyChampionId: 238
+      }
+    },
+    response: {
+      difficulty: 'Medium',
+      laneStyle: 'Poke and punish',
+      laneSummary: {
+        goal: 'Keep the wave on your side and punish Zed after his shadow is unavailable.',
+        detail: [
+          'Respect level 3 all-ins and hold Charm for Zed’s re-entry.',
+          'Use your range advantage to secure priority before objectives.'
+        ]
+      }
+    },
+    error: null
   };
   return state;
 }
@@ -360,6 +429,7 @@ module.exports = {
   CAPTURE_SETTINGS,
   createCaptureState,
   createDraftCaptureState,
+  createInGameCaptureState,
   createChampionIconDataUrl,
   createStatsFixtureResponse,
   createTimeline

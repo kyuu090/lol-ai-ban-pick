@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   createCaptureState,
   createDraftCaptureState,
+  createInGameCaptureState,
   createStatsFixtureResponse,
   createTimeline
 } = require('../scripts/ui-capture-fixtures');
@@ -12,6 +13,7 @@ test('UI capture state includes champion catalog and selected theme', () => {
   const state = createCaptureState('dark');
   assert.equal(state.settings.themeMode, 'dark');
   assert.equal(state.championsById[103].alias, 'Ahri');
+  assert.equal(state.championsById[103].name, 'Ahri');
   assert.deepEqual(state.championPool.middle, [103, 61]);
 });
 
@@ -26,6 +28,24 @@ test('UI capture provides standalone ban and pick draft states', () => {
   assert.equal(pickState.champSelect.theirTeam[0].championId, 238);
   assert.equal(pickState.championPool.middle.length, 12);
   assert.equal(pickState.matchHistorySelfVsLaneOpponentStats.length, 11);
+});
+
+test('UI capture provides a completed draft snapshot for the in-game recommendation view', () => {
+  const state = createInGameCaptureState();
+
+  assert.equal(state.gameflowPhase, 'GameStart');
+  assert.equal(state.gameflowSession.gameData.mapId, 11);
+  assert.equal(state.champSelect.myTeam[0].championId, 103);
+  assert.equal(state.champSelect.theirTeam[0].championId, 238);
+  assert.equal(state.perksCurrentPage.selectedPerkIds[0], 8112);
+  assert.equal(state.laneMatchupAnalysis.status, 'ready');
+  assert.deepEqual(state.laneMatchupAnalysis.request.payload, {
+    myChampionName: 'Ahri',
+    myChampionId: 103,
+    lane: 'MID',
+    enemyChampionName: 'Zed',
+    enemyChampionId: 238
+  });
 });
 
 test('UI capture StatsAPI fixtures cover analysis navigation', () => {

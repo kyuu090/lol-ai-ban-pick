@@ -234,14 +234,14 @@
         <div class="bg-layer bg-right"></div>
         <div class="bg-center-glow"></div>
         <div class="controls">
-          <button id="minimizeButton" class="control-button" type="button" aria-label="最小化">ー</button>
-          <button id="closeButton" class="control-button" type="button" aria-label="閉じる">✕</button>
+          <button id="minimizeButton" class="control-button" type="button" aria-label="Minimize">ー</button>
+          <button id="closeButton" class="control-button" type="button" aria-label="Close">✕</button>
         </div>
         <div class="hero">
           <div class="brand">BanPick<span class="accent">.ai</span></div>
         </div>
         <div id="versionLine" class="version-line">Client v0.0.0</div>
-        <div id="statusLine" class="status-line" aria-live="polite">アップデートを確認しています...</div>
+        <div id="statusLine" class="status-line" aria-live="polite">Checking for updates…</div>
       </section>
     </main>
     <script>
@@ -252,8 +252,8 @@
       }
 
       window.setSplashStatus = function setSplashStatus(message) {
-        var nextMessage = String(message || "").trim() || "起動を開始しています...";
-        setText("statusLine", "起動を開始しています...", nextMessage);
+        var nextMessage = String(message || "").trim() || "Starting application…";
+        setText("statusLine", "Starting application…", nextMessage);
       };
 
       window.setSplashVersion = function setSplashVersion(version) {

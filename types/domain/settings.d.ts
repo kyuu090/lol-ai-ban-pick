@@ -1,4 +1,5 @@
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type AppLanguage = 'en' | 'ja' | 'kr';
 
 export type RiotPlatformRegion =
   | 'BR1'
@@ -25,4 +26,6 @@ export interface PublicSettings {
   riotPlatformRegions: readonly RiotPlatformRegion[];
   themeMode: ThemeMode;
   themeModes: readonly ThemeMode[];
+  language: AppLanguage;
+  languages: readonly AppLanguage[];
 }
