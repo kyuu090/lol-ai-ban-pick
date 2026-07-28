@@ -3571,7 +3571,10 @@
         setStatsApiLoading(true);
       }
       try {
-        await Promise.all([
+        // These catalogs only enrich the presentation.  Start them together with
+        // the Stats API request so their first-load latency never delays the
+        // build data itself.
+        const assetCatalogsPromise = Promise.all([
           ensureStatsApiRuneCatalog(),
           ensureSummonerSpellLabels(),
           ensureStatsApiChampionSpellCatalog(championId)
@@ -3580,6 +3583,16 @@
         if (requestId !== statsApiDetailsRequestId) return;
         lastDetailsData = response?.data || null;
         renderSelectedChampionDetails(lastDetailsData);
+
+        // Rendered data is immediately useful with text fallbacks.  Re-render
+        // only after the non-critical asset catalogs are ready to hydrate their
+        // icons, provided this is still the selected detail request.
+        void assetCatalogsPromise
+          .then(() => {
+            if (requestId !== statsApiDetailsRequestId) return;
+            renderSelectedChampionDetails(lastDetailsData);
+          })
+          .catch(() => undefined);
       } catch (error: any) {
         if (requestId !== statsApiDetailsRequestId) return;
         lastDetailsData = null;
